@@ -1,0 +1,80 @@
+search:
+  fields:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: jellyseerr_search
+    query:
+      required: true
+      example: "The Expanse"
+      selector:
+        text:
+    media_type:
+      default: all
+      selector:
+        select:
+          translation_key: media_type_filter
+          options:
+            - all
+            - movie
+            - tv
+    limit:
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 20
+          mode: box
+
+request:
+  fields:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: jellyseerr_search
+    tmdb_id:
+      required: true
+      example: 438631
+      selector:
+        number:
+          min: 1
+          max: 99999999
+          mode: box
+    media_type:
+      required: true
+      selector:
+        select:
+          translation_key: media_type
+          options:
+            - movie
+            - tv
+    seasons:
+      default: all
+      example: "1, 2"
+      selector:
+        text:
+    is_4k:
+      default: false
+      selector:
+        boolean:
+
+quick_request:
+  fields:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: jellyseerr_search
+    query:
+      required: true
+      example: "Dune Part Two"
+      selector:
+        text:
+    media_type:
+      default: all
+      selector:
+        select:
+          translation_key: media_type_filter
+          options:
+            - all
+            - movie
+            - tv

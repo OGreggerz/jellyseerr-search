@@ -1,0 +1,123 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Jellyseerr",
+        "description": "Find the API key in Jellyseerr under Settings > General.",
+        "data": {
+          "url": "URL",
+          "api_key": "API key",
+          "verify_ssl": "Verify SSL certificate"
+        },
+        "data_description": {
+          "url": "For example http://192.168.1.20:5055.",
+          "api_key": "Requests are made as the Jellyseerr user who owns this key."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-enter the Jellyseerr API key",
+        "description": "Jellyseerr at {url} rejected the saved API key.",
+        "data": {
+          "api_key": "API key"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach Jellyseerr at that URL.",
+      "invalid_auth": "Jellyseerr rejected the API key.",
+      "unknown": "Unexpected error. Check the Home Assistant log."
+    },
+    "abort": {
+      "already_configured": "This Jellyseerr server is already set up.",
+      "reauth_successful": "The API key was updated."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "pending_requests": { "name": "Pending requests" },
+      "approved_requests": { "name": "Approved requests" },
+      "processing_requests": { "name": "Processing requests" },
+      "available_requests": { "name": "Available requests" },
+      "total_requests": { "name": "Total requests" }
+    }
+  },
+  "exceptions": {
+    "no_server": {
+      "message": "No Jellyseerr server is set up and loaded."
+    },
+    "multiple_servers": {
+      "message": "More than one Jellyseerr server is set up; choose one with config_entry_id."
+    },
+    "entry_not_loaded": {
+      "message": "Jellyseerr server {entry_id} is not set up or not loaded."
+    },
+    "api_error": {
+      "message": "Jellyseerr returned an error: {error}"
+    },
+    "request_failed": {
+      "message": "Jellyseerr did not accept the request: {error}"
+    },
+    "no_results": {
+      "message": "Jellyseerr found no movie or show matching \"{query}\"."
+    }
+  },
+  "selector": {
+    "media_type": {
+      "options": {
+        "movie": "Movie",
+        "tv": "TV show"
+      }
+    },
+    "media_type_filter": {
+      "options": {
+        "all": "Movies and TV shows",
+        "movie": "Movies only",
+        "tv": "TV shows only"
+      }
+    }
+  },
+  "services": {
+    "search": {
+      "name": "Search",
+      "description": "Searches Jellyseerr for movies and TV shows and returns the matches.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "Which Jellyseerr server to use. Only needed when more than one is set up."
+        },
+        "query": { "name": "Query", "description": "Title to search for." },
+        "media_type": { "name": "Media type", "description": "Limit results to movies or TV shows." },
+        "limit": { "name": "Limit", "description": "Maximum number of results." }
+      }
+    },
+    "request": {
+      "name": "Request",
+      "description": "Requests a movie or TV show in Jellyseerr, which sends it to Radarr or Sonarr to download.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "Which Jellyseerr server to use. Only needed when more than one is set up."
+        },
+        "tmdb_id": { "name": "TMDB ID", "description": "The tmdb_id from a search result." },
+        "media_type": { "name": "Media type", "description": "Whether the ID is a movie or a TV show." },
+        "seasons": {
+          "name": "Seasons",
+          "description": "TV only: \"all\", or season numbers separated by commas."
+        },
+        "is_4k": { "name": "4K", "description": "Request the 4K version. Needs a 4K Radarr or Sonarr in Jellyseerr." }
+      }
+    },
+    "quick_request": {
+      "name": "Quick request",
+      "description": "Searches and requests the best match in one step, for voice commands and automations.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "Which Jellyseerr server to use. Only needed when more than one is set up."
+        },
+        "query": { "name": "Query", "description": "Title to search for." },
+        "media_type": { "name": "Media type", "description": "Limit the match to movies or TV shows." }
+      }
+    }
+  }
+}
