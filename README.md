@@ -16,7 +16,8 @@ from Jellyseerr → Settings → General.
 
 **Search card**: the integration adds `custom:jellyseerr-search-card` to your
 dashboard resources automatically (storage-mode dashboards). Add it from
-*Add card → Jellyseerr Search*. Type a title, tap a poster, pick seasons for
+*Add card → Jellyseerr Search*. Before you type it shows what's trending today
+(follows the All / Movies / TV filter). Type a title, tap a poster, pick seasons for
 shows, and tap **Request**. Posters show whether a title is already requested
 or available.
 
@@ -25,6 +26,7 @@ type: custom:jellyseerr-search-card
 title: Request movies & TV
 media_type: all      # default filter: all | movie | tv
 show_4k: false       # offer a 4K toggle (needs 4K Radarr/Sonarr in Jellyseerr)
+show_trending: true  # trending titles while the search box is empty
 ```
 
 If your dashboards are in YAML mode, add `/jellyseerr_search/jellyseerr-search-card.js`

@@ -84,6 +84,18 @@ class JellyseerrClient:
             if item.get("mediaType") in MEDIA_TYPES
         ]
 
+    async def async_trending(self, media_type: str, page: int = 1) -> list[dict[str, Any]]:
+        """Trending titles (TMDB, past day), normalized. `media_type` is all, movie
+        or tv; Seerr filters by it. People and collections are dropped."""
+        data = await self._request(
+            "GET", "/discover/trending", params={"mediaType": media_type, "page": page}
+        )
+        return [
+            normalize_result(item)
+            for item in data.get("results", [])
+            if item.get("mediaType") in MEDIA_TYPES
+        ]
+
     async def async_get_tv_seasons(self, tmdb_id: int) -> list[dict[str, Any]]:
         """A show's seasons (specials excluded) with what the server has of each."""
         data = await self._request("GET", f"/tv/{tmdb_id}")

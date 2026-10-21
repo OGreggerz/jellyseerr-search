@@ -35,4 +35,6 @@ export interface CardConfig {
   media_type?: MediaFilter;
   config_entry_id?: string;
   show_4k?: boolean;
+  /** Trending titles while the search box is empty. Default on. */
+  show_trending?: boolean;
 }

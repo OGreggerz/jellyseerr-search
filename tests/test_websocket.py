@@ -61,3 +61,34 @@ async def test_error_reaches_card(hass: HomeAssistant, entry, aioclient_mock, ha
     await ws.send_json_auto_id({"type": f"{DOMAIN}/request", "tmdb_id": 1, "media_type": "movie"})
     msg = await ws.receive_json()
     assert not msg["success"]
+
+
+async def test_trending(hass: HomeAssistant, entry, aioclient_mock, hass_ws_client) -> None:
+    aioclient_mock.get(f"{API}/discover/trending", json=SEARCH)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/trending"})
+    msg = await ws.receive_json()
+    assert msg["success"]
+    # The person in the fixture is dropped.
+    assert [r["tmdb_id"] for r in msg["result"]["results"]] == [438631, 90228]
+    assert msg["result"]["results"][1]["status"] == "available"
+    assert dict(aioclient_mock.mock_calls[-1][1].query) == {"mediaType": "all", "page": "1"}
+
+
+async def test_trending_filters_type(
+    hass: HomeAssistant, entry, aioclient_mock, hass_ws_client
+) -> None:
+    """Seerr filters by mediaType; a server that ignores it is filtered here."""
+    aioclient_mock.get(f"{API}/discover/trending", json=SEARCH)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/trending", "media_type": "tv"})
+    msg = await ws.receive_json()
+    assert [r["tmdb_id"] for r in msg["result"]["results"]] == [90228]
+    assert dict(aioclient_mock.mock_calls[-1][1].query) == {"mediaType": "tv", "page": "1"}
+
+
+async def test_trending_rejects_unknown_type(hass: HomeAssistant, entry, hass_ws_client) -> None:
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/trending", "media_type": "person"})
+    msg = await ws.receive_json()
+    assert not msg["success"]

@@ -9,6 +9,8 @@ export const CARD_VERSION = __CARD_VERSION__;
 const DOMAIN = "jellyseerr_search";
 const DEBOUNCE_MS = 400;
 const MIN_QUERY = 2;
+// A wall-mounted tablet keeps the card open for days; refetch trending after this.
+const TRENDING_TTL_MS = 60 * 60 * 1000;
 
 let versionChecked = false;
 
@@ -25,6 +27,8 @@ export class JellyseerrSearchCard extends LitElement {
     _query: { state: true },
     _filter: { state: true },
     _results: { state: true },
+    _trending: { state: true },
+    _trendingError: { state: true },
     _loading: { state: true },
     _error: { state: true },
     _selected: { state: true },
@@ -41,6 +45,8 @@ export class JellyseerrSearchCard extends LitElement {
   declare _query: string;
   declare _filter: MediaFilter;
   declare _results?: SearchResult[];
+  declare _trending?: SearchResult[];
+  declare _trendingError?: string;
   declare _loading: boolean;
   declare _error?: string;
   declare _selected?: SearchResult;
@@ -54,6 +60,9 @@ export class JellyseerrSearchCard extends LitElement {
   private _debounce?: ReturnType<typeof setTimeout>;
   private _latestSearch = new Latest();
   private _latestSeasons = new Latest();
+  private _latestTrending = new Latest();
+  private _trendingAt = 0;
+  private _trendingFilter?: MediaFilter;
 
   constructor() {
     super();
@@ -82,6 +91,7 @@ export class JellyseerrSearchCard extends LitElement {
             },
           },
         },
+        { name: "show_trending", selector: { boolean: {} } },
         { name: "show_4k", selector: { boolean: {} } },
         { name: "config_entry_id", selector: { config_entry: { integration: DOMAIN } } },
       ],
@@ -89,6 +99,7 @@ export class JellyseerrSearchCard extends LitElement {
         ({
           title: "Title",
           media_type: "Default filter",
+          show_trending: "Show trending titles before searching",
           show_4k: "Offer 4K requests",
           config_entry_id: "Jellyseerr server (only if you have several)",
         })[field.name],
@@ -109,7 +120,7 @@ export class JellyseerrSearchCard extends LitElement {
   }
 
   getCardSize(): number {
-    return this._results?.length ? 8 : 2;
+    return this._results?.length || (this._showTrending() && this._trending?.length) ? 8 : 2;
   }
 
   getGridOptions() {
@@ -126,6 +137,7 @@ export class JellyseerrSearchCard extends LitElement {
       versionChecked = true;
       void this._checkVersion();
     }
+    if (changed.has("hass") && this.hass && this._trendingDue()) void this._loadTrending();
   }
 
   /** A cached old card talking to a newer backend: offer a cache-clearing reload. */
@@ -150,6 +162,38 @@ export class JellyseerrSearchCard extends LitElement {
 
   private _entry(): Record<string, string> {
     return this._config.config_entry_id ? { config_entry_id: this._config.config_entry_id } : {};
+  }
+
+  // --- trending -----------------------------------------------------------
+
+  private _showTrending(): boolean {
+    return this._config.show_trending !== false && this._query.trim().length < MIN_QUERY;
+  }
+
+  /** Missing, for another filter, or older than the TTL, and on screen. */
+  private _trendingDue(): boolean {
+    if (!this._showTrending() || this._selected) return false;
+    if (this._trendingFilter !== this._filter) return true;
+    return Date.now() - this._trendingAt > TRENDING_TTL_MS;
+  }
+
+  private async _loadTrending(): Promise<void> {
+    const current = this._latestTrending.next();
+    const filter = this._filter;
+    // Set before the call so the frequent hass updates don't refetch meanwhile.
+    this._trendingFilter = filter;
+    this._trendingAt = Date.now();
+    this._trendingError = undefined;
+    try {
+      const { results } = await this.hass.callWS<{ results: SearchResult[] }>({
+        type: `${DOMAIN}/trending`,
+        media_type: filter,
+        ...this._entry(),
+      });
+      if (current()) this._trending = results;
+    } catch (err) {
+      if (current()) this._trendingError = errorMessage(err);
+    }
   }
 
   // --- search -------------------------------------------------------------
@@ -181,6 +225,7 @@ export class JellyseerrSearchCard extends LitElement {
     if (filter === this._filter) return;
     this._filter = filter;
     if (this._query.trim().length >= MIN_QUERY) void this._search();
+    else if (this._trendingDue()) void this._loadTrending();
   }
 
   private async _search(): Promise<void> {
@@ -279,9 +324,10 @@ export class JellyseerrSearchCard extends LitElement {
   private _markRequested(item: SearchResult): void {
     const status = item.status === "partially_available" ? item.status : "pending";
     const updated = { ...item, status } as SearchResult;
-    this._results = this._results?.map((r) =>
-      r.tmdb_id === item.tmdb_id && r.media_type === item.media_type ? updated : r,
-    );
+    const swap = (list?: SearchResult[]) =>
+      list?.map((r) => (r.tmdb_id === item.tmdb_id && r.media_type === item.media_type ? updated : r));
+    this._results = swap(this._results);
+    this._trending = swap(this._trending);
     if (this._selected === item) this._selected = updated;
     if (this._seasons) {
       this._seasons = this._seasons.map((s) =>
@@ -347,6 +393,7 @@ export class JellyseerrSearchCard extends LitElement {
   }
 
   private _renderResults() {
+    if (this._showTrending()) return this._renderTrending();
     if (this._error) return html`<div class="message error">${this._error}</div>`;
     if (this._loading && !this._results) return html`<div class="message">Searching…</div>`;
     if (!this._results) return nothing;
@@ -355,6 +402,18 @@ export class JellyseerrSearchCard extends LitElement {
       <div class="grid ${this._loading ? "busy" : ""}">
         ${this._results.map((r) => this._renderTile(r))}
       </div>
+    `;
+  }
+
+  private _renderTrending() {
+    if (this._trendingError) {
+      return html`<div class="message error">Couldn't load trending (${this._trendingError}).</div>`;
+    }
+    if (!this._trending) return html`<div class="message">Loading trending…</div>`;
+    if (!this._trending.length) return nothing;
+    return html`
+      <div class="section">Trending today</div>
+      <div class="grid">${this._trending.map((r) => this._renderTile(r))}</div>
     `;
   }
 
@@ -384,7 +443,7 @@ export class JellyseerrSearchCard extends LitElement {
     return html`
       <div class="detail">
         <button class="back" @click=${() => (this._selected = undefined)}>
-          <ha-icon icon="mdi:arrow-left"></ha-icon> Results
+          <ha-icon icon="mdi:arrow-left"></ha-icon> Back
         </button>
         <div class="head">
           ${item.poster_url ? html`<img class="thumb" src=${item.poster_url} alt="" />` : nothing}
@@ -522,6 +581,11 @@ export class JellyseerrSearchCard extends LitElement {
     }
     .message.error {
       color: var(--error-color);
+    }
+    .section {
+      padding: var(--js-gap) var(--js-gap) 0;
+      font-weight: 500;
+      color: var(--secondary-text-color);
     }
     .grid {
       display: grid;

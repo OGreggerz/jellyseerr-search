@@ -115,6 +115,23 @@ async def async_search_media(
     return results[:limit]
 
 
+async def async_trending_media(
+    client: JellyseerrClient, media_type: str, limit: int
+) -> list[dict[str, Any]]:
+    try:
+        results = await client.async_trending(media_type)
+    except JellyseerrError as err:
+        raise HomeAssistantError(
+            translation_domain=DOMAIN,
+            translation_key="api_error",
+            translation_placeholders={"error": str(err)},
+        ) from err
+    # Seerr filters by type itself; older Jellyseerr releases may not.
+    if media_type != MEDIA_ALL:
+        results = [item for item in results if item["media_type"] == media_type]
+    return results[:limit]
+
+
 async def async_request_media(
     client: JellyseerrClient,
     media_type: str,
