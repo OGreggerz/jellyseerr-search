@@ -58,7 +58,7 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 		}
 		return n;
 	}
-}, g = (e, t) => !l(e, t), _ = {
+}, g = (e, t) => !l(e, t), ae = {
 	attribute: !0,
 	type: String,
 	converter: h,
@@ -67,14 +67,14 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 	hasChanged: g
 };
 Symbol.metadata ??= Symbol("metadata"), f.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
-var v = class extends HTMLElement {
+var _ = class extends HTMLElement {
 	static addInitializer(e) {
 		this._$Ei(), (this.l ??= []).push(e);
 	}
 	static get observedAttributes() {
 		return this.finalize(), this._$Eh && [...this._$Eh.keys()];
 	}
-	static createProperty(e, t = _) {
+	static createProperty(e, t = ae) {
 		if (t.state && (t.attribute = !1), this._$Ei(), this.prototype.hasOwnProperty(e) && ((t = Object.create(t)).wrapped = !0), this.elementProperties.set(e, t), !t.noAccessor) {
 			let n = Symbol(), r = this.getPropertyDescriptor(e, n, t);
 			r !== void 0 && u(this.prototype, e, r);
@@ -100,7 +100,7 @@ var v = class extends HTMLElement {
 		};
 	}
 	static getPropertyOptions(e) {
-		return this.elementProperties.get(e) ?? _;
+		return this.elementProperties.get(e) ?? ae;
 	}
 	static _$Ei() {
 		if (this.hasOwnProperty(m("elementProperties"))) return;
@@ -251,25 +251,25 @@ var v = class extends HTMLElement {
 	updated(e) {}
 	firstUpdated(e) {}
 };
-v.elementStyles = [], v.shadowRootOptions = { mode: "open" }, v[m("elementProperties")] = /* @__PURE__ */ new Map(), v[m("finalized")] = /* @__PURE__ */ new Map(), ie?.({ ReactiveElement: v }), (f.reactiveElementVersions ??= []).push("2.1.2");
+_.elementStyles = [], _.shadowRootOptions = { mode: "open" }, _[m("elementProperties")] = /* @__PURE__ */ new Map(), _[m("finalized")] = /* @__PURE__ */ new Map(), ie?.({ ReactiveElement: _ }), (f.reactiveElementVersions ??= []).push("2.1.2");
 //#endregion
 //#region ../../src/frontend/node_modules/lit-html/lit-html.js
-var y = globalThis, ae = (e) => e, b = y.trustedTypes, x = b ? b.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, oe = "$lit$", S = `lit$${Math.random().toFixed(9).slice(2)}$`, C = "?" + S, se = `<${C}>`, w = document, T = () => w.createComment(""), E = (e) => e === null || typeof e != "object" && typeof e != "function", D = Array.isArray, ce = (e) => D(e) || typeof e?.[Symbol.iterator] == "function", O = "[ 	\n\f\r]", k = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, A = /-->/g, le = />/g, j = RegExp(`>|${O}(?:([^\\s"'>=/]+)(${O}*=${O}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), ue = /'/g, de = /"/g, fe = /^(?:script|style|textarea|title)$/i, M = ((e) => (t, ...n) => ({
+var v = globalThis, oe = (e) => e, y = v.trustedTypes, se = y ? y.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, ce = "$lit$", b = `lit$${Math.random().toFixed(9).slice(2)}$`, x = "?" + b, le = `<${x}>`, S = document, C = () => S.createComment(""), w = (e) => e === null || typeof e != "object" && typeof e != "function", T = Array.isArray, ue = (e) => T(e) || typeof e?.[Symbol.iterator] == "function", E = "[ 	\n\f\r]", D = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, O = /-->/g, k = />/g, A = RegExp(`>|${E}(?:([^\\s"'>=/]+)(${E}*=${E}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), de = /'/g, fe = /"/g, j = /^(?:script|style|textarea|title)$/i, M = ((e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
 	values: n
-}))(1), N = Symbol.for("lit-noChange"), P = Symbol.for("lit-nothing"), F = /* @__PURE__ */ new WeakMap(), I = w.createTreeWalker(w, 129);
+}))(1), N = Symbol.for("lit-noChange"), P = Symbol.for("lit-nothing"), F = /* @__PURE__ */ new WeakMap(), I = S.createTreeWalker(S, 129);
 function L(e, t) {
-	if (!D(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
-	return x === void 0 ? t : x.createHTML(t);
+	if (!T(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
+	return se === void 0 ? t : se.createHTML(t);
 }
 var pe = (e, t) => {
-	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = k;
+	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = D;
 	for (let t = 0; t < n; t++) {
 		let n = e[t], s, c, l = -1, u = 0;
-		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === k ? c[1] === "!--" ? o = A : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = j) : (fe.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = j) : o = le : o === j ? c[0] === ">" ? (o = i ?? k, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? j : c[3] === "\"" ? de : ue) : o === de || o === ue ? o = j : o === A || o === le ? o = k : (o = j, i = void 0);
-		let d = o === j && e[t + 1].startsWith("/>") ? " " : "";
-		a += o === k ? n + se : l >= 0 ? (r.push(s), n.slice(0, l) + oe + n.slice(l) + S + d) : n + S + (l === -2 ? t : d);
+		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === D ? c[1] === "!--" ? o = O : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = A) : (j.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = A) : o = k : o === A ? c[0] === ">" ? (o = i ?? D, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? A : c[3] === "\"" ? fe : de) : o === fe || o === de ? o = A : o === O || o === k ? o = D : (o = A, i = void 0);
+		let d = o === A && e[t + 1].startsWith("/>") ? " " : "";
+		a += o === D ? n + le : l >= 0 ? (r.push(s), n.slice(0, l) + ce + n.slice(l) + b + d) : n + b + (l === -2 ? t : d);
 	}
 	return [L(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
 }, R = class e {
@@ -283,8 +283,8 @@ var pe = (e, t) => {
 		}
 		for (; (i = I.nextNode()) !== null && c.length < s;) {
 			if (i.nodeType === 1) {
-				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(oe)) {
-					let t = u[o++], n = i.getAttribute(e).split(S), r = /([.?@])?(.*)/.exec(t);
+				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(ce)) {
+					let t = u[o++], n = i.getAttribute(e).split(b), r = /([.?@])?(.*)/.exec(t);
 					c.push({
 						type: 1,
 						index: a,
@@ -292,45 +292,45 @@ var pe = (e, t) => {
 						strings: n,
 						ctor: r[1] === "." ? he : r[1] === "?" ? ge : r[1] === "@" ? _e : V
 					}), i.removeAttribute(e);
-				} else e.startsWith(S) && (c.push({
+				} else e.startsWith(b) && (c.push({
 					type: 6,
 					index: a
 				}), i.removeAttribute(e));
-				if (fe.test(i.tagName)) {
-					let e = i.textContent.split(S), t = e.length - 1;
+				if (j.test(i.tagName)) {
+					let e = i.textContent.split(b), t = e.length - 1;
 					if (t > 0) {
-						i.textContent = b ? b.emptyScript : "";
-						for (let n = 0; n < t; n++) i.append(e[n], T()), I.nextNode(), c.push({
+						i.textContent = y ? y.emptyScript : "";
+						for (let n = 0; n < t; n++) i.append(e[n], C()), I.nextNode(), c.push({
 							type: 2,
 							index: ++a
 						});
-						i.append(e[t], T());
+						i.append(e[t], C());
 					}
 				}
 			} else if (i.nodeType === 8) {
-				if (i.data === C) c.push({
+				if (i.data === x) c.push({
 					type: 2,
 					index: a
 				});
 				else {
 					let e = -1;
-					for (; (e = i.data.indexOf(S, e + 1)) !== -1;) c.push({
+					for (; (e = i.data.indexOf(b, e + 1)) !== -1;) c.push({
 						type: 7,
 						index: a
-					}), e += S.length - 1;
+					}), e += b.length - 1;
 				}
 			}
 			a++;
 		}
 	}
 	static createElement(e, t) {
-		let n = w.createElement("template");
+		let n = S.createElement("template");
 		return n.innerHTML = e, n;
 	}
 };
 function z(e, t, n = e, r) {
 	if (t === N) return t;
-	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = E(t) ? void 0 : t._$litDirective$;
+	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = w(t) ? void 0 : t._$litDirective$;
 	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = z(e, i._$AS(e, t.values), i, r)), t;
 }
 var me = class {
@@ -344,7 +344,7 @@ var me = class {
 		return this._$AM._$AU;
 	}
 	u(e) {
-		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? w).importNode(t, !0);
+		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? S).importNode(t, !0);
 		I.currentNode = r;
 		let i = I.nextNode(), a = 0, o = 0, s = n[0];
 		for (; s !== void 0;) {
@@ -354,7 +354,7 @@ var me = class {
 			}
 			a !== s?.index && (i = I.nextNode(), a++);
 		}
-		return I.currentNode = w, r;
+		return I.currentNode = S, r;
 	}
 	p(e) {
 		let t = 0;
@@ -378,7 +378,7 @@ var me = class {
 		return this._$AB;
 	}
 	_$AI(e, t = this) {
-		e = z(this, e, t), E(e) ? e === P || e == null || e === "" ? (this._$AH !== P && this._$AR(), this._$AH = P) : e !== this._$AH && e !== N && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? ce(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
+		e = z(this, e, t), w(e) ? e === P || e == null || e === "" ? (this._$AH !== P && this._$AR(), this._$AH = P) : e !== this._$AH && e !== N && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? ue(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
 	}
 	O(e) {
 		return this._$AA.parentNode.insertBefore(e, this._$AB);
@@ -387,7 +387,7 @@ var me = class {
 		this._$AH !== e && (this._$AR(), this._$AH = this.O(e));
 	}
 	_(e) {
-		this._$AH !== P && E(this._$AH) ? this._$AA.nextSibling.data = e : this.T(w.createTextNode(e)), this._$AH = e;
+		this._$AH !== P && w(this._$AH) ? this._$AA.nextSibling.data = e : this.T(S.createTextNode(e)), this._$AH = e;
 	}
 	$(e) {
 		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = R.createElement(L(n.h, n.h[0]), this.options)), n);
@@ -402,15 +402,15 @@ var me = class {
 		return t === void 0 && F.set(e.strings, t = new R(e)), t;
 	}
 	k(t) {
-		D(this._$AH) || (this._$AH = [], this._$AR());
+		T(this._$AH) || (this._$AH = [], this._$AR());
 		let n = this._$AH, r, i = 0;
-		for (let a of t) i === n.length ? n.push(r = new e(this.O(T()), this.O(T()), this, this.options)) : r = n[i], r._$AI(a), i++;
+		for (let a of t) i === n.length ? n.push(r = new e(this.O(C()), this.O(C()), this, this.options)) : r = n[i], r._$AI(a), i++;
 		i < n.length && (this._$AR(r && r._$AB.nextSibling, i), n.length = i);
 	}
 	_$AR(e = this._$AA.nextSibling, t) {
 		for (this._$AP?.(!1, !0, t); e !== this._$AB;) {
-			let t = ae(e).nextSibling;
-			ae(e).remove(), e = t;
+			let t = oe(e).nextSibling;
+			oe(e).remove(), e = t;
 		}
 	}
 	setConnected(e) {
@@ -428,10 +428,10 @@ var me = class {
 	}
 	_$AI(e, t = this, n, r) {
 		let i = this.strings, a = !1;
-		if (i === void 0) e = z(this, e, t, 0), a = !E(e) || e !== this._$AH && e !== N, a && (this._$AH = e);
+		if (i === void 0) e = z(this, e, t, 0), a = !w(e) || e !== this._$AH && e !== N, a && (this._$AH = e);
 		else {
 			let r = e, o, s;
-			for (e = i[0], o = 0; o < i.length - 1; o++) s = z(this, r[n + o], t, o), s === N && (s = this._$AH[o]), a ||= !E(s) || s !== this._$AH[o], s === P ? e = P : e !== P && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
+			for (e = i[0], o = 0; o < i.length - 1; o++) s = z(this, r[n + o], t, o), s === N && (s = this._$AH[o]), a ||= !w(s) || s !== this._$AH[o], s === P ? e = P : e !== P && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
 		}
 		a && !r && this.j(e);
 	}
@@ -474,16 +474,16 @@ var me = class {
 	_$AI(e) {
 		z(this, e);
 	}
-}, ye = y.litHtmlPolyfillSupport;
-ye?.(R, B), (y.litHtmlVersions ??= []).push("3.3.3");
+}, ye = v.litHtmlPolyfillSupport;
+ye?.(R, B), (v.litHtmlVersions ??= []).push("3.3.3");
 var be = (e, t, n) => {
 	let r = n?.renderBefore ?? t, i = r._$litPart$;
 	if (i === void 0) {
 		let e = n?.renderBefore ?? null;
-		r._$litPart$ = i = new B(t.insertBefore(T(), e), e, void 0, n ?? {});
+		r._$litPart$ = i = new B(t.insertBefore(C(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
-}, H = globalThis, U = class extends v {
+}, H = globalThis, U = class extends _ {
 	constructor() {
 		super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
 	}
@@ -543,10 +543,13 @@ function q(e) {
 		default: return null;
 	}
 }
+function we(e) {
+	return e === "available" || e === "partially_available" || e === "processing";
+}
 function J(e) {
 	return e.filter((e) => K(e.status)).map((e) => e.season_number);
 }
-function we(e) {
+function Te(e) {
 	return K(e) || e === "partially_available";
 }
 var Y = class {
@@ -557,7 +560,7 @@ var Y = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, X, Te = "0.3.1", Z = "jellyseerr_search", Ee = 400, Q = 2, De = 36e5, Oe = !1, ke = [
+}, X, Ee = "0.4.0", Z = "jellyseerr_search", De = 400, Q = 2, Oe = 36e5, ke = !1, Ae = [
 	{
 		value: "all",
 		label: "All"
@@ -570,7 +573,7 @@ var Y = class {
 		value: "tv",
 		label: "TV"
 	}
-], Ae = [{
+], je = [{
 	value: "trending",
 	label: "Trending",
 	heading: "Trending today"
@@ -580,7 +583,7 @@ var Y = class {
 	heading: "Popular"
 }], $ = class extends U {
 	constructor() {
-		super(), this._latestSearch = new Y(), this._latestSeasons = new Y(), this._latestBrowse = new Y(), this._browseAt = 0, this._query = "", this._filter = "all", this._browse = "trending", this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1;
+		super(), this._latestSearch = new Y(), this._latestSeasons = new Y(), this._latestBrowse = new Y(), this._browseAt = 0, this._query = "", this._filter = "all", this._browse = "trending", this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1, this._confirmRemove = !1, this._removing = !1;
 	}
 	static getConfigForm() {
 		return {
@@ -618,6 +621,10 @@ var Y = class {
 					selector: { boolean: {} }
 				},
 				{
+					name: "show_remove",
+					selector: { boolean: {} }
+				},
+				{
 					name: "config_entry_id",
 					selector: { config_entry: { integration: Z } }
 				}
@@ -627,6 +634,7 @@ var Y = class {
 				media_type: "Default filter",
 				show_trending: "Show trending and popular titles before searching",
 				show_4k: "Offer 4K requests",
+				show_remove: "Offer Remove (deletes the files from Radarr/Sonarr)",
 				config_entry_id: "Jellyseerr server (only if you have several)"
 			})[e.name]
 		};
@@ -636,7 +644,7 @@ var Y = class {
 	}
 	setConfig(e) {
 		if (!e) throw Error("Invalid configuration");
-		if (e.media_type && !ke.some((t) => t.value === e.media_type)) throw Error("media_type must be all, movie or tv");
+		if (e.media_type && !Ae.some((t) => t.value === e.media_type)) throw Error("media_type must be all, movie or tv");
 		this._config = e, this._filter = e.media_type ?? "all";
 	}
 	getCardSize() {
@@ -653,12 +661,12 @@ var Y = class {
 		super.disconnectedCallback(), clearTimeout(this._debounce);
 	}
 	updated(e) {
-		e.has("hass") && this.hass && !Oe && (Oe = !0, this._checkVersion()), e.has("hass") && this.hass && this._browseDue() && this._loadBrowse();
+		e.has("hass") && this.hass && !ke && (ke = !0, this._checkVersion()), e.has("hass") && this.hass && this._browseDue() && this._loadBrowse();
 	}
 	async _checkVersion() {
 		try {
 			let { version: e } = await this.hass.callWS({ type: `${Z}/version` });
-			e !== "0.3.1" && (this._staleVersion = e);
+			e !== "0.4.0" && (this._staleVersion = e);
 		} catch {}
 	}
 	async _reload() {
@@ -675,7 +683,7 @@ var Y = class {
 		return this._config.show_trending !== !1 && this._query.trim().length < Q;
 	}
 	_browseDue() {
-		return !this._showBrowse() || this._selected ? !1 : this._browseKey !== `${this._browse}/${this._filter}` || Date.now() - this._browseAt > De;
+		return !this._showBrowse() || this._selected ? !1 : this._browseKey !== `${this._browse}/${this._filter}` || Date.now() - this._browseAt > Oe;
 	}
 	async _loadBrowse() {
 		let e = this._latestBrowse.next(), t = `${this._browse}/${this._filter}`;
@@ -695,7 +703,7 @@ var Y = class {
 		e !== this._browse && (this._browse = e, this._browseDue() && this._loadBrowse());
 	}
 	_onInput(e) {
-		this._query = e.target.value, clearTimeout(this._debounce), this._debounce = setTimeout(() => void this._search(), Ee);
+		this._query = e.target.value, clearTimeout(this._debounce), this._debounce = setTimeout(() => void this._search(), De);
 	}
 	_onKeydown(e) {
 		e.key === "Enter" && (clearTimeout(this._debounce), e.target.blur(), this._search());
@@ -730,7 +738,7 @@ var Y = class {
 		}
 	}
 	_open(e) {
-		this._selected = e, this._seasons = void 0, this._seasonsError = void 0, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, e.media_type === "tv" && this._loadSeasons(e.tmdb_id);
+		this._selected = e, this._seasons = void 0, this._seasonsError = void 0, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._confirmRemove = !1, e.media_type === "tv" && this._loadSeasons(e.tmdb_id);
 	}
 	async _loadSeasons(e) {
 		let t = this._latestSeasons.next();
@@ -773,6 +781,38 @@ var Y = class {
 			this._requesting = !1;
 		}
 	}
+	async _remove() {
+		let e = this._selected;
+		if (e && !this._removing) {
+			if (!this._confirmRemove) {
+				this._confirmRemove = !0;
+				return;
+			}
+			this._removing = !0;
+			try {
+				await this.hass.callWS({
+					type: `${Z}/remove`,
+					tmdb_id: e.tmdb_id,
+					media_type: e.media_type,
+					...this._entry()
+				}), W(this, `Removed ${e.title}`), this._setStatus(e, "deleted");
+			} catch (e) {
+				W(this, `Remove failed: ${G(e)}`);
+			} finally {
+				this._removing = !1, this._confirmRemove = !1;
+			}
+		}
+	}
+	_setStatus(e, t) {
+		let n = {
+			...e,
+			status: t
+		}, r = (t) => t?.map((t) => t.tmdb_id === e.tmdb_id && t.media_type === e.media_type ? n : t);
+		this._results = r(this._results), this._browseResults = r(this._browseResults), this._selected === e && (this._selected = n), this._seasons && t === "deleted" && (this._seasons = this._seasons.map((e) => ({
+			...e,
+			status: "deleted"
+		})));
+	}
 	_markRequested(e) {
 		let t = e.status === "partially_available" ? e.status : "pending", n = {
 			...e,
@@ -814,7 +854,7 @@ var Y = class {
               </button>` : P}
         </div>
         <div class="chips" role="radiogroup" aria-label="Media type">
-          ${ke.map((e) => M`<button
+          ${Ae.map((e) => M`<button
               class="chip ${e.value === this._filter ? "on" : ""}"
               role="radio"
               aria-checked=${e.value === this._filter}
@@ -835,12 +875,12 @@ var Y = class {
     ` : M`<div class="message">No movies or shows found.</div>` : P;
 	}
 	_renderBrowse() {
-		let e = Ae.find((e) => e.value === this._browse).heading, t;
+		let e = je.find((e) => e.value === this._browse).heading, t;
 		return t = this._browseError ? M`<div class="message error">Couldn't load ${e.toLowerCase()} (${this._browseError}).</div>` : this._browseResults ? this._browseResults.length ? M`<div class="grid">${this._browseResults.map((e) => this._renderTile(e))}</div>` : M`<div class="message">Nothing to show.</div>` : M`<div class="message">Loading…</div>`, M`
       <div class="section">
         <span>${e}</span>
         <div class="chips small" role="radiogroup" aria-label="Browse">
-          ${Ae.map((e) => M`<button
+          ${je.map((e) => M`<button
               class="chip ${e.value === this._browse ? "on" : ""}"
               role="radio"
               aria-checked=${e.value === this._browse}
@@ -868,7 +908,7 @@ var Y = class {
     `;
 	}
 	_renderDetail(e) {
-		let t = q(e.status), n = e.media_type === "tv", r = n ? we(e.status) && (!this._seasons || this._chosen.size > 0) : K(e.status);
+		let t = q(e.status), n = e.media_type === "tv", r = n ? Te(e.status) && (!this._seasons || this._chosen.size > 0) : K(e.status);
 		return M`
       <div class="detail">
         <button class="back" @click=${() => this._selected = void 0}>
@@ -893,8 +933,26 @@ var Y = class {
         <button class="primary" ?disabled=${!r || this._requesting} @click=${this._request}>
           ${this._requesting ? "Requesting…" : r ? "Request" : t ?? "Unavailable"}
         </button>
+        ${this._config.show_remove && we(e.status) ? this._renderRemove(e) : P}
       </div>
     `;
+	}
+	_renderRemove(e) {
+		let t = e.media_type === "tv" ? "the whole show" : "this movie";
+		return this._confirmRemove ? M`
+      <div class="confirm" role="alert">
+        Delete ${t} and its files from ${e.media_type === "tv" ? "Sonarr" : "Radarr"}? This can't be
+        undone.
+      </div>
+      <div class="confirm-row">
+        <button class="secondary" ?disabled=${this._removing} @click=${() => this._confirmRemove = !1}>
+          Cancel
+        </button>
+        <button class="danger solid" ?disabled=${this._removing} @click=${this._remove}>
+          ${this._removing ? "Removing…" : "Delete files"}
+        </button>
+      </div>
+    ` : M`<button class="danger" @click=${this._remove}>Remove…</button>`;
 	}
 	_renderSeasons() {
 		if (this._seasonsError) return M`<div class="message error">Couldn't load seasons (${this._seasonsError}). Request will ask for all.</div>`;
@@ -943,6 +1001,8 @@ X = $, X.properties = {
 	_chosen: { state: !0 },
 	_is4k: { state: !0 },
 	_requesting: { state: !0 },
+	_confirmRemove: { state: !0 },
+	_removing: { state: !0 },
 	_staleVersion: { state: !0 }
 }, X.styles = o`
     :host {
@@ -1216,6 +1276,39 @@ X = $, X.properties = {
       color: var(--text-primary-color, #fff);
       font-weight: 500;
     }
+    .danger,
+    .secondary {
+      height: 44px;
+      border-radius: 22px;
+      font-weight: 500;
+      background: none;
+    }
+    .danger {
+      border: 1px solid var(--error-color, #db4437);
+      color: var(--error-color, #db4437);
+    }
+    .danger.solid {
+      background: var(--error-color, #db4437);
+      color: #fff;
+    }
+    .secondary {
+      border: 1px solid var(--divider-color);
+      color: var(--primary-text-color);
+    }
+    .confirm {
+      color: var(--error-color, #db4437);
+      line-height: 1.4;
+    }
+    .confirm-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--js-gap);
+    }
+    .danger[disabled],
+    .secondary[disabled] {
+      opacity: 0.6;
+      cursor: default;
+    }
     .primary[disabled] {
       background: var(--disabled-color, #bdbdbd);
       cursor: default;
@@ -1227,4 +1320,4 @@ X = $, X.properties = {
 	preview: !1
 }));
 //#endregion
-export { Te as CARD_VERSION, $ as JellyseerrSearchCard };
+export { Ee as CARD_VERSION, $ as JellyseerrSearchCard };

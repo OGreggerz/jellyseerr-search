@@ -151,6 +151,26 @@ async def async_popular_media(
     return mixed[:limit]
 
 
+async def async_remove_media(
+    client: JellyseerrClient, media_type: str, tmdb_id: int
+) -> dict[str, Any]:
+    try:
+        removed = await client.async_remove(media_type, tmdb_id)
+    except JellyseerrError as err:
+        raise HomeAssistantError(
+            translation_domain=DOMAIN,
+            translation_key="remove_failed",
+            translation_placeholders={"error": str(err)},
+        ) from err
+    if not removed:
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="not_in_library",
+            translation_placeholders={"tmdb_id": str(tmdb_id)},
+        )
+    return {"tmdb_id": tmdb_id, "media_type": media_type}
+
+
 async def async_request_media(
     client: JellyseerrClient,
     media_type: str,

@@ -26,6 +26,11 @@ export function statusLabel(status: MediaStatus): string | null {
   }
 }
 
+/** Titles Radarr/Sonarr hold (or are fetching), so Remove has something to delete. */
+export function isRemovable(status: MediaStatus): boolean {
+  return status === "available" || status === "partially_available" || status === "processing";
+}
+
 /** Seasons that can still be requested: the default selection in the picker. */
 export function requestableSeasons(seasons: readonly Season[]): number[] {
   return seasons.filter((s) => isRequestable(s.status)).map((s) => s.season_number);

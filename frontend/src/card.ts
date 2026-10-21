@@ -2,7 +2,7 @@
 
 import { LitElement, css, html, nothing, type PropertyValues } from "lit";
 import { errorMessage, toast, type HomeAssistant } from "./ha";
-import { Latest, canRequestMore, isRequestable, requestableSeasons, statusLabel } from "./logic";
+import { Latest, canRequestMore, isRemovable, isRequestable, requestableSeasons, statusLabel } from "./logic";
 import type { Browse, CardConfig, MediaFilter, SearchResult, Season } from "./types";
 
 export const CARD_VERSION = __CARD_VERSION__;
@@ -43,6 +43,8 @@ export class JellyseerrSearchCard extends LitElement {
     _chosen: { state: true },
     _is4k: { state: true },
     _requesting: { state: true },
+    _confirmRemove: { state: true },
+    _removing: { state: true },
     _staleVersion: { state: true },
   };
 
@@ -62,6 +64,8 @@ export class JellyseerrSearchCard extends LitElement {
   declare _chosen: Set<number>;
   declare _is4k: boolean;
   declare _requesting: boolean;
+  declare _confirmRemove: boolean;
+  declare _removing: boolean;
   declare _staleVersion?: string;
 
   private _debounce?: ReturnType<typeof setTimeout>;
@@ -81,6 +85,8 @@ export class JellyseerrSearchCard extends LitElement {
     this._chosen = new Set();
     this._is4k = false;
     this._requesting = false;
+    this._confirmRemove = false;
+    this._removing = false;
   }
 
   static getConfigForm() {
@@ -102,6 +108,7 @@ export class JellyseerrSearchCard extends LitElement {
         },
         { name: "show_trending", selector: { boolean: {} } },
         { name: "show_4k", selector: { boolean: {} } },
+        { name: "show_remove", selector: { boolean: {} } },
         { name: "config_entry_id", selector: { config_entry: { integration: DOMAIN } } },
       ],
       computeLabel: (field: { name: string }) =>
@@ -110,6 +117,7 @@ export class JellyseerrSearchCard extends LitElement {
           media_type: "Default filter",
           show_trending: "Show trending and popular titles before searching",
           show_4k: "Offer 4K requests",
+          show_remove: "Offer Remove (deletes the files from Radarr/Sonarr)",
           config_entry_id: "Jellyseerr server (only if you have several)",
         })[field.name],
     };
@@ -280,6 +288,7 @@ export class JellyseerrSearchCard extends LitElement {
     this._seasonsError = undefined;
     this._chosen = new Set();
     this._is4k = false;
+    this._confirmRemove = false;
     if (result.media_type === "tv") void this._loadSeasons(result.tmdb_id);
   }
 
@@ -333,6 +342,44 @@ export class JellyseerrSearchCard extends LitElement {
       toast(this, `Request failed: ${errorMessage(err)}`);
     } finally {
       this._requesting = false;
+    }
+  }
+
+  /** First tap arms the button; the second, on "Delete files", removes. */
+  private async _remove(): Promise<void> {
+    const item = this._selected;
+    if (!item || this._removing) return;
+    if (!this._confirmRemove) {
+      this._confirmRemove = true;
+      return;
+    }
+    this._removing = true;
+    try {
+      await this.hass.callWS({
+        type: `${DOMAIN}/remove`,
+        tmdb_id: item.tmdb_id,
+        media_type: item.media_type,
+        ...this._entry(),
+      });
+      toast(this, `Removed ${item.title}`);
+      this._setStatus(item, "deleted");
+    } catch (err) {
+      toast(this, `Remove failed: ${errorMessage(err)}`);
+    } finally {
+      this._removing = false;
+      this._confirmRemove = false;
+    }
+  }
+
+  private _setStatus(item: SearchResult, status: SearchResult["status"]): void {
+    const updated = { ...item, status };
+    const swap = (list?: SearchResult[]) =>
+      list?.map((r) => (r.tmdb_id === item.tmdb_id && r.media_type === item.media_type ? updated : r));
+    this._results = swap(this._results);
+    this._browseResults = swap(this._browseResults);
+    if (this._selected === item) this._selected = updated;
+    if (this._seasons && status === "deleted") {
+      this._seasons = this._seasons.map((s) => ({ ...s, status: "deleted" }));
     }
   }
 
@@ -501,6 +548,28 @@ export class JellyseerrSearchCard extends LitElement {
           : nothing}
         <button class="primary" ?disabled=${!canRequest || this._requesting} @click=${this._request}>
           ${this._requesting ? "Requesting…" : canRequest ? "Request" : label ?? "Unavailable"}
+        </button>
+        ${this._config.show_remove && isRemovable(item.status) ? this._renderRemove(item) : nothing}
+      </div>
+    `;
+  }
+
+  private _renderRemove(item: SearchResult) {
+    const what = item.media_type === "tv" ? "the whole show" : "this movie";
+    if (!this._confirmRemove) {
+      return html`<button class="danger" @click=${this._remove}>Remove…</button>`;
+    }
+    return html`
+      <div class="confirm" role="alert">
+        Delete ${what} and its files from ${item.media_type === "tv" ? "Sonarr" : "Radarr"}? This can't be
+        undone.
+      </div>
+      <div class="confirm-row">
+        <button class="secondary" ?disabled=${this._removing} @click=${() => (this._confirmRemove = false)}>
+          Cancel
+        </button>
+        <button class="danger solid" ?disabled=${this._removing} @click=${this._remove}>
+          ${this._removing ? "Removing…" : "Delete files"}
         </button>
       </div>
     `;
@@ -812,6 +881,39 @@ export class JellyseerrSearchCard extends LitElement {
       background: var(--primary-color);
       color: var(--text-primary-color, #fff);
       font-weight: 500;
+    }
+    .danger,
+    .secondary {
+      height: 44px;
+      border-radius: 22px;
+      font-weight: 500;
+      background: none;
+    }
+    .danger {
+      border: 1px solid var(--error-color, #db4437);
+      color: var(--error-color, #db4437);
+    }
+    .danger.solid {
+      background: var(--error-color, #db4437);
+      color: #fff;
+    }
+    .secondary {
+      border: 1px solid var(--divider-color);
+      color: var(--primary-text-color);
+    }
+    .confirm {
+      color: var(--error-color, #db4437);
+      line-height: 1.4;
+    }
+    .confirm-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--js-gap);
+    }
+    .danger[disabled],
+    .secondary[disabled] {
+      opacity: 0.6;
+      cursor: default;
     }
     .primary[disabled] {
       background: var(--disabled-color, #bdbdbd);

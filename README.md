@@ -28,6 +28,7 @@ title: Request movies & TV
 media_type: all      # default filter: all | movie | tv
 show_4k: false       # offer a 4K toggle (needs 4K Radarr/Sonarr in Jellyseerr)
 show_trending: true  # trending / popular titles while the search box is empty
+show_remove: false   # a Remove button on titles you have; deletes the files (asks first)
 ```
 
 If your dashboards are in YAML mode, add `/jellyseerr_search/jellyseerr-search-card.js`

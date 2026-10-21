@@ -131,6 +131,18 @@ class JellyseerrClient:
             if season.get("seasonNumber", 0) > 0
         ]
 
+    async def async_remove(self, media_type: str, tmdb_id: int) -> bool:
+        """Delete a movie or a whole show from Radarr/Sonarr, files included, the
+        way Jellyseerr's "Remove from Radarr/Sonarr" button does. Jellyseerr then
+        marks it deleted, so it can be requested again. False if Jellyseerr has
+        no record of it."""
+        data = await self._request("GET", f"/{media_type}/{tmdb_id}")
+        media_id = (data.get("mediaInfo") or {}).get("id")
+        if not media_id:
+            return False
+        await self._request("DELETE", f"/media/{media_id}/file", params={"is4k": "false"})
+        return True
+
     async def async_request(
         self,
         media_type: str,

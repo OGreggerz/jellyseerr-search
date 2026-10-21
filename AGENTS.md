@@ -14,9 +14,9 @@ here follow it. The user commits changes themselves.
   `/request/count` for the sensors.
 - **Actions and WebSocket commands share one code path**:
   `services.resolve_client` / `async_search_media` / `async_trending_media` /
-  `async_popular_media` / `async_request_media` / `async_tv_seasons`. The card
-  uses the WS commands (`jellyseerr_search/search`, `/trending`, `/popular`,
-  `/seasons`, `/request`, `/version`); automations use the actions.
+  `async_popular_media` / `async_request_media` / `async_remove_media` /
+  `async_tv_seasons`. The card uses the WS commands (`jellyseerr_search/search`,
+  `/trending`, `/popular`, `/seasons`, `/request`, `/remove`, `/version`); automations use the actions.
 - Query strings are encoded like `encodeURIComponent` (`%20`, not `+`);
   Jellyseerr rejects anything else. A test pins this.
 - Services, WS commands and card serving are registered in `async_setup`

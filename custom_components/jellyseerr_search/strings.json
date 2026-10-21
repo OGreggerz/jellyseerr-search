@@ -57,6 +57,12 @@
     "request_failed": {
       "message": "Jellyseerr did not accept the request: {error}"
     },
+    "remove_failed": {
+      "message": "Jellyseerr could not remove it: {error}"
+    },
+    "not_in_library": {
+      "message": "Jellyseerr has no record of TMDB ID {tmdb_id}, so there is nothing to remove."
+    },
     "no_results": {
       "message": "Jellyseerr found no movie or show matching \"{query}\"."
     }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Latest, canRequestMore, isRequestable, requestableSeasons, statusLabel } from "../src/logic";
+import { Latest, canRequestMore, isRemovable, isRequestable, requestableSeasons, statusLabel } from "../src/logic";
 import type { Season } from "../src/types";
 
 const season = (n: number, status: Season["status"]): Season => ({
@@ -43,5 +43,16 @@ describe("Latest", () => {
     const second = latest.next();
     expect(first()).toBe(false);
     expect(second()).toBe(true);
+  });
+});
+
+describe("remove", () => {
+  it("is offered only for titles Radarr/Sonarr hold", () => {
+    expect(isRemovable("available")).toBe(true);
+    expect(isRemovable("partially_available")).toBe(true);
+    expect(isRemovable("processing")).toBe(true);
+    for (const s of ["not_requested", "pending", "deleted", "unknown", "blacklisted"] as const) {
+      expect(isRemovable(s)).toBe(false);
+    }
   });
 });
