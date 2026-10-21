@@ -1,4 +1,4 @@
-//#region node_modules/@lit/reactive-element/css-tag.js
+//#region ../../src/frontend/node_modules/@lit/reactive-element/css-tag.js
 var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, n = Symbol(), r = /* @__PURE__ */ new WeakMap(), i = class {
 	constructor(e, t, r) {
 		if (this._$cssResult$ = !0, r !== n) throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");
@@ -253,7 +253,7 @@ var v = class extends HTMLElement {
 };
 v.elementStyles = [], v.shadowRootOptions = { mode: "open" }, v[m("elementProperties")] = /* @__PURE__ */ new Map(), v[m("finalized")] = /* @__PURE__ */ new Map(), ie?.({ ReactiveElement: v }), (f.reactiveElementVersions ??= []).push("2.1.2");
 //#endregion
-//#region node_modules/lit-html/lit-html.js
+//#region ../../src/frontend/node_modules/lit-html/lit-html.js
 var y = globalThis, ae = (e) => e, b = y.trustedTypes, x = b ? b.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, oe = "$lit$", S = `lit$${Math.random().toFixed(9).slice(2)}$`, C = "?" + S, se = `<${C}>`, w = document, T = () => w.createComment(""), E = (e) => e === null || typeof e != "object" && typeof e != "function", D = Array.isArray, ce = (e) => D(e) || typeof e?.[Symbol.iterator] == "function", O = "[ 	\n\f\r]", k = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, A = /-->/g, le = />/g, j = RegExp(`>|${O}(?:([^\\s"'>=/]+)(${O}*=${O}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), ue = /'/g, de = /"/g, fe = /^(?:script|style|textarea|title)$/i, M = ((e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
@@ -557,7 +557,7 @@ var Y = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, X, Te = "0.2.0", Z = "jellyseerr_search", Ee = 400, Q = 2, De = 36e5, Oe = !1, ke = [
+}, X, Te = "0.3.0", Z = "jellyseerr_search", Ee = 400, Q = 2, De = 36e5, Oe = !1, ke = [
 	{
 		value: "all",
 		label: "All"
@@ -570,9 +570,17 @@ var Y = class {
 		value: "tv",
 		label: "TV"
 	}
-], $ = class extends U {
+], Ae = [{
+	value: "trending",
+	label: "Trending",
+	heading: "Trending today"
+}, {
+	value: "popular",
+	label: "Popular",
+	heading: "Popular"
+}], $ = class extends U {
 	constructor() {
-		super(), this._latestSearch = new Y(), this._latestSeasons = new Y(), this._latestTrending = new Y(), this._trendingAt = 0, this._query = "", this._filter = "all", this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1;
+		super(), this._latestSearch = new Y(), this._latestSeasons = new Y(), this._latestBrowse = new Y(), this._browseAt = 0, this._query = "", this._filter = "all", this._browse = "trending", this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1;
 	}
 	static getConfigForm() {
 		return {
@@ -617,7 +625,7 @@ var Y = class {
 			computeLabel: (e) => ({
 				title: "Title",
 				media_type: "Default filter",
-				show_trending: "Show trending titles before searching",
+				show_trending: "Show trending and popular titles before searching",
 				show_4k: "Offer 4K requests",
 				config_entry_id: "Jellyseerr server (only if you have several)"
 			})[e.name]
@@ -632,7 +640,7 @@ var Y = class {
 		this._config = e, this._filter = e.media_type ?? "all";
 	}
 	getCardSize() {
-		return this._results?.length || this._showTrending() && this._trending?.length ? 8 : 2;
+		return this._results?.length || this._showBrowse() && this._browseResults?.length ? 8 : 2;
 	}
 	getGridOptions() {
 		return {
@@ -645,12 +653,12 @@ var Y = class {
 		super.disconnectedCallback(), clearTimeout(this._debounce);
 	}
 	updated(e) {
-		e.has("hass") && this.hass && !Oe && (Oe = !0, this._checkVersion()), e.has("hass") && this.hass && this._trendingDue() && this._loadTrending();
+		e.has("hass") && this.hass && !Oe && (Oe = !0, this._checkVersion()), e.has("hass") && this.hass && this._browseDue() && this._loadBrowse();
 	}
 	async _checkVersion() {
 		try {
 			let { version: e } = await this.hass.callWS({ type: `${Z}/version` });
-			e !== "0.2.0" && (this._staleVersion = e);
+			e !== "0.3.0" && (this._staleVersion = e);
 		} catch {}
 	}
 	async _reload() {
@@ -663,25 +671,28 @@ var Y = class {
 	_entry() {
 		return this._config.config_entry_id ? { config_entry_id: this._config.config_entry_id } : {};
 	}
-	_showTrending() {
+	_showBrowse() {
 		return this._config.show_trending !== !1 && this._query.trim().length < Q;
 	}
-	_trendingDue() {
-		return !this._showTrending() || this._selected ? !1 : this._trendingFilter !== this._filter || Date.now() - this._trendingAt > De;
+	_browseDue() {
+		return !this._showBrowse() || this._selected ? !1 : this._browseKey !== `${this._browse}/${this._filter}` || Date.now() - this._browseAt > De;
 	}
-	async _loadTrending() {
-		let e = this._latestTrending.next(), t = this._filter;
-		this._trendingFilter = t, this._trendingAt = Date.now(), this._trendingError = void 0;
+	async _loadBrowse() {
+		let e = this._latestBrowse.next(), t = `${this._browse}/${this._filter}`;
+		this._browseKey !== t && (this._browseResults = void 0), this._browseKey = t, this._browseAt = Date.now(), this._browseError = void 0;
 		try {
-			let { results: n } = await this.hass.callWS({
-				type: `${Z}/trending`,
-				media_type: t,
+			let { results: t } = await this.hass.callWS({
+				type: `${Z}/${this._browse}`,
+				media_type: this._filter,
 				...this._entry()
 			});
-			e() && (this._trending = n);
+			e() && (this._browseResults = t);
 		} catch (t) {
-			e() && (this._trendingError = G(t));
+			e() && (this._browseError = G(t));
 		}
+	}
+	_setBrowse(e) {
+		e !== this._browse && (this._browse = e, this._browseDue() && this._loadBrowse());
 	}
 	_onInput(e) {
 		this._query = e.target.value, clearTimeout(this._debounce), this._debounce = setTimeout(() => void this._search(), Ee);
@@ -693,7 +704,7 @@ var Y = class {
 		clearTimeout(this._debounce), this._latestSearch.next(), this._query = "", this._results = void 0, this._error = void 0, this._loading = !1, this._selected = void 0;
 	}
 	_setFilter(e) {
-		e !== this._filter && (this._filter = e, this._query.trim().length >= Q ? this._search() : this._trendingDue() && this._loadTrending());
+		e !== this._filter && (this._filter = e, this._query.trim().length >= Q ? this._search() : this._browseDue() && this._loadBrowse());
 	}
 	async _search() {
 		let e = this._query.trim();
@@ -767,7 +778,7 @@ var Y = class {
 			...e,
 			status: t
 		}, r = (t) => t?.map((t) => t.tmdb_id === e.tmdb_id && t.media_type === e.media_type ? n : t);
-		this._results = r(this._results), this._trending = r(this._trending), this._selected === e && (this._selected = n), this._seasons && (this._seasons = this._seasons.map((e) => this._chosen.has(e.season_number) ? {
+		this._results = r(this._results), this._browseResults = r(this._browseResults), this._selected === e && (this._selected = n), this._seasons && (this._seasons = this._seasons.map((e) => this._chosen.has(e.season_number) ? {
 			...e,
 			status: "pending"
 		} : e), this._chosen = /* @__PURE__ */ new Set());
@@ -817,17 +828,30 @@ var Y = class {
     `;
 	}
 	_renderResults() {
-		return this._showTrending() ? this._renderTrending() : this._error ? M`<div class="message error">${this._error}</div>` : this._loading && !this._results ? M`<div class="message">Searching…</div>` : this._results ? this._results.length ? M`
+		return this._showBrowse() ? this._renderBrowse() : this._error ? M`<div class="message error">${this._error}</div>` : this._loading && !this._results ? M`<div class="message">Searching…</div>` : this._results ? this._results.length ? M`
       <div class="grid ${this._loading ? "busy" : ""}">
         ${this._results.map((e) => this._renderTile(e))}
       </div>
     ` : M`<div class="message">No movies or shows found.</div>` : P;
 	}
-	_renderTrending() {
-		return this._trendingError ? M`<div class="message error">Couldn't load trending (${this._trendingError}).</div>` : this._trending ? this._trending.length ? M`
-      <div class="section">Trending today</div>
-      <div class="grid">${this._trending.map((e) => this._renderTile(e))}</div>
-    ` : P : M`<div class="message">Loading trending…</div>`;
+	_renderBrowse() {
+		let e = Ae.find((e) => e.value === this._browse).heading, t;
+		return t = this._browseError ? M`<div class="message error">Couldn't load ${e.toLowerCase()} (${this._browseError}).</div>` : this._browseResults ? this._browseResults.length ? M`<div class="grid">${this._browseResults.map((e) => this._renderTile(e))}</div>` : M`<div class="message">Nothing to show.</div>` : M`<div class="message">Loading…</div>`, M`
+      <div class="section">
+        <span>${e}</span>
+        <div class="chips small" role="radiogroup" aria-label="Browse">
+          ${Ae.map((e) => M`<button
+              class="chip ${e.value === this._browse ? "on" : ""}"
+              role="radio"
+              aria-checked=${e.value === this._browse}
+              @click=${() => this._setBrowse(e.value)}
+            >
+              ${e.label}
+            </button>`)}
+        </div>
+      </div>
+      ${t}
+    `;
 	}
 	_renderTile(e) {
 		let t = q(e.status);
@@ -908,8 +932,9 @@ X = $, X.properties = {
 	_query: { state: !0 },
 	_filter: { state: !0 },
 	_results: { state: !0 },
-	_trending: { state: !0 },
-	_trendingError: { state: !0 },
+	_browse: { state: !0 },
+	_browseResults: { state: !0 },
+	_browseError: { state: !0 },
 	_loading: { state: !0 },
 	_error: { state: !0 },
 	_selected: { state: !0 },
@@ -997,9 +1022,20 @@ X = $, X.properties = {
       color: var(--error-color);
     }
     .section {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
       padding: var(--js-gap) var(--js-gap) 0;
       font-weight: 500;
       color: var(--secondary-text-color);
+    }
+    .chips.small {
+      padding: 0;
+    }
+    .chips.small .chip {
+      padding: 3px 10px;
+      font-size: 13px;
     }
     .grid {
       display: grid;

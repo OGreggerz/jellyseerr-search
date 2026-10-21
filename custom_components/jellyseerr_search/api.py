@@ -9,6 +9,7 @@ import aiohttp
 from yarl import URL
 
 from .const import (
+    MEDIA_MOVIE,
     MEDIA_STATUS,
     MEDIA_TYPES,
     REQUEST_TIMEOUT,
@@ -90,6 +91,17 @@ class JellyseerrClient:
         data = await self._request(
             "GET", "/discover/trending", params={"mediaType": media_type, "page": page}
         )
+        return [
+            normalize_result(item)
+            for item in data.get("results", [])
+            if item.get("mediaType") in MEDIA_TYPES
+        ]
+
+    async def async_popular(self, media_type: str, page: int = 1) -> list[dict[str, Any]]:
+        """Popular movies or shows (TMDB discover, by popularity), normalized.
+        Jellyseerr has no combined list, so `media_type` is movie or tv."""
+        path = "/discover/movies" if media_type == MEDIA_MOVIE else "/discover/tv"
+        data = await self._request("GET", path, params={"page": page})
         return [
             normalize_result(item)
             for item in data.get("results", [])

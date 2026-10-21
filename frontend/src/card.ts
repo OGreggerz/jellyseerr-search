@@ -3,14 +3,14 @@
 import { LitElement, css, html, nothing, type PropertyValues } from "lit";
 import { errorMessage, toast, type HomeAssistant } from "./ha";
 import { Latest, canRequestMore, isRequestable, requestableSeasons, statusLabel } from "./logic";
-import type { CardConfig, MediaFilter, SearchResult, Season } from "./types";
+import type { Browse, CardConfig, MediaFilter, SearchResult, Season } from "./types";
 
 export const CARD_VERSION = __CARD_VERSION__;
 const DOMAIN = "jellyseerr_search";
 const DEBOUNCE_MS = 400;
 const MIN_QUERY = 2;
-// A wall-mounted tablet keeps the card open for days; refetch trending after this.
-const TRENDING_TTL_MS = 60 * 60 * 1000;
+// A wall-mounted tablet keeps the card open for days; refetch the browse list after this.
+const BROWSE_TTL_MS = 60 * 60 * 1000;
 
 let versionChecked = false;
 
@@ -20,6 +20,11 @@ const FILTERS: Array<{ value: MediaFilter; label: string }> = [
   { value: "tv", label: "TV" },
 ];
 
+const BROWSE: Array<{ value: Browse; label: string; heading: string }> = [
+  { value: "trending", label: "Trending", heading: "Trending today" },
+  { value: "popular", label: "Popular", heading: "Popular" },
+];
+
 export class JellyseerrSearchCard extends LitElement {
   static override properties = {
     hass: { attribute: false },
@@ -27,8 +32,9 @@ export class JellyseerrSearchCard extends LitElement {
     _query: { state: true },
     _filter: { state: true },
     _results: { state: true },
-    _trending: { state: true },
-    _trendingError: { state: true },
+    _browse: { state: true },
+    _browseResults: { state: true },
+    _browseError: { state: true },
     _loading: { state: true },
     _error: { state: true },
     _selected: { state: true },
@@ -45,8 +51,9 @@ export class JellyseerrSearchCard extends LitElement {
   declare _query: string;
   declare _filter: MediaFilter;
   declare _results?: SearchResult[];
-  declare _trending?: SearchResult[];
-  declare _trendingError?: string;
+  declare _browse: Browse;
+  declare _browseResults?: SearchResult[];
+  declare _browseError?: string;
   declare _loading: boolean;
   declare _error?: string;
   declare _selected?: SearchResult;
@@ -60,14 +67,16 @@ export class JellyseerrSearchCard extends LitElement {
   private _debounce?: ReturnType<typeof setTimeout>;
   private _latestSearch = new Latest();
   private _latestSeasons = new Latest();
-  private _latestTrending = new Latest();
-  private _trendingAt = 0;
-  private _trendingFilter?: MediaFilter;
+  private _latestBrowse = new Latest();
+  private _browseAt = 0;
+  /** What _browseResults were loaded for, as `${browse}/${filter}`. */
+  private _browseKey?: string;
 
   constructor() {
     super();
     this._query = "";
     this._filter = "all";
+    this._browse = "trending";
     this._loading = false;
     this._chosen = new Set();
     this._is4k = false;
@@ -99,7 +108,7 @@ export class JellyseerrSearchCard extends LitElement {
         ({
           title: "Title",
           media_type: "Default filter",
-          show_trending: "Show trending titles before searching",
+          show_trending: "Show trending and popular titles before searching",
           show_4k: "Offer 4K requests",
           config_entry_id: "Jellyseerr server (only if you have several)",
         })[field.name],
@@ -120,7 +129,7 @@ export class JellyseerrSearchCard extends LitElement {
   }
 
   getCardSize(): number {
-    return this._results?.length || (this._showTrending() && this._trending?.length) ? 8 : 2;
+    return this._results?.length || (this._showBrowse() && this._browseResults?.length) ? 8 : 2;
   }
 
   getGridOptions() {
@@ -137,7 +146,7 @@ export class JellyseerrSearchCard extends LitElement {
       versionChecked = true;
       void this._checkVersion();
     }
-    if (changed.has("hass") && this.hass && this._trendingDue()) void this._loadTrending();
+    if (changed.has("hass") && this.hass && this._browseDue()) void this._loadBrowse();
   }
 
   /** A cached old card talking to a newer backend: offer a cache-clearing reload. */
@@ -164,36 +173,43 @@ export class JellyseerrSearchCard extends LitElement {
     return this._config.config_entry_id ? { config_entry_id: this._config.config_entry_id } : {};
   }
 
-  // --- trending -----------------------------------------------------------
+  // --- trending / popular -------------------------------------------------
 
-  private _showTrending(): boolean {
+  private _showBrowse(): boolean {
     return this._config.show_trending !== false && this._query.trim().length < MIN_QUERY;
   }
 
-  /** Missing, for another filter, or older than the TTL, and on screen. */
-  private _trendingDue(): boolean {
-    if (!this._showTrending() || this._selected) return false;
-    if (this._trendingFilter !== this._filter) return true;
-    return Date.now() - this._trendingAt > TRENDING_TTL_MS;
+  /** Missing, for another list or filter, or older than the TTL, and on screen. */
+  private _browseDue(): boolean {
+    if (!this._showBrowse() || this._selected) return false;
+    if (this._browseKey !== `${this._browse}/${this._filter}`) return true;
+    return Date.now() - this._browseAt > BROWSE_TTL_MS;
   }
 
-  private async _loadTrending(): Promise<void> {
-    const current = this._latestTrending.next();
-    const filter = this._filter;
+  private async _loadBrowse(): Promise<void> {
+    const current = this._latestBrowse.next();
+    const key = `${this._browse}/${this._filter}`;
+    if (this._browseKey !== key) this._browseResults = undefined;
     // Set before the call so the frequent hass updates don't refetch meanwhile.
-    this._trendingFilter = filter;
-    this._trendingAt = Date.now();
-    this._trendingError = undefined;
+    this._browseKey = key;
+    this._browseAt = Date.now();
+    this._browseError = undefined;
     try {
       const { results } = await this.hass.callWS<{ results: SearchResult[] }>({
-        type: `${DOMAIN}/trending`,
-        media_type: filter,
+        type: `${DOMAIN}/${this._browse}`,
+        media_type: this._filter,
         ...this._entry(),
       });
-      if (current()) this._trending = results;
+      if (current()) this._browseResults = results;
     } catch (err) {
-      if (current()) this._trendingError = errorMessage(err);
+      if (current()) this._browseError = errorMessage(err);
     }
+  }
+
+  private _setBrowse(browse: Browse): void {
+    if (browse === this._browse) return;
+    this._browse = browse;
+    if (this._browseDue()) void this._loadBrowse();
   }
 
   // --- search -------------------------------------------------------------
@@ -225,7 +241,7 @@ export class JellyseerrSearchCard extends LitElement {
     if (filter === this._filter) return;
     this._filter = filter;
     if (this._query.trim().length >= MIN_QUERY) void this._search();
-    else if (this._trendingDue()) void this._loadTrending();
+    else if (this._browseDue()) void this._loadBrowse();
   }
 
   private async _search(): Promise<void> {
@@ -327,7 +343,7 @@ export class JellyseerrSearchCard extends LitElement {
     const swap = (list?: SearchResult[]) =>
       list?.map((r) => (r.tmdb_id === item.tmdb_id && r.media_type === item.media_type ? updated : r));
     this._results = swap(this._results);
-    this._trending = swap(this._trending);
+    this._browseResults = swap(this._browseResults);
     if (this._selected === item) this._selected = updated;
     if (this._seasons) {
       this._seasons = this._seasons.map((s) =>
@@ -393,7 +409,7 @@ export class JellyseerrSearchCard extends LitElement {
   }
 
   private _renderResults() {
-    if (this._showTrending()) return this._renderTrending();
+    if (this._showBrowse()) return this._renderBrowse();
     if (this._error) return html`<div class="message error">${this._error}</div>`;
     if (this._loading && !this._results) return html`<div class="message">Searching…</div>`;
     if (!this._results) return nothing;
@@ -405,15 +421,35 @@ export class JellyseerrSearchCard extends LitElement {
     `;
   }
 
-  private _renderTrending() {
-    if (this._trendingError) {
-      return html`<div class="message error">Couldn't load trending (${this._trendingError}).</div>`;
+  private _renderBrowse() {
+    const heading = BROWSE.find((b) => b.value === this._browse)!.heading;
+    let body;
+    if (this._browseError) {
+      body = html`<div class="message error">Couldn't load ${heading.toLowerCase()} (${this._browseError}).</div>`;
+    } else if (!this._browseResults) {
+      body = html`<div class="message">Loading…</div>`;
+    } else if (!this._browseResults.length) {
+      body = html`<div class="message">Nothing to show.</div>`;
+    } else {
+      body = html`<div class="grid">${this._browseResults.map((r) => this._renderTile(r))}</div>`;
     }
-    if (!this._trending) return html`<div class="message">Loading trending…</div>`;
-    if (!this._trending.length) return nothing;
     return html`
-      <div class="section">Trending today</div>
-      <div class="grid">${this._trending.map((r) => this._renderTile(r))}</div>
+      <div class="section">
+        <span>${heading}</span>
+        <div class="chips small" role="radiogroup" aria-label="Browse">
+          ${BROWSE.map(
+            (b) => html`<button
+              class="chip ${b.value === this._browse ? "on" : ""}"
+              role="radio"
+              aria-checked=${b.value === this._browse}
+              @click=${() => this._setBrowse(b.value)}
+            >
+              ${b.label}
+            </button>`,
+          )}
+        </div>
+      </div>
+      ${body}
     `;
   }
 
@@ -583,9 +619,20 @@ export class JellyseerrSearchCard extends LitElement {
       color: var(--error-color);
     }
     .section {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
       padding: var(--js-gap) var(--js-gap) 0;
       font-weight: 500;
       color: var(--secondary-text-color);
+    }
+    .chips.small {
+      padding: 0;
+    }
+    .chips.small .chip {
+      padding: 3px 10px;
+      font-size: 13px;
     }
     .grid {
       display: grid;

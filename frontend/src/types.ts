@@ -1,5 +1,7 @@
 export type MediaType = "movie" | "tv";
 export type MediaFilter = MediaType | "all";
+/** What the card lists while the search box is empty. */
+export type Browse = "trending" | "popular";
 
 export type MediaStatus =
   | "not_requested"
@@ -35,6 +37,6 @@ export interface CardConfig {
   media_type?: MediaFilter;
   config_entry_id?: string;
   show_4k?: boolean;
-  /** Trending titles while the search box is empty. Default on. */
+  /** Trending / popular titles while the search box is empty. Default on. */
   show_trending?: boolean;
 }
