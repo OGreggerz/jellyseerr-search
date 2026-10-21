@@ -17,7 +17,8 @@ from Jellyseerr → Settings → General.
 **Search card**: the integration adds `custom:jellyseerr-search-card` to your
 dashboard resources automatically (storage-mode dashboards). Add it from
 *Add card → Jellyseerr Search*. Before you type it shows what's trending today, or
-what's popular (switch on the heading; follows the All / Movies / TV filter). Type a title, tap a poster, pick seasons for
+what's popular (switch on the heading; follows the All / Movies / TV filter). Popular
+TV leaves out shows with fewer than 500 TMDB votes, which are mostly daily news and soaps. Type a title, tap a poster, pick seasons for
 shows, and tap **Request**. Posters show whether a title is already requested
 or available.
 

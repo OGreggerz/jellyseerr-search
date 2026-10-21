@@ -11,6 +11,7 @@ from yarl import URL
 from .const import (
     MEDIA_MOVIE,
     MEDIA_STATUS,
+    POPULAR_TV_MIN_VOTES,
     MEDIA_TYPES,
     REQUEST_TIMEOUT,
     STATUS_NOT_REQUESTED,
@@ -99,9 +100,13 @@ class JellyseerrClient:
 
     async def async_popular(self, media_type: str, page: int = 1) -> list[dict[str, Any]]:
         """Popular movies or shows (TMDB discover, by popularity), normalized.
-        Jellyseerr has no combined list, so `media_type` is movie or tv."""
-        path = "/discover/movies" if media_type == MEDIA_MOVIE else "/discover/tv"
-        data = await self._request("GET", path, params={"page": page})
+        Jellyseerr has no combined list, so `media_type` is movie or tv. Shows
+        need POPULAR_TV_MIN_VOTES votes."""
+        if media_type == MEDIA_MOVIE:
+            path, params = "/discover/movies", {"page": page}
+        else:
+            path, params = "/discover/tv", {"page": page, "voteCountGte": POPULAR_TV_MIN_VOTES}
+        data = await self._request("GET", path, params=params)
         return [
             normalize_result(item)
             for item in data.get("results", [])

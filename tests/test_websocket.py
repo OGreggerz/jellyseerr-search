@@ -118,5 +118,8 @@ async def test_popular_one_type(hass: HomeAssistant, entry, aioclient_mock, hass
     msg = await ws.receive_json()
     assert [r["tmdb_id"] for r in msg["result"]["results"]] == [3]
     # Only the TV list is fetched (other calls are the sensors' /request/count).
-    paths = [call[1].path for call in aioclient_mock.mock_calls]
-    assert "/api/v1/discover/tv" in paths and "/api/v1/discover/movies" not in paths
+    urls = [call[1] for call in aioclient_mock.mock_calls]
+    tv = [url for url in urls if url.path == "/api/v1/discover/tv"]
+    assert tv and not any(url.path == "/api/v1/discover/movies" for url in urls)
+    # Low-vote shows (foreign daily news, soaps) are filtered out by Seerr.
+    assert dict(tv[-1].query) == {"page": "1", "voteCountGte": "500"}

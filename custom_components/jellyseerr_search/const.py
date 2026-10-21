@@ -27,6 +27,12 @@ MEDIA_STATUS: Final = {
     7: "deleted",
 }
 STATUS_NOT_REQUESTED: Final = "not_requested"
+# Popular TV skips shows with fewer TMDB votes than this. TMDB's TV popularity
+# is full of daily news and soaps from every country (a news bulletin with 2
+# votes ranks beside Breaking Bad); 200 still let some through. Movies aren't
+# filtered: unreleased blockbusters have 0 votes and lead the popular list.
+POPULAR_TV_MIN_VOTES: Final = 500
+
 # Statuses a new request makes sense for.
 REQUESTABLE_STATUSES: Final = (STATUS_NOT_REQUESTED, "unknown", "deleted")
 
@@ -38,4 +44,4 @@ REQUEST_COUNT_KEYS: Final = ("pending", "approved", "processing", "available", "
 URL_BASE: Final = f"/{DOMAIN}"
 CARD_FILENAME: Final = "jellyseerr-search-card.js"
 CARD_URL: Final = f"{URL_BASE}/{CARD_FILENAME}"
-CARD_VERSION: Final = "0.3.0"
+CARD_VERSION: Final = "0.3.1"

@@ -557,7 +557,7 @@ var Y = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, X, Te = "0.3.0", Z = "jellyseerr_search", Ee = 400, Q = 2, De = 36e5, Oe = !1, ke = [
+}, X, Te = "0.3.1", Z = "jellyseerr_search", Ee = 400, Q = 2, De = 36e5, Oe = !1, ke = [
 	{
 		value: "all",
 		label: "All"
@@ -658,7 +658,7 @@ var Y = class {
 	async _checkVersion() {
 		try {
 			let { version: e } = await this.hass.callWS({ type: `${Z}/version` });
-			e !== "0.3.0" && (this._staleVersion = e);
+			e !== "0.3.1" && (this._staleVersion = e);
 		} catch {}
 	}
 	async _reload() {
