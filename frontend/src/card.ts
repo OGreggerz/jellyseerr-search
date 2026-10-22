@@ -2,8 +2,19 @@
 
 import { LitElement, css, html, nothing, type PropertyValues } from "lit";
 import { errorMessage, toast, type HomeAssistant } from "./ha";
-import { Latest, canRequestMore, isRemovable, isRequestable, requestableSeasons, statusLabel } from "./logic";
-import type { Browse, CardConfig, MediaFilter, SearchResult, Season } from "./types";
+import {
+  Latest,
+  airDateLabel,
+  canRequestMore,
+  episodeLabel,
+  isPickable,
+  isRemovable,
+  isRequestable,
+  pickableEpisodes,
+  requestableSeasons,
+  statusLabel,
+} from "./logic";
+import type { Browse, CardConfig, MediaFilter, SearchResult, Season, SeasonEpisodes, SonarrShow } from "./types";
 
 export const CARD_VERSION = __CARD_VERSION__;
 const DOMAIN = "jellyseerr_search";
@@ -46,6 +57,12 @@ export class JellyseerrSearchCard extends LitElement {
     _confirmRemove: { state: true },
     _removing: { state: true },
     _staleVersion: { state: true },
+    _picker: { state: true },
+    _episodeSeason: { state: true },
+    _episodes: { state: true },
+    _episodesError: { state: true },
+    _picked: { state: true },
+    _pickerBusy: { state: true },
   };
 
   declare hass: HomeAssistant;
@@ -67,11 +84,23 @@ export class JellyseerrSearchCard extends LitElement {
   declare _confirmRemove: boolean;
   declare _removing: boolean;
   declare _staleVersion?: string;
+  /** Sonarr is set up, so seasons offer "Choose episodes". */
+  declare _picker: boolean;
+  /** The season whose episodes are open, if any. */
+  declare _episodeSeason?: Season;
+  declare _episodes?: SeasonEpisodes;
+  declare _episodesError?: string;
+  declare _picked: Set<number>;
+  declare _pickerBusy: boolean;
 
   private _debounce?: ReturnType<typeof setTimeout>;
   private _latestSearch = new Latest();
   private _latestSeasons = new Latest();
   private _latestBrowse = new Latest();
+  private _latestEpisodes = new Latest();
+  /** A Sonarr series the picker added for the open show; removed again on leaving
+   *  the show unless something was picked (Sonarr checks that too). */
+  private _addedSeries?: number;
   private _browseAt = 0;
   /** What _browseResults were loaded for, as `${browse}/${filter}`. */
   private _browseKey?: string;
@@ -87,6 +116,9 @@ export class JellyseerrSearchCard extends LitElement {
     this._requesting = false;
     this._confirmRemove = false;
     this._removing = false;
+    this._picker = false;
+    this._picked = new Set();
+    this._pickerBusy = false;
   }
 
   static getConfigForm() {
@@ -236,6 +268,7 @@ export class JellyseerrSearchCard extends LitElement {
   }
 
   private _clear(): void {
+    this._leaveShow();
     clearTimeout(this._debounce);
     this._latestSearch.next(); // Anything in flight is now stale.
     this._query = "";
@@ -283,25 +316,29 @@ export class JellyseerrSearchCard extends LitElement {
   // --- detail + request ---------------------------------------------------
 
   private _open(result: SearchResult): void {
+    this._leaveShow();
     this._selected = result;
     this._seasons = undefined;
     this._seasonsError = undefined;
     this._chosen = new Set();
     this._is4k = false;
     this._confirmRemove = false;
+    this._picker = false;
+    this._closeEpisodes();
     if (result.media_type === "tv") void this._loadSeasons(result.tmdb_id);
   }
 
   private async _loadSeasons(tmdbId: number): Promise<void> {
     const current = this._latestSeasons.next();
     try {
-      const { seasons } = await this.hass.callWS<{ seasons: Season[] }>({
+      const { seasons, episode_picker } = await this.hass.callWS<{ seasons: Season[]; episode_picker?: boolean }>({
         type: `${DOMAIN}/seasons`,
         tmdb_id: tmdbId,
         ...this._entry(),
       });
       if (!current()) return;
       this._seasons = seasons;
+      this._picker = !!episode_picker;
       this._chosen = new Set(requestableSeasons(seasons));
     } catch (err) {
       if (current()) this._seasonsError = errorMessage(err);
@@ -400,6 +437,116 @@ export class JellyseerrSearchCard extends LitElement {
     }
   }
 
+  // --- episode picker (Sonarr) --------------------------------------------
+
+  private _openEpisodes(season: Season, ev: Event): void {
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (!this._selected) return;
+    this._episodeSeason = season;
+    this._episodes = undefined;
+    this._episodesError = undefined;
+    this._picked = new Set();
+    void this._loadEpisodes(this._selected.tmdb_id, season.season_number);
+  }
+
+  private async _loadEpisodes(tmdbId: number, seasonNumber: number): Promise<void> {
+    const current = this._latestEpisodes.next();
+    try {
+      const result = await this.hass.callWS<SeasonEpisodes>({
+        type: `${DOMAIN}/episodes`,
+        tmdb_id: tmdbId,
+        season_number: seasonNumber,
+        ...this._entry(),
+      });
+      if (result.added) this._addedSeries = result.series_id;
+      if (!current()) return;
+      this._episodes = result;
+    } catch (err) {
+      if (current()) this._episodesError = errorMessage(err);
+    }
+  }
+
+  private _closeEpisodes(): void {
+    this._latestEpisodes.next();
+    this._episodeSeason = undefined;
+    this._episodes = undefined;
+    this._episodesError = undefined;
+    this._picked = new Set();
+  }
+
+  /** Leaving a show: drop a Sonarr series the picker added if nothing was picked. */
+  private _leaveShow(): void {
+    const seriesId = this._addedSeries;
+    this._addedSeries = undefined;
+    if (seriesId === undefined || !this.hass) return;
+    this.hass
+      .callWS({ type: `${DOMAIN}/episodes/discard`, series_id: seriesId, ...this._entry() })
+      .catch(() => undefined); // Left in Sonarr, unmonitored: harmless.
+  }
+
+  private _back(): void {
+    this._leaveShow();
+    this._closeEpisodes();
+    this._selected = undefined;
+  }
+
+  private _togglePick(id: number): void {
+    const picked = new Set(this._picked);
+    picked.has(id) ? picked.delete(id) : picked.add(id);
+    this._picked = picked;
+  }
+
+  private _toggleAllPicks(): void {
+    const all = pickableEpisodes(this._episodes?.episodes ?? []);
+    this._picked = this._picked.size === all.length ? new Set() : new Set(all);
+  }
+
+  private async _download(): Promise<void> {
+    const list = this._episodes;
+    if (!list || !this._picked.size || this._pickerBusy || !this._selected) return;
+    const ids = [...this._picked];
+    this._pickerBusy = true;
+    try {
+      await this.hass.callWS({
+        type: `${DOMAIN}/episodes/download`,
+        series_id: list.series_id,
+        episode_ids: ids,
+        ...this._entry(),
+      });
+      this._addedSeries = undefined; // Something was picked: keep the show.
+      toast(this, `Downloading ${ids.length} episode${ids.length === 1 ? "" : "s"} of ${list.title}`);
+      this._picked = new Set();
+      await this._loadEpisodes(this._selected.tmdb_id, list.season_number);
+    } catch (err) {
+      toast(this, `Download failed: ${errorMessage(err)}`);
+    } finally {
+      this._pickerBusy = false;
+    }
+  }
+
+  private async _setOption(option: "follow_new" | "daily", value: boolean): Promise<void> {
+    const list = this._episodes;
+    if (!list || this._pickerBusy || !this._selected) return;
+    this._pickerBusy = true;
+    try {
+      const show = await this.hass.callWS<SonarrShow>({
+        type: `${DOMAIN}/episodes/options`,
+        series_id: list.series_id,
+        [option]: value,
+        ...this._entry(),
+      });
+      if (show.follow_new) this._addedSeries = undefined;
+      // Following changes which future episodes are monitored, so reload them.
+      if (option === "follow_new") await this._loadEpisodes(this._selected.tmdb_id, list.season_number);
+      else this._episodes = { ...list, ...show };
+    } catch (err) {
+      toast(this, `Couldn't change it: ${errorMessage(err)}`);
+    } finally {
+      this._pickerBusy = false;
+    }
+  }
+
   // --- render -------------------------------------------------------------
 
   protected override render() {
@@ -412,7 +559,11 @@ export class JellyseerrSearchCard extends LitElement {
               <button class="link" @click=${this._reload}>Reload</button>
             </div>`
           : nothing}
-        ${this._selected ? this._renderDetail(this._selected) : this._renderSearch()}
+        ${this._selected && this._episodeSeason
+          ? this._renderEpisodes(this._selected, this._episodeSeason)
+          : this._selected
+            ? this._renderDetail(this._selected)
+            : this._renderSearch()}
       </ha-card>
     `;
   }
@@ -525,7 +676,7 @@ export class JellyseerrSearchCard extends LitElement {
       : isRequestable(item.status);
     return html`
       <div class="detail">
-        <button class="back" @click=${() => (this._selected = undefined)}>
+        <button class="back" @click=${this._back}>
           <ha-icon icon="mdi:arrow-left"></ha-icon> Back
         </button>
         <div class="head">
@@ -604,8 +755,106 @@ export class JellyseerrSearchCard extends LitElement {
             <span class="grow">${s.name}</span>
             <span class="count">${s.episode_count} ep</span>
             ${label ? html`<span class="status inline ${s.status}">${label}</span>` : nothing}
+            ${this._picker
+              ? html`<button class="link episodes-link" @click=${(e: Event) => this._openEpisodes(s, e)}>
+                  Episodes
+                </button>`
+              : nothing}
           </label>`;
         })}
+      </div>
+    `;
+  }
+
+  private _renderEpisodes(item: SearchResult, season: Season) {
+    const list = this._episodes;
+    let body;
+    if (this._episodesError) {
+      body = html`<div class="message error">Couldn't load episodes (${this._episodesError}).</div>`;
+    } else if (!list) {
+      body = html`<div class="message">Loading episodes from Sonarr…</div>`;
+    } else {
+      const open = pickableEpisodes(list.episodes);
+      const n = this._picked.size;
+      body = html`
+        <div class="seasons options">
+          <label class="row option">
+            <input
+              type="checkbox"
+              .checked=${list.follow_new}
+              ?disabled=${this._pickerBusy}
+              @change=${(e: Event) => this._setOption("follow_new", (e.target as HTMLInputElement).checked)}
+            />
+            <span class="grow">
+              Get new episodes
+              <span class="hint">
+                Download future episodes of ${list.title} when they air. Turning it off also cancels
+                upcoming episodes you picked.
+              </span>
+            </span>
+          </label>
+          <label class="row option">
+            <input
+              type="checkbox"
+              .checked=${list.daily}
+              ?disabled=${this._pickerBusy}
+              @change=${(e: Event) => this._setOption("daily", (e.target as HTMLInputElement).checked)}
+            />
+            <span class="grow">
+              Daily show
+              <span class="hint">For shows released by date, like quizzes and soaps.</span>
+            </span>
+          </label>
+        </div>
+        <div class="seasons">
+          <div class="seasons-head">
+            <span>${list.episodes.length} episodes</span>
+            ${open.length > 1
+              ? html`<button class="link" @click=${this._toggleAllPicks}>
+                  ${n === open.length ? "Select none" : `Select all ${open.length}`}
+                </button>`
+              : nothing}
+          </div>
+          ${list.episodes.length
+            ? list.episodes.map((ep) => {
+                const free = isPickable(ep);
+                const label = episodeLabel(ep);
+                return html`<label class="row season episode ${free ? "" : "done"}">
+                  <input
+                    type="checkbox"
+                    .checked=${free ? this._picked.has(ep.id) : ep.status !== "not_aired" || ep.monitored}
+                    ?disabled=${!free}
+                    @change=${() => this._togglePick(ep.id)}
+                  />
+                  <span class="grow">
+                    <span class="ep-title">${ep.episode_number}. ${ep.title || `Episode ${ep.episode_number}`}</span>
+                    <span class="hint">${airDateLabel(ep.air_date)}</span>
+                  </span>
+                  ${label ? html`<span class="status inline ep ${ep.status}">${label}</span>` : nothing}
+                </label>`;
+              })
+            : html`<div class="message">Sonarr lists no episodes for this season yet.</div>`}
+        </div>
+        ${n > 20
+          ? html`<div class="warn">That's ${n} episodes. Check there's room before downloading.</div>`
+          : nothing}
+        <button class="primary" ?disabled=${!n || this._pickerBusy} @click=${this._download}>
+          ${this._pickerBusy ? "Working…" : n ? `Download ${n} episode${n === 1 ? "" : "s"}` : "Pick episodes to download"}
+        </button>
+      `;
+    }
+    return html`
+      <div class="detail">
+        <button class="back" @click=${this._closeEpisodes}>
+          <ha-icon icon="mdi:arrow-left"></ha-icon> ${item.title}
+        </button>
+        <div class="ep-head">
+          <h2>${season.name}</h2>
+          <div class="meta">From Sonarr${list && list.episodes.length !== season.episode_count
+            ? html` · Jellyseerr said ${season.episode_count}`
+            : nothing}</div>
+        </div>
+        ${body}
       </div>
     `;
   }
@@ -859,6 +1108,45 @@ export class JellyseerrSearchCard extends LitElement {
     }
     .season.done {
       color: var(--secondary-text-color);
+    }
+    .episodes-link {
+      flex: none;
+      font-size: 14px;
+    }
+    .option {
+      padding: 6px 12px;
+    }
+    .option + .option {
+      border-top: 1px solid var(--divider-color);
+    }
+    .hint {
+      display: block;
+      color: var(--secondary-text-color);
+      font-size: 12px;
+      line-height: 1.3;
+    }
+    .episode {
+      padding-block: 6px;
+    }
+    .ep-title {
+      display: block;
+      line-height: 1.3;
+    }
+    .ep-head h2 {
+      margin: 0;
+    }
+    .status.ep {
+      flex: none;
+    }
+    .status.downloaded {
+      background: var(--success-color, #43a047);
+    }
+    .status.not_aired {
+      background: var(--secondary-text-color, #727272);
+    }
+    .warn {
+      color: var(--warning-color, #ffa600);
+      line-height: 1.4;
     }
     .row input {
       width: 20px;

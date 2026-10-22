@@ -33,6 +33,13 @@ STATUS_NOT_REQUESTED: Final = "not_requested"
 # filtered: unreleased blockbusters have 0 votes and lead the popular list.
 POPULAR_TV_MIN_VOTES: Final = 500
 
+# Episode picker (optional; Sonarr directly, since Jellyseerr requests whole seasons).
+CONF_SONARR_URL: Final = "sonarr_url"
+CONF_SONARR_API_KEY: Final = "sonarr_api_key"
+# Sonarr fills in a newly added show's episodes in the background (about a second
+# on Sonarr 4.0.20); wait up to this long for them.
+EPISODE_WAIT_SECONDS: Final = 15
+
 # Statuses a new request makes sense for.
 REQUESTABLE_STATUSES: Final = (STATUS_NOT_REQUESTED, "unknown", "deleted")
 
@@ -44,4 +51,4 @@ REQUEST_COUNT_KEYS: Final = ("pending", "approved", "processing", "available", "
 URL_BASE: Final = f"/{DOMAIN}"
 CARD_FILENAME: Final = "jellyseerr-search-card.js"
 CARD_URL: Final = f"{URL_BASE}/{CARD_FILENAME}"
-CARD_VERSION: Final = "0.4.0"
+CARD_VERSION: Final = "0.5.0"

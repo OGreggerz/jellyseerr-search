@@ -1,4 +1,4 @@
-//#region ../../src/frontend/node_modules/@lit/reactive-element/css-tag.js
+//#region node_modules/@lit/reactive-element/css-tag.js
 var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, n = Symbol(), r = /* @__PURE__ */ new WeakMap(), i = class {
 	constructor(e, t, r) {
 		if (this._$cssResult$ = !0, r !== n) throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");
@@ -58,7 +58,7 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 		}
 		return n;
 	}
-}, g = (e, t) => !l(e, t), ae = {
+}, g = (e, t) => !l(e, t), _ = {
 	attribute: !0,
 	type: String,
 	converter: h,
@@ -67,14 +67,14 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 	hasChanged: g
 };
 Symbol.metadata ??= Symbol("metadata"), f.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
-var _ = class extends HTMLElement {
+var v = class extends HTMLElement {
 	static addInitializer(e) {
 		this._$Ei(), (this.l ??= []).push(e);
 	}
 	static get observedAttributes() {
 		return this.finalize(), this._$Eh && [...this._$Eh.keys()];
 	}
-	static createProperty(e, t = ae) {
+	static createProperty(e, t = _) {
 		if (t.state && (t.attribute = !1), this._$Ei(), this.prototype.hasOwnProperty(e) && ((t = Object.create(t)).wrapped = !0), this.elementProperties.set(e, t), !t.noAccessor) {
 			let n = Symbol(), r = this.getPropertyDescriptor(e, n, t);
 			r !== void 0 && u(this.prototype, e, r);
@@ -100,7 +100,7 @@ var _ = class extends HTMLElement {
 		};
 	}
 	static getPropertyOptions(e) {
-		return this.elementProperties.get(e) ?? ae;
+		return this.elementProperties.get(e) ?? _;
 	}
 	static _$Ei() {
 		if (this.hasOwnProperty(m("elementProperties"))) return;
@@ -251,25 +251,25 @@ var _ = class extends HTMLElement {
 	updated(e) {}
 	firstUpdated(e) {}
 };
-_.elementStyles = [], _.shadowRootOptions = { mode: "open" }, _[m("elementProperties")] = /* @__PURE__ */ new Map(), _[m("finalized")] = /* @__PURE__ */ new Map(), ie?.({ ReactiveElement: _ }), (f.reactiveElementVersions ??= []).push("2.1.2");
+v.elementStyles = [], v.shadowRootOptions = { mode: "open" }, v[m("elementProperties")] = /* @__PURE__ */ new Map(), v[m("finalized")] = /* @__PURE__ */ new Map(), ie?.({ ReactiveElement: v }), (f.reactiveElementVersions ??= []).push("2.1.2");
 //#endregion
-//#region ../../src/frontend/node_modules/lit-html/lit-html.js
-var v = globalThis, oe = (e) => e, y = v.trustedTypes, se = y ? y.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, ce = "$lit$", b = `lit$${Math.random().toFixed(9).slice(2)}$`, x = "?" + b, le = `<${x}>`, S = document, C = () => S.createComment(""), w = (e) => e === null || typeof e != "object" && typeof e != "function", T = Array.isArray, ue = (e) => T(e) || typeof e?.[Symbol.iterator] == "function", E = "[ 	\n\f\r]", D = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, O = /-->/g, k = />/g, A = RegExp(`>|${E}(?:([^\\s"'>=/]+)(${E}*=${E}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), de = /'/g, fe = /"/g, j = /^(?:script|style|textarea|title)$/i, M = ((e) => (t, ...n) => ({
+//#region node_modules/lit-html/lit-html.js
+var y = globalThis, ae = (e) => e, b = y.trustedTypes, oe = b ? b.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, se = "$lit$", x = `lit$${Math.random().toFixed(9).slice(2)}$`, S = "?" + x, ce = `<${S}>`, C = document, w = () => C.createComment(""), T = (e) => e === null || typeof e != "object" && typeof e != "function", E = Array.isArray, le = (e) => E(e) || typeof e?.[Symbol.iterator] == "function", D = "[ 	\n\f\r]", O = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, k = /-->/g, ue = />/g, A = RegExp(`>|${D}(?:([^\\s"'>=/]+)(${D}*=${D}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), de = /'/g, fe = /"/g, j = /^(?:script|style|textarea|title)$/i, M = ((e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
 	values: n
-}))(1), N = Symbol.for("lit-noChange"), P = Symbol.for("lit-nothing"), F = /* @__PURE__ */ new WeakMap(), I = S.createTreeWalker(S, 129);
+}))(1), N = Symbol.for("lit-noChange"), P = Symbol.for("lit-nothing"), F = /* @__PURE__ */ new WeakMap(), I = C.createTreeWalker(C, 129);
 function L(e, t) {
-	if (!T(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
-	return se === void 0 ? t : se.createHTML(t);
+	if (!E(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
+	return oe === void 0 ? t : oe.createHTML(t);
 }
 var pe = (e, t) => {
-	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = D;
+	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = O;
 	for (let t = 0; t < n; t++) {
 		let n = e[t], s, c, l = -1, u = 0;
-		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === D ? c[1] === "!--" ? o = O : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = A) : (j.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = A) : o = k : o === A ? c[0] === ">" ? (o = i ?? D, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? A : c[3] === "\"" ? fe : de) : o === fe || o === de ? o = A : o === O || o === k ? o = D : (o = A, i = void 0);
+		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === O ? c[1] === "!--" ? o = k : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = A) : (j.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = A) : o = ue : o === A ? c[0] === ">" ? (o = i ?? O, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? A : c[3] === "\"" ? fe : de) : o === fe || o === de ? o = A : o === k || o === ue ? o = O : (o = A, i = void 0);
 		let d = o === A && e[t + 1].startsWith("/>") ? " " : "";
-		a += o === D ? n + le : l >= 0 ? (r.push(s), n.slice(0, l) + ce + n.slice(l) + b + d) : n + b + (l === -2 ? t : d);
+		a += o === O ? n + ce : l >= 0 ? (r.push(s), n.slice(0, l) + se + n.slice(l) + x + d) : n + x + (l === -2 ? t : d);
 	}
 	return [L(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
 }, R = class e {
@@ -283,8 +283,8 @@ var pe = (e, t) => {
 		}
 		for (; (i = I.nextNode()) !== null && c.length < s;) {
 			if (i.nodeType === 1) {
-				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(ce)) {
-					let t = u[o++], n = i.getAttribute(e).split(b), r = /([.?@])?(.*)/.exec(t);
+				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(se)) {
+					let t = u[o++], n = i.getAttribute(e).split(x), r = /([.?@])?(.*)/.exec(t);
 					c.push({
 						type: 1,
 						index: a,
@@ -292,45 +292,45 @@ var pe = (e, t) => {
 						strings: n,
 						ctor: r[1] === "." ? he : r[1] === "?" ? ge : r[1] === "@" ? _e : V
 					}), i.removeAttribute(e);
-				} else e.startsWith(b) && (c.push({
+				} else e.startsWith(x) && (c.push({
 					type: 6,
 					index: a
 				}), i.removeAttribute(e));
 				if (j.test(i.tagName)) {
-					let e = i.textContent.split(b), t = e.length - 1;
+					let e = i.textContent.split(x), t = e.length - 1;
 					if (t > 0) {
-						i.textContent = y ? y.emptyScript : "";
-						for (let n = 0; n < t; n++) i.append(e[n], C()), I.nextNode(), c.push({
+						i.textContent = b ? b.emptyScript : "";
+						for (let n = 0; n < t; n++) i.append(e[n], w()), I.nextNode(), c.push({
 							type: 2,
 							index: ++a
 						});
-						i.append(e[t], C());
+						i.append(e[t], w());
 					}
 				}
 			} else if (i.nodeType === 8) {
-				if (i.data === x) c.push({
+				if (i.data === S) c.push({
 					type: 2,
 					index: a
 				});
 				else {
 					let e = -1;
-					for (; (e = i.data.indexOf(b, e + 1)) !== -1;) c.push({
+					for (; (e = i.data.indexOf(x, e + 1)) !== -1;) c.push({
 						type: 7,
 						index: a
-					}), e += b.length - 1;
+					}), e += x.length - 1;
 				}
 			}
 			a++;
 		}
 	}
 	static createElement(e, t) {
-		let n = S.createElement("template");
+		let n = C.createElement("template");
 		return n.innerHTML = e, n;
 	}
 };
 function z(e, t, n = e, r) {
 	if (t === N) return t;
-	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = w(t) ? void 0 : t._$litDirective$;
+	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = T(t) ? void 0 : t._$litDirective$;
 	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = z(e, i._$AS(e, t.values), i, r)), t;
 }
 var me = class {
@@ -344,7 +344,7 @@ var me = class {
 		return this._$AM._$AU;
 	}
 	u(e) {
-		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? S).importNode(t, !0);
+		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? C).importNode(t, !0);
 		I.currentNode = r;
 		let i = I.nextNode(), a = 0, o = 0, s = n[0];
 		for (; s !== void 0;) {
@@ -354,7 +354,7 @@ var me = class {
 			}
 			a !== s?.index && (i = I.nextNode(), a++);
 		}
-		return I.currentNode = S, r;
+		return I.currentNode = C, r;
 	}
 	p(e) {
 		let t = 0;
@@ -378,7 +378,7 @@ var me = class {
 		return this._$AB;
 	}
 	_$AI(e, t = this) {
-		e = z(this, e, t), w(e) ? e === P || e == null || e === "" ? (this._$AH !== P && this._$AR(), this._$AH = P) : e !== this._$AH && e !== N && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? ue(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
+		e = z(this, e, t), T(e) ? e === P || e == null || e === "" ? (this._$AH !== P && this._$AR(), this._$AH = P) : e !== this._$AH && e !== N && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? le(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
 	}
 	O(e) {
 		return this._$AA.parentNode.insertBefore(e, this._$AB);
@@ -387,7 +387,7 @@ var me = class {
 		this._$AH !== e && (this._$AR(), this._$AH = this.O(e));
 	}
 	_(e) {
-		this._$AH !== P && w(this._$AH) ? this._$AA.nextSibling.data = e : this.T(S.createTextNode(e)), this._$AH = e;
+		this._$AH !== P && T(this._$AH) ? this._$AA.nextSibling.data = e : this.T(C.createTextNode(e)), this._$AH = e;
 	}
 	$(e) {
 		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = R.createElement(L(n.h, n.h[0]), this.options)), n);
@@ -402,15 +402,15 @@ var me = class {
 		return t === void 0 && F.set(e.strings, t = new R(e)), t;
 	}
 	k(t) {
-		T(this._$AH) || (this._$AH = [], this._$AR());
+		E(this._$AH) || (this._$AH = [], this._$AR());
 		let n = this._$AH, r, i = 0;
-		for (let a of t) i === n.length ? n.push(r = new e(this.O(C()), this.O(C()), this, this.options)) : r = n[i], r._$AI(a), i++;
+		for (let a of t) i === n.length ? n.push(r = new e(this.O(w()), this.O(w()), this, this.options)) : r = n[i], r._$AI(a), i++;
 		i < n.length && (this._$AR(r && r._$AB.nextSibling, i), n.length = i);
 	}
 	_$AR(e = this._$AA.nextSibling, t) {
 		for (this._$AP?.(!1, !0, t); e !== this._$AB;) {
-			let t = oe(e).nextSibling;
-			oe(e).remove(), e = t;
+			let t = ae(e).nextSibling;
+			ae(e).remove(), e = t;
 		}
 	}
 	setConnected(e) {
@@ -428,10 +428,10 @@ var me = class {
 	}
 	_$AI(e, t = this, n, r) {
 		let i = this.strings, a = !1;
-		if (i === void 0) e = z(this, e, t, 0), a = !w(e) || e !== this._$AH && e !== N, a && (this._$AH = e);
+		if (i === void 0) e = z(this, e, t, 0), a = !T(e) || e !== this._$AH && e !== N, a && (this._$AH = e);
 		else {
 			let r = e, o, s;
-			for (e = i[0], o = 0; o < i.length - 1; o++) s = z(this, r[n + o], t, o), s === N && (s = this._$AH[o]), a ||= !w(s) || s !== this._$AH[o], s === P ? e = P : e !== P && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
+			for (e = i[0], o = 0; o < i.length - 1; o++) s = z(this, r[n + o], t, o), s === N && (s = this._$AH[o]), a ||= !T(s) || s !== this._$AH[o], s === P ? e = P : e !== P && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
 		}
 		a && !r && this.j(e);
 	}
@@ -474,16 +474,16 @@ var me = class {
 	_$AI(e) {
 		z(this, e);
 	}
-}, ye = v.litHtmlPolyfillSupport;
-ye?.(R, B), (v.litHtmlVersions ??= []).push("3.3.3");
+}, ye = y.litHtmlPolyfillSupport;
+ye?.(R, B), (y.litHtmlVersions ??= []).push("3.3.3");
 var be = (e, t, n) => {
 	let r = n?.renderBefore ?? t, i = r._$litPart$;
 	if (i === void 0) {
 		let e = n?.renderBefore ?? null;
-		r._$litPart$ = i = new B(t.insertBefore(C(), e), e, void 0, n ?? {});
+		r._$litPart$ = i = new B(t.insertBefore(w(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
-}, H = globalThis, U = class extends _ {
+}, H = globalThis, U = class extends v {
 	constructor() {
 		super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
 	}
@@ -552,6 +552,39 @@ function J(e) {
 function Te(e) {
 	return K(e) || e === "partially_available";
 }
+function Ee(e) {
+	return e.status === "missing" || e.status === "not_aired" && !e.monitored;
+}
+function De(e) {
+	return e.filter(Ee).map((e) => e.id);
+}
+function Oe(e) {
+	switch (e.status) {
+		case "downloaded": return "Downloaded";
+		case "downloading": return "Downloading";
+		case "wanted": return "Wanted";
+		case "not_aired": return e.monitored ? "When it airs" : "Not aired";
+		default: return null;
+	}
+}
+function ke(e) {
+	if (!e) return "No air date";
+	let [t, n, r] = e.split("-").map(Number), i = [
+		"Jan",
+		"Feb",
+		"Mar",
+		"Apr",
+		"May",
+		"Jun",
+		"Jul",
+		"Aug",
+		"Sep",
+		"Oct",
+		"Nov",
+		"Dec"
+	][n - 1];
+	return i ? `${r} ${i} ${t}` : e;
+}
 var Y = class {
 	constructor() {
 		this._seq = 0;
@@ -560,7 +593,7 @@ var Y = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, X, Ee = "0.4.0", Z = "jellyseerr_search", De = 400, Q = 2, Oe = 36e5, ke = !1, Ae = [
+}, X, Ae = "0.5.0", Z = "jellyseerr_search", je = 400, Q = 2, Me = 36e5, Ne = !1, Pe = [
 	{
 		value: "all",
 		label: "All"
@@ -573,7 +606,7 @@ var Y = class {
 		value: "tv",
 		label: "TV"
 	}
-], je = [{
+], Fe = [{
 	value: "trending",
 	label: "Trending",
 	heading: "Trending today"
@@ -583,7 +616,7 @@ var Y = class {
 	heading: "Popular"
 }], $ = class extends U {
 	constructor() {
-		super(), this._latestSearch = new Y(), this._latestSeasons = new Y(), this._latestBrowse = new Y(), this._browseAt = 0, this._query = "", this._filter = "all", this._browse = "trending", this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1, this._confirmRemove = !1, this._removing = !1;
+		super(), this._latestSearch = new Y(), this._latestSeasons = new Y(), this._latestBrowse = new Y(), this._latestEpisodes = new Y(), this._browseAt = 0, this._query = "", this._filter = "all", this._browse = "trending", this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1, this._confirmRemove = !1, this._removing = !1, this._picker = !1, this._picked = /* @__PURE__ */ new Set(), this._pickerBusy = !1;
 	}
 	static getConfigForm() {
 		return {
@@ -644,7 +677,7 @@ var Y = class {
 	}
 	setConfig(e) {
 		if (!e) throw Error("Invalid configuration");
-		if (e.media_type && !Ae.some((t) => t.value === e.media_type)) throw Error("media_type must be all, movie or tv");
+		if (e.media_type && !Pe.some((t) => t.value === e.media_type)) throw Error("media_type must be all, movie or tv");
 		this._config = e, this._filter = e.media_type ?? "all";
 	}
 	getCardSize() {
@@ -661,12 +694,12 @@ var Y = class {
 		super.disconnectedCallback(), clearTimeout(this._debounce);
 	}
 	updated(e) {
-		e.has("hass") && this.hass && !ke && (ke = !0, this._checkVersion()), e.has("hass") && this.hass && this._browseDue() && this._loadBrowse();
+		e.has("hass") && this.hass && !Ne && (Ne = !0, this._checkVersion()), e.has("hass") && this.hass && this._browseDue() && this._loadBrowse();
 	}
 	async _checkVersion() {
 		try {
 			let { version: e } = await this.hass.callWS({ type: `${Z}/version` });
-			e !== "0.4.0" && (this._staleVersion = e);
+			e !== "0.5.0" && (this._staleVersion = e);
 		} catch {}
 	}
 	async _reload() {
@@ -683,7 +716,7 @@ var Y = class {
 		return this._config.show_trending !== !1 && this._query.trim().length < Q;
 	}
 	_browseDue() {
-		return !this._showBrowse() || this._selected ? !1 : this._browseKey !== `${this._browse}/${this._filter}` || Date.now() - this._browseAt > Oe;
+		return !this._showBrowse() || this._selected ? !1 : this._browseKey !== `${this._browse}/${this._filter}` || Date.now() - this._browseAt > Me;
 	}
 	async _loadBrowse() {
 		let e = this._latestBrowse.next(), t = `${this._browse}/${this._filter}`;
@@ -703,13 +736,13 @@ var Y = class {
 		e !== this._browse && (this._browse = e, this._browseDue() && this._loadBrowse());
 	}
 	_onInput(e) {
-		this._query = e.target.value, clearTimeout(this._debounce), this._debounce = setTimeout(() => void this._search(), De);
+		this._query = e.target.value, clearTimeout(this._debounce), this._debounce = setTimeout(() => void this._search(), je);
 	}
 	_onKeydown(e) {
 		e.key === "Enter" && (clearTimeout(this._debounce), e.target.blur(), this._search());
 	}
 	_clear() {
-		clearTimeout(this._debounce), this._latestSearch.next(), this._query = "", this._results = void 0, this._error = void 0, this._loading = !1, this._selected = void 0;
+		this._leaveShow(), clearTimeout(this._debounce), this._latestSearch.next(), this._query = "", this._results = void 0, this._error = void 0, this._loading = !1, this._selected = void 0;
 	}
 	_setFilter(e) {
 		e !== this._filter && (this._filter = e, this._query.trim().length >= Q ? this._search() : this._browseDue() && this._loadBrowse());
@@ -738,18 +771,18 @@ var Y = class {
 		}
 	}
 	_open(e) {
-		this._selected = e, this._seasons = void 0, this._seasonsError = void 0, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._confirmRemove = !1, e.media_type === "tv" && this._loadSeasons(e.tmdb_id);
+		this._leaveShow(), this._selected = e, this._seasons = void 0, this._seasonsError = void 0, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._confirmRemove = !1, this._picker = !1, this._closeEpisodes(), e.media_type === "tv" && this._loadSeasons(e.tmdb_id);
 	}
 	async _loadSeasons(e) {
 		let t = this._latestSeasons.next();
 		try {
-			let { seasons: n } = await this.hass.callWS({
+			let { seasons: n, episode_picker: r } = await this.hass.callWS({
 				type: `${Z}/seasons`,
 				tmdb_id: e,
 				...this._entry()
 			});
 			if (!t()) return;
-			this._seasons = n, this._chosen = new Set(J(n));
+			this._seasons = n, this._picker = !!r, this._chosen = new Set(J(n));
 		} catch (e) {
 			t() && (this._seasonsError = G(e));
 		}
@@ -823,6 +856,86 @@ var Y = class {
 			status: "pending"
 		} : e), this._chosen = /* @__PURE__ */ new Set());
 	}
+	_openEpisodes(e, t) {
+		t.preventDefault(), t.stopPropagation(), this._selected && (this._episodeSeason = e, this._episodes = void 0, this._episodesError = void 0, this._picked = /* @__PURE__ */ new Set(), this._loadEpisodes(this._selected.tmdb_id, e.season_number));
+	}
+	async _loadEpisodes(e, t) {
+		let n = this._latestEpisodes.next();
+		try {
+			let r = await this.hass.callWS({
+				type: `${Z}/episodes`,
+				tmdb_id: e,
+				season_number: t,
+				...this._entry()
+			});
+			if (r.added && (this._addedSeries = r.series_id), !n()) return;
+			this._episodes = r;
+		} catch (e) {
+			n() && (this._episodesError = G(e));
+		}
+	}
+	_closeEpisodes() {
+		this._latestEpisodes.next(), this._episodeSeason = void 0, this._episodes = void 0, this._episodesError = void 0, this._picked = /* @__PURE__ */ new Set();
+	}
+	_leaveShow() {
+		let e = this._addedSeries;
+		this._addedSeries = void 0, e !== void 0 && this.hass && this.hass.callWS({
+			type: `${Z}/episodes/discard`,
+			series_id: e,
+			...this._entry()
+		}).catch(() => void 0);
+	}
+	_back() {
+		this._leaveShow(), this._closeEpisodes(), this._selected = void 0;
+	}
+	_togglePick(e) {
+		let t = new Set(this._picked);
+		t.has(e) ? t.delete(e) : t.add(e), this._picked = t;
+	}
+	_toggleAllPicks() {
+		let e = De(this._episodes?.episodes ?? []);
+		this._picked = this._picked.size === e.length ? /* @__PURE__ */ new Set() : new Set(e);
+	}
+	async _download() {
+		let e = this._episodes;
+		if (!e || !this._picked.size || this._pickerBusy || !this._selected) return;
+		let t = [...this._picked];
+		this._pickerBusy = !0;
+		try {
+			await this.hass.callWS({
+				type: `${Z}/episodes/download`,
+				series_id: e.series_id,
+				episode_ids: t,
+				...this._entry()
+			}), this._addedSeries = void 0, W(this, `Downloading ${t.length} episode${t.length === 1 ? "" : "s"} of ${e.title}`), this._picked = /* @__PURE__ */ new Set(), await this._loadEpisodes(this._selected.tmdb_id, e.season_number);
+		} catch (e) {
+			W(this, `Download failed: ${G(e)}`);
+		} finally {
+			this._pickerBusy = !1;
+		}
+	}
+	async _setOption(e, t) {
+		let n = this._episodes;
+		if (n && !this._pickerBusy && this._selected) {
+			this._pickerBusy = !0;
+			try {
+				let r = await this.hass.callWS({
+					type: `${Z}/episodes/options`,
+					series_id: n.series_id,
+					[e]: t,
+					...this._entry()
+				});
+				r.follow_new && (this._addedSeries = void 0), e === "follow_new" ? await this._loadEpisodes(this._selected.tmdb_id, n.season_number) : this._episodes = {
+					...n,
+					...r
+				};
+			} catch (e) {
+				W(this, `Couldn't change it: ${G(e)}`);
+			} finally {
+				this._pickerBusy = !1;
+			}
+		}
+	}
 	render() {
 		return this._config ? M`
       <ha-card .header=${this._config.title || void 0}>
@@ -830,7 +943,7 @@ var Y = class {
               Card is out of date (server has ${this._staleVersion}).
               <button class="link" @click=${this._reload}>Reload</button>
             </div>` : P}
-        ${this._selected ? this._renderDetail(this._selected) : this._renderSearch()}
+        ${this._selected && this._episodeSeason ? this._renderEpisodes(this._selected, this._episodeSeason) : this._selected ? this._renderDetail(this._selected) : this._renderSearch()}
       </ha-card>
     ` : P;
 	}
@@ -854,7 +967,7 @@ var Y = class {
               </button>` : P}
         </div>
         <div class="chips" role="radiogroup" aria-label="Media type">
-          ${Ae.map((e) => M`<button
+          ${Pe.map((e) => M`<button
               class="chip ${e.value === this._filter ? "on" : ""}"
               role="radio"
               aria-checked=${e.value === this._filter}
@@ -875,12 +988,12 @@ var Y = class {
     ` : M`<div class="message">No movies or shows found.</div>` : P;
 	}
 	_renderBrowse() {
-		let e = je.find((e) => e.value === this._browse).heading, t;
+		let e = Fe.find((e) => e.value === this._browse).heading, t;
 		return t = this._browseError ? M`<div class="message error">Couldn't load ${e.toLowerCase()} (${this._browseError}).</div>` : this._browseResults ? this._browseResults.length ? M`<div class="grid">${this._browseResults.map((e) => this._renderTile(e))}</div>` : M`<div class="message">Nothing to show.</div>` : M`<div class="message">Loading…</div>`, M`
       <div class="section">
         <span>${e}</span>
         <div class="chips small" role="radiogroup" aria-label="Browse">
-          ${je.map((e) => M`<button
+          ${Fe.map((e) => M`<button
               class="chip ${e.value === this._browse ? "on" : ""}"
               role="radio"
               aria-checked=${e.value === this._browse}
@@ -911,7 +1024,7 @@ var Y = class {
 		let t = q(e.status), n = e.media_type === "tv", r = n ? Te(e.status) && (!this._seasons || this._chosen.size > 0) : K(e.status);
 		return M`
       <div class="detail">
-        <button class="back" @click=${() => this._selected = void 0}>
+        <button class="back" @click=${this._back}>
           <ha-icon icon="mdi:arrow-left"></ha-icon> Back
         </button>
         <div class="head">
@@ -978,8 +1091,90 @@ var Y = class {
             <span class="grow">${e.name}</span>
             <span class="count">${e.episode_count} ep</span>
             ${n ? M`<span class="status inline ${e.status}">${n}</span>` : P}
+            ${this._picker ? M`<button class="link episodes-link" @click=${(t) => this._openEpisodes(e, t)}>
+                  Episodes
+                </button>` : P}
           </label>`;
 		})}
+      </div>
+    `;
+	}
+	_renderEpisodes(e, t) {
+		let n = this._episodes, r;
+		if (this._episodesError) r = M`<div class="message error">Couldn't load episodes (${this._episodesError}).</div>`;
+		else if (!n) r = M`<div class="message">Loading episodes from Sonarr…</div>`;
+		else {
+			let e = De(n.episodes), t = this._picked.size;
+			r = M`
+        <div class="seasons options">
+          <label class="row option">
+            <input
+              type="checkbox"
+              .checked=${n.follow_new}
+              ?disabled=${this._pickerBusy}
+              @change=${(e) => this._setOption("follow_new", e.target.checked)}
+            />
+            <span class="grow">
+              Get new episodes
+              <span class="hint">
+                Download future episodes of ${n.title} when they air. Turning it off also cancels
+                upcoming episodes you picked.
+              </span>
+            </span>
+          </label>
+          <label class="row option">
+            <input
+              type="checkbox"
+              .checked=${n.daily}
+              ?disabled=${this._pickerBusy}
+              @change=${(e) => this._setOption("daily", e.target.checked)}
+            />
+            <span class="grow">
+              Daily show
+              <span class="hint">For shows released by date, like quizzes and soaps.</span>
+            </span>
+          </label>
+        </div>
+        <div class="seasons">
+          <div class="seasons-head">
+            <span>${n.episodes.length} episodes</span>
+            ${e.length > 1 ? M`<button class="link" @click=${this._toggleAllPicks}>
+                  ${t === e.length ? "Select none" : `Select all ${e.length}`}
+                </button>` : P}
+          </div>
+          ${n.episodes.length ? n.episodes.map((e) => {
+				let t = Ee(e), n = Oe(e);
+				return M`<label class="row season episode ${t ? "" : "done"}">
+                  <input
+                    type="checkbox"
+                    .checked=${t ? this._picked.has(e.id) : e.status !== "not_aired" || e.monitored}
+                    ?disabled=${!t}
+                    @change=${() => this._togglePick(e.id)}
+                  />
+                  <span class="grow">
+                    <span class="ep-title">${e.episode_number}. ${e.title || `Episode ${e.episode_number}`}</span>
+                    <span class="hint">${ke(e.air_date)}</span>
+                  </span>
+                  ${n ? M`<span class="status inline ep ${e.status}">${n}</span>` : P}
+                </label>`;
+			}) : M`<div class="message">Sonarr lists no episodes for this season yet.</div>`}
+        </div>
+        ${t > 20 ? M`<div class="warn">That's ${t} episodes. Check there's room before downloading.</div>` : P}
+        <button class="primary" ?disabled=${!t || this._pickerBusy} @click=${this._download}>
+          ${this._pickerBusy ? "Working…" : t ? `Download ${t} episode${t === 1 ? "" : "s"}` : "Pick episodes to download"}
+        </button>
+      `;
+		}
+		return M`
+      <div class="detail">
+        <button class="back" @click=${this._closeEpisodes}>
+          <ha-icon icon="mdi:arrow-left"></ha-icon> ${e.title}
+        </button>
+        <div class="ep-head">
+          <h2>${t.name}</h2>
+          <div class="meta">From Sonarr${n && n.episodes.length !== t.episode_count ? M` · Jellyseerr said ${t.episode_count}` : P}</div>
+        </div>
+        ${r}
       </div>
     `;
 	}
@@ -1003,7 +1198,13 @@ X = $, X.properties = {
 	_requesting: { state: !0 },
 	_confirmRemove: { state: !0 },
 	_removing: { state: !0 },
-	_staleVersion: { state: !0 }
+	_staleVersion: { state: !0 },
+	_picker: { state: !0 },
+	_episodeSeason: { state: !0 },
+	_episodes: { state: !0 },
+	_episodesError: { state: !0 },
+	_picked: { state: !0 },
+	_pickerBusy: { state: !0 }
 }, X.styles = o`
     :host {
       --js-gap: 12px;
@@ -1254,6 +1455,45 @@ X = $, X.properties = {
     .season.done {
       color: var(--secondary-text-color);
     }
+    .episodes-link {
+      flex: none;
+      font-size: 14px;
+    }
+    .option {
+      padding: 6px 12px;
+    }
+    .option + .option {
+      border-top: 1px solid var(--divider-color);
+    }
+    .hint {
+      display: block;
+      color: var(--secondary-text-color);
+      font-size: 12px;
+      line-height: 1.3;
+    }
+    .episode {
+      padding-block: 6px;
+    }
+    .ep-title {
+      display: block;
+      line-height: 1.3;
+    }
+    .ep-head h2 {
+      margin: 0;
+    }
+    .status.ep {
+      flex: none;
+    }
+    .status.downloaded {
+      background: var(--success-color, #43a047);
+    }
+    .status.not_aired {
+      background: var(--secondary-text-color, #727272);
+    }
+    .warn {
+      color: var(--warning-color, #ffa600);
+      line-height: 1.4;
+    }
     .row input {
       width: 20px;
       height: 20px;
@@ -1320,4 +1560,4 @@ X = $, X.properties = {
 	preview: !1
 }));
 //#endregion
-export { Ee as CARD_VERSION, $ as JellyseerrSearchCard };
+export { Ae as CARD_VERSION, $ as JellyseerrSearchCard };

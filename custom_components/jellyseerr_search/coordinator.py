@@ -11,6 +11,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .api import JellyseerrAuthError, JellyseerrClient, JellyseerrError
 from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
+from .sonarr import SonarrClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -18,12 +19,17 @@ type JellyseerrConfigEntry = ConfigEntry[JellyseerrCoordinator]
 
 
 class JellyseerrCoordinator(DataUpdateCoordinator[dict[str, int]]):
-    """Owns the client; `data` is the latest /request/count payload."""
+    """Owns the clients; `data` is the latest /request/count payload. `sonarr` is
+    set only when the episode picker is configured in the options."""
 
     config_entry: JellyseerrConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, entry: JellyseerrConfigEntry, client: JellyseerrClient
+        self,
+        hass: HomeAssistant,
+        entry: JellyseerrConfigEntry,
+        client: JellyseerrClient,
+        sonarr: SonarrClient | None = None,
     ) -> None:
         super().__init__(
             hass,
@@ -33,6 +39,7 @@ class JellyseerrCoordinator(DataUpdateCoordinator[dict[str, int]]):
             update_interval=DEFAULT_SCAN_INTERVAL,
         )
         self.client = client
+        self.sonarr = sonarr
 
     async def _async_update_data(self) -> dict[str, int]:
         try:

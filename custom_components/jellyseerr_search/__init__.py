@@ -9,10 +9,11 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.typing import ConfigType
 
 from .api import JellyseerrClient
-from .const import DOMAIN
+from .const import CONF_SONARR_API_KEY, CONF_SONARR_URL, DOMAIN
 from .coordinator import JellyseerrConfigEntry, JellyseerrCoordinator
 from .frontend import async_register_frontend
 from .services import async_register_services
+from .sonarr import SonarrClient
 from .websocket import async_register_websocket
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
@@ -32,11 +33,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: JellyseerrConfigEntry) -
     """Connect to one Jellyseerr server."""
     session = async_get_clientsession(hass, verify_ssl=entry.data.get(CONF_VERIFY_SSL, True))
     client = JellyseerrClient(session, entry.data[CONF_URL], entry.data[CONF_API_KEY])
-    coordinator = JellyseerrCoordinator(hass, entry, client)
+    sonarr = None
+    if entry.options.get(CONF_SONARR_URL) and entry.options.get(CONF_SONARR_API_KEY):
+        sonarr = SonarrClient(
+            async_get_clientsession(hass), entry.options[CONF_SONARR_URL], entry.options[CONF_SONARR_API_KEY]
+        )
+    coordinator = JellyseerrCoordinator(hass, entry, client, sonarr)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
     return True
+
+
+async def _async_options_updated(hass: HomeAssistant, entry: JellyseerrConfigEntry) -> None:
+    """Sonarr was set up or removed in the options: reconnect."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: JellyseerrConfigEntry) -> bool:

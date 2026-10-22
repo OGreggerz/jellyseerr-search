@@ -131,6 +131,21 @@ class JellyseerrClient:
             if season.get("seasonNumber", 0) > 0
         ]
 
+    async def async_get_tvdb_id(self, tmdb_id: int) -> int | None:
+        """The show's TVDB id, which Sonarr matches on (Sonarr may have no TMDB id)."""
+        data = await self._request("GET", f"/tv/{tmdb_id}")
+        return (data.get("externalIds") or {}).get("tvdbId") or None
+
+    async def async_get_sonarr_defaults(self) -> tuple[int, str] | None:
+        """Quality profile id and root folder of Jellyseerr's default (non-4K) Sonarr,
+        so shows added by the episode picker land where requests do."""
+        servers = await self._request("GET", "/settings/sonarr") or []
+        hd = [s for s in servers if not s.get("is4k")]
+        server = next((s for s in hd if s.get("isDefault")), hd[0] if hd else None)
+        if not server or not server.get("activeProfileId") or not server.get("activeDirectory"):
+            return None
+        return int(server["activeProfileId"]), str(server["activeDirectory"])
+
     async def async_remove(self, media_type: str, tmdb_id: int) -> bool:
         """Delete a movie or a whole show from Radarr/Sonarr, files included, the
         way Jellyseerr's "Remove from Radarr/Sonarr" button does. Jellyseerr then

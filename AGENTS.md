@@ -17,6 +17,14 @@ here follow it. The user commits changes themselves.
   `async_popular_media` / `async_request_media` / `async_remove_media` /
   `async_tv_seasons`. The card uses the WS commands (`jellyseerr_search/search`,
   `/trending`, `/popular`, `/seasons`, `/request`, `/remove`, `/version`); automations use the actions.
+- **Episode picker talks to Sonarr directly** (`sonarr.py`, `episodes.py`),
+  only when Sonarr is set in the entry's **options** (`coordinator.sonarr`;
+  otherwise `None`). Shows are matched by TVDB id from Jellyseerr
+  (`/tv/<tmdb>` → `externalIds.tvdbId`), since Sonarr may have no TMDB id.
+  WS commands `/episodes`, `/episodes/download`, `/episodes/options`,
+  `/episodes/discard`; `/seasons` returns `episode_picker` so the card knows.
+  Changing a season's `monitored` makes Sonarr set every episode in it, so
+  `async_set_show_options` restores aired episodes afterwards.
 - Query strings are encoded like `encodeURIComponent` (`%20`, not `+`);
   Jellyseerr rejects anything else. A test pins this.
 - Services, WS commands and card serving are registered in `async_setup`

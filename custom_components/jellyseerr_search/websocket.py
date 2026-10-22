@@ -9,7 +9,15 @@ import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
 
+from homeassistant.exceptions import ServiceValidationError
+
 from .const import CARD_VERSION, DOMAIN, MEDIA_TV, MEDIA_TYPES
+from .episodes import (
+    async_discard_show,
+    async_download_episodes,
+    async_season_episodes,
+    async_set_show_options,
+)
 from .services import (
     MEDIA_ALL,
     parse_seasons,
@@ -20,6 +28,7 @@ from .services import (
     async_trending_media,
     async_tv_seasons,
     resolve_client,
+    resolve_coordinator,
 )
 
 SEARCH_LIMIT = 20
@@ -27,7 +36,19 @@ SEARCH_LIMIT = 20
 
 @callback
 def async_register_websocket(hass: HomeAssistant) -> None:
-    for command in (ws_version, ws_search, ws_trending, ws_popular, ws_seasons, ws_request, ws_remove):
+    for command in (
+        ws_version,
+        ws_search,
+        ws_trending,
+        ws_popular,
+        ws_seasons,
+        ws_request,
+        ws_remove,
+        ws_episodes,
+        ws_episodes_download,
+        ws_episodes_options,
+        ws_episodes_discard,
+    ):
         websocket_api.async_register_command(hass, command)
 
 
@@ -101,9 +122,12 @@ async def ws_popular(
 async def ws_seasons(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
-    client = resolve_client(hass, msg.get("config_entry_id"))
-    seasons = await async_tv_seasons(client, msg["tmdb_id"])
-    connection.send_result(msg["id"], {"seasons": seasons})
+    coordinator = resolve_coordinator(hass, msg.get("config_entry_id"))
+    seasons = await async_tv_seasons(coordinator.client, msg["tmdb_id"])
+    # The card offers "Choose episodes" only when Sonarr is set up.
+    connection.send_result(
+        msg["id"], {"seasons": seasons, "episode_picker": coordinator.sonarr is not None}
+    )
 
 
 @websocket_api.websocket_command(
@@ -143,4 +167,85 @@ async def ws_remove(
     """Deletes files. The card only offers it when show_remove is set."""
     client = resolve_client(hass, msg.get("config_entry_id"))
     result = await async_remove_media(client, msg["media_type"], msg["tmdb_id"])
+    connection.send_result(msg["id"], result)
+
+
+def _sonarr(hass: HomeAssistant, entry_id: str | None):
+    coordinator = resolve_coordinator(hass, entry_id)
+    if coordinator.sonarr is None:
+        raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_sonarr")
+    return coordinator.client, coordinator.sonarr
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/episodes",
+        vol.Required("tmdb_id"): vol.All(int, vol.Range(min=1)),
+        vol.Required("season_number"): vol.All(int, vol.Range(min=0)),
+        vol.Optional("config_entry_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_episodes(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """A season's episodes from Sonarr. May add the show to Sonarr, unmonitored."""
+    seerr, sonarr = _sonarr(hass, msg.get("config_entry_id"))
+    result = await async_season_episodes(seerr, sonarr, msg["tmdb_id"], msg["season_number"])
+    connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/episodes/download",
+        vol.Required("series_id"): vol.All(int, vol.Range(min=1)),
+        vol.Required("episode_ids"): vol.All([vol.All(int, vol.Range(min=1))], vol.Length(min=1)),
+        vol.Optional("config_entry_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_episodes_download(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    _, sonarr = _sonarr(hass, msg.get("config_entry_id"))
+    result = await async_download_episodes(sonarr, msg["series_id"], msg["episode_ids"])
+    connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/episodes/options",
+        vol.Required("series_id"): vol.All(int, vol.Range(min=1)),
+        vol.Optional("follow_new"): bool,
+        vol.Optional("daily"): bool,
+        vol.Optional("config_entry_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_episodes_options(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Follow new episodes on/off, and the Daily series type (dated releases)."""
+    _, sonarr = _sonarr(hass, msg.get("config_entry_id"))
+    result = await async_set_show_options(
+        sonarr, msg["series_id"], msg.get("follow_new"), msg.get("daily")
+    )
+    connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/episodes/discard",
+        vol.Required("series_id"): vol.All(int, vol.Range(min=1)),
+        vol.Optional("config_entry_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_episodes_discard(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """The card leaves a show it added without picking anything: remove it again,
+    unless it has files or monitored episodes."""
+    _, sonarr = _sonarr(hass, msg.get("config_entry_id"))
+    result = await async_discard_show(sonarr, msg["series_id"])
     connection.send_result(msg["id"], result)

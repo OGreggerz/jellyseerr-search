@@ -8,8 +8,9 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_API_KEY, CONF_URL, CONF_VERIFY_SSL
+from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     TextSelector,
@@ -18,7 +19,8 @@ from homeassistant.helpers.selector import (
 )
 
 from .api import JellyseerrAuthError, JellyseerrClient, JellyseerrConnectionError, JellyseerrError
-from .const import DOMAIN
+from .const import CONF_SONARR_API_KEY, CONF_SONARR_URL, DOMAIN
+from .sonarr import SonarrAuthError, SonarrClient, SonarrConnectionError, SonarrError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,6 +53,11 @@ class JellyseerrConfigFlow(ConfigFlow, domain=DOMAIN):
     """Connect to a Jellyseerr server with its API key."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> JellyseerrOptionsFlow:
+        return JellyseerrOptionsFlow()
 
     async def _async_validate(self, data: dict[str, Any]) -> str | None:
         """Return an error key, or None if the server accepted the key."""
@@ -105,5 +112,53 @@ class JellyseerrConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="reauth_confirm",
             data_schema=REAUTH_SCHEMA,
             description_placeholders={"url": entry.data[CONF_URL]},
+            errors=errors,
+        )
+
+
+OPTIONS_SCHEMA = vol.Schema(
+    {
+        vol.Optional(CONF_SONARR_URL): TextSelector(TextSelectorConfig(type=TextSelectorType.URL)),
+        vol.Optional(CONF_SONARR_API_KEY): TextSelector(
+            TextSelectorConfig(type=TextSelectorType.PASSWORD)
+        ),
+    }
+)
+
+
+class JellyseerrOptionsFlow(OptionsFlow):
+    """Optional Sonarr connection for the episode picker. Leave both empty to
+    turn the picker off."""
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            url = (user_input.get(CONF_SONARR_URL) or "").strip()
+            key = (user_input.get(CONF_SONARR_API_KEY) or "").strip()
+            if not url and not key:
+                return self.async_create_entry(data={})
+            if not url or not key:
+                errors["base"] = "sonarr_incomplete"
+            else:
+                url = _normalize_url(url)
+                session = async_get_clientsession(self.hass)
+                try:
+                    await SonarrClient(session, url, key).async_get_status()
+                except SonarrAuthError:
+                    errors["base"] = "sonarr_invalid_auth"
+                except SonarrConnectionError:
+                    errors["base"] = "sonarr_cannot_connect"
+                except SonarrError:
+                    _LOGGER.exception("Unexpected answer from Sonarr")
+                    errors["base"] = "unknown"
+                else:
+                    return self.async_create_entry(
+                        data={CONF_SONARR_URL: url, CONF_SONARR_API_KEY: key}
+                    )
+        return self.async_show_form(
+            step_id="init",
+            data_schema=self.add_suggested_values_to_schema(
+                OPTIONS_SCHEMA, user_input or dict(self.config_entry.options)
+            ),
             errors=errors,
         )

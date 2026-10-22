@@ -21,6 +21,7 @@ import homeassistant.helpers.config_validation as cv
 
 from .api import JellyseerrClient, JellyseerrError
 from .const import DOMAIN, MEDIA_TV, MEDIA_TYPES, REQUESTABLE_STATUSES
+from .coordinator import JellyseerrCoordinator
 
 SERVICE_SEARCH = "search"
 SERVICE_REQUEST = "request"
@@ -79,6 +80,11 @@ QUICK_REQUEST_SCHEMA = vol.Schema(
 
 def resolve_client(hass: HomeAssistant, entry_id: str | None) -> JellyseerrClient:
     """The client for the chosen entry, or the only loaded one."""
+    return resolve_coordinator(hass, entry_id).client
+
+
+def resolve_coordinator(hass: HomeAssistant, entry_id: str | None) -> JellyseerrCoordinator:
+    """The coordinator for the chosen entry, or the only loaded one."""
     loaded = [
         entry
         for entry in hass.config_entries.async_entries(DOMAIN)
@@ -98,7 +104,7 @@ def resolve_client(hass: HomeAssistant, entry_id: str | None) -> JellyseerrClien
         raise ServiceValidationError(
             translation_domain=DOMAIN, translation_key="multiple_servers"
         )
-    return loaded[0].runtime_data.client
+    return loaded[0].runtime_data
 
 
 async def async_search_media(

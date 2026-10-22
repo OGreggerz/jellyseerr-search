@@ -31,6 +31,33 @@ export interface Season {
   status: MediaStatus;
 }
 
+/** jellyseerr_search/episodes: what Sonarr has of each episode. */
+export type EpisodeStatus = "downloaded" | "downloading" | "wanted" | "not_aired" | "missing";
+
+export interface Episode {
+  id: number;
+  episode_number: number;
+  title: string;
+  air_date: string | null;
+  status: EpisodeStatus;
+  monitored: boolean;
+}
+
+/** A show's settings in Sonarr, as the picker shows them. */
+export interface SonarrShow {
+  series_id: number;
+  title: string;
+  daily: boolean;
+  follow_new: boolean;
+}
+
+export interface SeasonEpisodes extends SonarrShow {
+  /** The picker added the show to Sonarr (unmonitored) to list its episodes. */
+  added: boolean;
+  season_number: number;
+  episodes: Episode[];
+}
+
 export interface CardConfig {
   type: string;
   title?: string;

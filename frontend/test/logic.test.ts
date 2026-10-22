@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { Latest, canRequestMore, isRemovable, isRequestable, requestableSeasons, statusLabel } from "../src/logic";
-import type { Season } from "../src/types";
+import {
+  Latest,
+  airDateLabel,
+  canRequestMore,
+  episodeLabel,
+  isRemovable,
+  isRequestable,
+  pickableEpisodes,
+  requestableSeasons,
+  statusLabel,
+} from "../src/logic";
+import type { Episode, Season } from "../src/types";
 
 const season = (n: number, status: Season["status"]): Season => ({
   season_number: n,
@@ -54,5 +64,39 @@ describe("remove", () => {
     for (const s of ["not_requested", "pending", "deleted", "unknown", "blacklisted"] as const) {
       expect(isRemovable(s)).toBe(false);
     }
+  });
+});
+
+const episode = (id: number, status: Episode["status"], monitored = false): Episode => ({
+  id,
+  episode_number: id,
+  title: `Episode ${id}`,
+  air_date: "2026-11-04",
+  status,
+  monitored,
+});
+
+describe("episode picker", () => {
+  it("only offers episodes that aren't on disk, on the way or already wanted", () => {
+    const eps = [
+      episode(1, "downloaded", true),
+      episode(2, "downloading", true),
+      episode(3, "wanted", true),
+      episode(4, "missing"),
+      episode(5, "not_aired"),
+      episode(6, "not_aired", true),
+    ];
+    expect(pickableEpisodes(eps)).toEqual([4, 5]);
+  });
+
+  it("labels upcoming episodes by whether they will download", () => {
+    expect(episodeLabel(episode(1, "not_aired", true))).toBe("When it airs");
+    expect(episodeLabel(episode(1, "not_aired"))).toBe("Not aired");
+    expect(episodeLabel(episode(1, "missing"))).toBeNull();
+  });
+
+  it("formats air dates without a time zone shift", () => {
+    expect(airDateLabel("2026-11-04")).toBe("4 Nov 2026");
+    expect(airDateLabel(null)).toBe("No air date");
   });
 });
