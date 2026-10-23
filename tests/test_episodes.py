@@ -902,3 +902,30 @@ async def test_request_seasons_through_sonarr(hass, picker, aioclient_mock, hass
     put = calls(aioclient_mock, "put", "/series/16")[-1][2]
     assert [(s["seasonNumber"], s["monitored"]) for s in put["seasons"]] == [(0, False), (1, False), (2, True), (3, True)]
     assert calls(aioclient_mock, "post", "/command")[-1][2] == {"name": "SeasonSearch", "seriesId": 16, "seasonNumber": 2}
+
+
+async def test_downloaded_comes_from_sonarr_and_radarr(hass, arrs, aioclient_mock, hass_ws_client) -> None:
+    """Jellyseerr doesn't list The Apothecary Diaries yet; Sonarr has 3 episodes of it."""
+    aioclient_mock.get(f"{API}/media", json={"results": [{"tmdbId": 829280, "mediaType": "movie", "status": 5}]})
+    aioclient_mock.get(f"{API}/movie/829280", json={"id": 829280, "title": "Enola Holmes 2", "releaseDate": "2022-11-04", "mediaInfo": {"status": 5}})
+    aioclient_mock.get(f"{RADARR}/movie", json=[
+        {**_movie(1, "Enola Holmes 2", "released", has_file=True), "tmdbId": 829280, "movieFile": {"dateAdded": "2026-10-21T12:27:00Z"}},
+        {**_movie(8, "Infinity Castle 2", "announced"), "tmdbId": 1311034},
+    ])
+    aioclient_mock.get(f"{RADARR}/queue", json={"records": []})
+    aioclient_mock.get(f"{SONARR}/series", json=[
+        {**APOTHECARY, "tmdbId": 220542, "images": [], "statistics": {"episodeFileCount": 3, "percentOfEpisodes": 12.5}},
+    ])
+    aioclient_mock.get(f"{SONARR}/episodefile?seriesId=16", json=[{"dateAdded": "2026-10-23T10:34:01Z"}, {"dateAdded": "2026-10-23T10:34:00Z"}])
+    aioclient_mock.get(f"{SONARR}/wanted/missing", json={"records": []})
+    aioclient_mock.get(f"{SONARR}/calendar", json=[
+        {"seriesId": 16, "seasonNumber": 3, "episodeNumber": 4, "airDateUtc": "2999-01-01T00:00:00Z", "monitored": True, "hasFile": False},
+    ])
+    aioclient_mock.get(f"{SONARR}/queue", json={"records": []})
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/library"})
+    results = (await ws.receive_json())["result"]["results"]
+    assert [(r["title"], r["status"], r["arr"]) for r in results] == [
+        ("The Apothecary Diaries", "partially_available", {"downloaded": True, "waiting": True}),  # newest first
+        ("Enola Holmes 2", "available", {"downloaded": True, "waiting": False}),
+    ]

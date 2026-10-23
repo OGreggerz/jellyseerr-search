@@ -16,7 +16,7 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from .const import CARD_VERSION, DOMAIN, LIBRARY_LIMIT, MEDIA_TV, MEDIA_TYPES
 from .api import JellyseerrError
 from .sonarr import SonarrError
-from .waiting import async_annotate, async_check, async_search_again, async_waiting
+from .waiting import async_annotate, async_check, async_downloaded, async_search_again, async_waiting
 from .episodes import (
     async_discard_show,
     async_download_episodes,
@@ -155,7 +155,13 @@ async def ws_library(
     client = resolve_client(hass, msg.get("config_entry_id"))
     results = await async_library_media(client, LIBRARY_LIMIT)
     c = resolve_coordinator(hass, msg.get("config_entry_id"))
-    results = await async_annotate(results, c.arr_index, c.sonarr, c.radarr)
+    if c.sonarr is not None or c.radarr is not None:
+        try:
+            results = await async_downloaded(c.sonarr, c.radarr, results, LIBRARY_LIMIT)
+        except HomeAssistantError:
+            results = await async_annotate(results, c.arr_index, c.sonarr, c.radarr)  # *arr down: Jellyseerr's list
+    else:
+        results = await async_annotate(results, c.arr_index, c.sonarr, c.radarr)
     connection.send_result(msg["id"], {"results": results})
 
 

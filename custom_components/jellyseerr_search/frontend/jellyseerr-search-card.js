@@ -742,7 +742,7 @@ var q = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, J, Ze = "0.11.1", Y = "jellyseerr_search", Qe = 400, X = 2, $e = 36e5, et = [2e4, 6e4], tt = !1, Z = !1, nt = [
+}, J, Ze = "0.11.2", Y = "jellyseerr_search", Qe = 400, X = 2, $e = 36e5, et = [2e4, 6e4], tt = !1, Z = !1, nt = [
 	{
 		value: "all",
 		label: "All"
@@ -860,7 +860,7 @@ var $ = class extends R {
 	async _checkVersion() {
 		try {
 			let { version: e, waiting: t } = await this.hass.callWS({ type: `${Y}/version` });
-			e !== "0.11.1" && (this._staleVersion = e), Z = !!t, this._waitingOn = Z;
+			e !== "0.11.2" && (this._staleVersion = e), Z = !!t, this._waitingOn = Z;
 		} catch {}
 	}
 	async _reload() {

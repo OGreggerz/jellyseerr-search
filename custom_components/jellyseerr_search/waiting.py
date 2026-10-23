@@ -308,3 +308,57 @@ async def async_annotate(
         if info is not None:
             r["arr"] = info
     return results
+
+
+async def async_downloaded(
+    sonarr: SonarrClient | None, radarr: RadarrClient | None, seerr_items: list[dict[str, Any]], limit: int
+) -> list[dict[str, Any]]:
+    """The Downloaded list from what Sonarr and Radarr actually have (the same
+    source as the chips), newest file first. Jellyseerr's list lags: its Sonarr
+    scan runs once a day, and its Jellyfin scan can't match a show whose seasons
+    TMDB and TVDB number differently (The Apothecary Diaries). Titles only
+    Jellyseerr knows (say, films with no Radarr set up) are kept after them."""
+    waiting = {(i["media_type"], i["arr_id"]) for i in await async_waiting(sonarr, radarr)}
+    by_tvdb = {i["tvdb_id"]: i for i in seerr_items if i["media_type"] == "tv" and i.get("tvdb_id")}
+    items: list[dict[str, Any]] = []
+    try:
+        if radarr is not None:
+            for m in await radarr.async_get_movies():
+                if not m.get("hasFile"):
+                    continue
+                items.append({
+                    "tmdb_id": m.get("tmdbId") or None, "media_type": "movie", "title": m.get("title", ""),
+                    "year": m.get("year") or None, "overview": m.get("overview") or "", "poster_url": _poster(m),
+                    "status": "available", "tvdb_id": None,
+                    "arr": {"downloaded": True, "waiting": ("movie", m["id"]) in waiting},
+                    "added": (m.get("movieFile") or {}).get("dateAdded") or "",
+                })
+        if sonarr is not None:
+            for s in await sonarr._request("GET", "/series") or []:
+                stats = s.get("statistics") or {}
+                if not stats.get("episodeFileCount"):
+                    continue
+                files = await sonarr._request("GET", "/episodefile", params={"seriesId": s["id"]}) or []
+                seerr = by_tvdb.get(s.get("tvdbId"))
+                items.append({
+                    "tmdb_id": s.get("tmdbId") or (seerr or {}).get("tmdb_id"), "media_type": "tv",
+                    "title": s.get("title", ""), "year": s.get("year") or None, "overview": s.get("overview") or "",
+                    "poster_url": (seerr or {}).get("poster_url") or _poster(s),
+                    "status": "available" if (stats.get("percentOfEpisodes") or 0) >= 100 else "partially_available",
+                    "tvdb_id": s.get("tvdbId"),
+                    "arr": {"downloaded": True, "waiting": ("tv", s["id"]) in waiting},
+                    "added": max((f.get("dateAdded") or "" for f in files), default=""),
+                })
+    except (SonarrError, RadarrError) as err:
+        raise HomeAssistantError(
+            translation_domain=DOMAIN, translation_key="sonarr_error", translation_placeholders={"error": str(err)}
+        ) from err
+    items.sort(key=lambda i: i["added"], reverse=True)
+    covered = {(i["media_type"], i["tmdb_id"]) for i in items} | {("tvdb", i["tvdb_id"]) for i in items if i["tvdb_id"]}
+    extra = [
+        i for i in seerr_items
+        if (i["media_type"], i["tmdb_id"]) not in covered and ("tvdb", i.get("tvdb_id")) not in covered
+        and not (i["media_type"] == "movie" and radarr is not None)  # Radarr is the truth for films
+        and not (i["media_type"] == "tv" and sonarr is not None)  # and Sonarr for shows
+    ]
+    return [{k: v for k, v in i.items() if k != "added"} for i in items + extra][:limit]
