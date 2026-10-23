@@ -657,7 +657,7 @@ var Y = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, X, Be = "0.8.3", Z = "jellyseerr_search", Ve = 400, Q = 2, He = 36e5, Ue = [2e4, 6e4], We = !1, Ge = [
+}, X, Be = "0.9.0", Z = "jellyseerr_search", Ve = 400, Q = 2, He = 36e5, Ue = [2e4, 6e4], We = !1, Ge = [
 	{
 		value: "all",
 		label: "All"
@@ -771,7 +771,7 @@ var $ = class extends H {
 	async _checkVersion() {
 		try {
 			let { version: e } = await this.hass.callWS({ type: `${Z}/version` });
-			e !== "0.8.3" && (this._staleVersion = e);
+			e !== "0.9.0" && (this._staleVersion = e);
 		} catch {}
 	}
 	async _reload() {
@@ -857,18 +857,18 @@ var $ = class extends H {
 		}
 	}
 	_open(e) {
-		this._leaveShow(), this._selected = e, this._seasons = void 0, this._seasonsError = void 0, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._confirmRemove = !1, this._picker = !1, this._closeEpisodes(), e.media_type === "tv" && this._loadSeasons(e.tmdb_id);
+		this._leaveShow(), this._selected = e, this._seasons = void 0, this._seasonsError = void 0, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._confirmRemove = !1, this._picker = !1, this._show = void 0, this._closeEpisodes(), e.media_type === "tv" && this._loadSeasons(e.tmdb_id);
 	}
 	async _loadSeasons(e) {
 		let t = this._latestSeasons.next();
 		try {
-			let { seasons: n, episode_picker: r } = await this.hass.callWS({
+			let { seasons: n, episode_picker: r, show: i } = await this.hass.callWS({
 				type: `${Z}/seasons`,
 				tmdb_id: e,
 				...this._entry()
 			});
 			if (!t()) return;
-			this._seasons = n, this._picker = !!r, this._chosen = new Set(J(n));
+			this._seasons = n, this._picker = !!r, this._show = i, this._chosen = new Set(J(n));
 		} catch (e) {
 			t() && (this._seasonsError = G(e));
 		}
@@ -1038,24 +1038,50 @@ var $ = class extends H {
 			}
 		}
 	}
-	async _setFollowNew(e) {
-		let t = this._episodes, n = this._selected;
-		if (t && n && !this._pickerBusy) {
-			this._pickerBusy = !0, this._followBusy = !0;
+	async _setFollowShow(e) {
+		let t = this._selected;
+		if (t && !this._followBusy) {
+			this._followBusy = !0;
 			try {
-				let r = await this.hass.callWS({
-					type: `${Z}/episodes/options`,
-					series_id: t.series_id,
+				let n = await this.hass.callWS({
+					type: `${Z}/episodes/follow`,
+					tmdb_id: t.tmdb_id,
 					follow_new: e,
 					...this._entry()
 				});
-				r.follow_new && this._addedSeries === t.series_id && (this._addedSeries = void 0), r.series_type_changed && W(this, qe(t.title, r.series_type_changed)), e && !r.follow_new && W(this, `${t.title} has no regular series to follow yet.`), this._stillOn(n, t.series_id) && await this._loadEpisodes(n.tmdb_id, t.season_number);
+				if (n.series_type_changed && W(this, qe(t.title, n.series_type_changed)), e && !n.follow_new ? W(this, `${t.title} has no regular series to follow yet.`) : e && W(this, `New episodes of ${t.title} will download as they come out.`), this._selected !== t) return;
+				this._show = {
+					in_sonarr: n.in_sonarr,
+					follow_new: n.follow_new
+				}, this._episodes && this._episodeSeason && this._loadEpisodes(t.tmdb_id, this._episodeSeason.season_number);
 			} catch (e) {
-				this._recoverIfGone(e, n, t.season_number) || W(this, `Couldn't change it: ${G(e)}`), this.requestUpdate();
+				W(this, `Couldn't change it: ${G(e)}`), this.requestUpdate();
 			} finally {
-				this._pickerBusy = !1, this._followBusy = !1;
+				this._followBusy = !1;
 			}
 		}
+	}
+	_renderFollow(e) {
+		return !this._picker || this._show === void 0 ? N : this._show === null ? j`<div class="message">Couldn't reach Sonarr for this show.</div>` : j`
+      <div class="seasons options">
+        <label class="row option">
+          <input
+            type="checkbox"
+            .checked=${Ae(this._show.follow_new)}
+            ?disabled=${this._followBusy}
+            @change=${(e) => this._setFollowShow(e.target.checked)}
+          />
+          <span class="grow">
+            Get new episodes
+            ${this._followBusy ? j`<span class="hint busy">Checking how it's released and setting it up… This can take a
+                  minute; it carries on if you leave.</span>` : j`<span class="hint">
+                  Download new episodes of ${e.title} as they come out, including new series. Turning it off
+                  also cancels upcoming episodes you picked.
+                </span>`}
+          </span>
+        </label>
+      </div>
+    `;
 	}
 	render() {
 		return this._config ? j`
@@ -1181,6 +1207,7 @@ var $ = class extends H {
         </div>
         ${this._config.show_remove && Ne(e.status) && this._confirmRemove ? this._renderRemove(e) : N}
         ${e.overview ? j`<p class="overview">${e.overview}</p>` : N}
+        ${n ? this._renderFollow(e) : N}
         ${n ? this._renderSeasons() : N}
         ${this._config.show_4k && r ? j`<label class="row">
               <input type="checkbox" .checked=${this._is4k} @change=${(e) => this._is4k = e.target.checked} />
@@ -1243,25 +1270,6 @@ var $ = class extends H {
 		else {
 			let e = Ie(n.episodes), t = this._picked.size;
 			r = j`
-        <div class="seasons options">
-          <label class="row option">
-            <input
-              type="checkbox"
-              .checked=${Ae(n.follow_new)}
-              ?disabled=${this._pickerBusy}
-              @change=${(e) => this._setFollowNew(e.target.checked)}
-            />
-            <span class="grow">
-              Get new episodes
-              ${this._followBusy ? j`<span class="hint busy">Checking how it's released and setting it up… This can take a
-                    minute; it carries on if you leave.</span>` : N}
-              <span class="hint">
-                Download new episodes of ${n.title} as they come out, even ones listed late. Turning it
-                off also cancels upcoming episodes you picked.
-              </span>
-            </span>
-          </label>
-        </div>
         <div class="seasons">
           <div class="seasons-head">
             <span>${n.episodes.length} episodes</span>
@@ -1347,6 +1355,7 @@ X = $, X.properties = {
 	_confirmRemoveEp: { state: !0 },
 	_downloading: { state: !0 },
 	_followBusy: { state: !0 },
+	_show: { state: !0 },
 	_library: { state: !0 },
 	_libraryError: { state: !0 }
 }, X.styles = o`

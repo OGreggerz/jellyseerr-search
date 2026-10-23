@@ -41,9 +41,10 @@ more.
 
 **Episode picker (optional, needs Sonarr).** Jellyseerr requests whole seasons
 only. Add Sonarr's URL and API key under the integration's **Configure** button
-and each season in the card gets an **Episodes** link: tick single episodes and
-download them, switch **Get new episodes** on to have future episodes download
-when they air. **Daily show** (programmes named by date, like quizzes and
+and each season in the card gets an **Episodes** link to tick single episodes
+and download them. **Get new episodes**, on the show's page, has future
+episodes (and new seasons) download when they air; ticking it on a show Sonarr
+doesn't have adds it. **Daily show** (programmes named by date, like quizzes and
 soaps, which Sonarr can't match as a normal series) is set automatically: on
 Download, Sonarr test-searches the latest aired pick; if nothing matches, the
 other series type is tried and kept if it matches. That works from a show's

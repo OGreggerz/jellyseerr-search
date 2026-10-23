@@ -44,6 +44,12 @@ export interface Episode {
   monitored: boolean;
 }
 
+/** jellyseerr_search/seasons with Sonarr set up: the show page's follow state. */
+export interface ShowState {
+  in_sonarr: boolean;
+  follow_new: boolean;
+}
+
 /** A show's settings in Sonarr, as the picker shows them. */
 export interface SonarrShow {
   series_id: number;

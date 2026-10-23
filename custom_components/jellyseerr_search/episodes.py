@@ -577,3 +577,52 @@ async def async_remove_episodes(
             # The files are gone either way; Jellyseerr catches up overnight.
             _LOGGER.warning("Removed from Sonarr, but Jellyseerr didn't forget TMDB %s: %s", tmdb_id, err)
     return {"series_id": series_id, "files_removed": len(file_ids), "show_removed": result["removed"]}
+
+
+async def _series_for(seerr: JellyseerrClient, sonarr: SonarrClient, tmdb_id: int) -> tuple[int | None, dict[str, Any] | None]:
+    """The show's TVDB id (from Jellyseerr) and its Sonarr series, if Sonarr has it."""
+    tvdb_id = await seerr.async_get_tvdb_id(tmdb_id)
+    return tvdb_id, (await sonarr.async_get_series_by_tvdb(tvdb_id) if tvdb_id else None)
+
+
+async def async_show_state(seerr: JellyseerrClient, sonarr: SonarrClient, tmdb_id: int) -> dict[str, Any]:
+    """What the show page needs from Sonarr: whether it has the show and whether
+    new episodes are followed. Never adds anything."""
+    try:
+        _, series = await _series_for(seerr, sonarr, tmdb_id)
+    except (JellyseerrError, SonarrError) as err:
+        raise _error("sonarr_error", err) from err
+    return {"in_sonarr": series is not None, "follow_new": bool(series and follows_new(series))}
+
+
+async def async_follow_show(
+    seerr: JellyseerrClient,
+    sonarr: SonarrClient,
+    tmdb_id: int,
+    follow_new: bool,
+    added_shows: AddedShows | None = None,
+    followed: FollowedShows | None = None,
+    checked: CheckedTypes | None = None,
+) -> dict[str, Any]:
+    """Get new episodes on or off from the show page. A show Sonarr doesn't have
+    is added first (nothing monitored, nothing searched), then followed; it's
+    kept, since following is a reason to keep it."""
+    try:
+        tvdb_id, series = await _series_for(seerr, sonarr, tmdb_id)
+        if series is None:
+            if not follow_new:
+                return {"in_sonarr": False, "follow_new": False}
+            if not tvdb_id:
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key="no_tvdb_id",
+                    translation_placeholders={"tmdb_id": str(tmdb_id)},
+                )
+            series = await _add_to_sonarr(seerr, sonarr, tvdb_id)
+            await _wait_for_episodes(sonarr, series["id"])
+    except (JellyseerrError, SonarrError) as err:
+        raise _error("sonarr_error", err) from err
+    result = await async_set_show_options(
+        sonarr, series["id"], follow_new, None, added_shows, followed, checked
+    )
+    return {**result, "in_sonarr": True}

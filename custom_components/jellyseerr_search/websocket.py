@@ -11,12 +11,14 @@ import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
 
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 from .const import CARD_VERSION, DOMAIN, LIBRARY_LIMIT, MEDIA_TV, MEDIA_TYPES
 from .episodes import (
     async_discard_show,
     async_download_episodes,
+    async_follow_show,
+    async_show_state,
     async_remove_episodes,
     async_season_episodes,
     async_set_show_options,
@@ -54,6 +56,7 @@ def async_register_websocket(hass: HomeAssistant) -> None:
         ws_episodes_options,
         ws_episodes_discard,
         ws_episodes_remove,
+        ws_episodes_follow,
     ):
         websocket_api.async_register_command(hass, command)
 
@@ -146,10 +149,14 @@ async def ws_seasons(
 ) -> None:
     coordinator = resolve_coordinator(hass, msg.get("config_entry_id"))
     seasons = await async_tv_seasons(coordinator.client, msg["tmdb_id"])
-    # The card offers "Choose episodes" only when Sonarr is set up.
-    connection.send_result(
-        msg["id"], {"seasons": seasons, "episode_picker": coordinator.sonarr is not None}
-    )
+    result: dict[str, Any] = {"seasons": seasons, "episode_picker": coordinator.sonarr is not None}
+    # The card offers "Episodes" and "Get new episodes" only when Sonarr is set up.
+    if coordinator.sonarr is not None:
+        try:
+            result["show"] = await async_show_state(coordinator.client, coordinator.sonarr, msg["tmdb_id"])
+        except HomeAssistantError:
+            result["show"] = None  # Sonarr down: the seasons still show.
+    connection.send_result(msg["id"], result)
 
 
 @websocket_api.websocket_command(
@@ -312,6 +319,29 @@ async def ws_episodes_remove(
         hass,
         async_remove_episodes(
             c.sonarr, msg["series_id"], msg["episode_ids"], c.added_shows, c.client, msg.get("tmdb_id"), c.followed
+        ),
+    )
+    connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/episodes/follow",
+        vol.Required("tmdb_id"): vol.All(int, vol.Range(min=1)),
+        vol.Required("follow_new"): bool,
+        vol.Optional("config_entry_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_episodes_follow(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Get new episodes, from the show page. Adds the show to Sonarr if needed."""
+    c = _picker(hass, msg.get("config_entry_id"))
+    result = await _finish_regardless(
+        hass,
+        async_follow_show(
+            c.client, c.sonarr, msg["tmdb_id"], msg["follow_new"], c.added_shows, c.followed, c.checked
         ),
     )
     connection.send_result(msg["id"], result)

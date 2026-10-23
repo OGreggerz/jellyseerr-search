@@ -16,7 +16,17 @@ import {
   requestableSeasons,
   statusLabel,
 } from "./logic";
-import type { Browse, CardConfig, Episode, MediaFilter, SearchResult, Season, SeasonEpisodes, SonarrShow } from "./types";
+import type {
+  Browse,
+  CardConfig,
+  Episode,
+  MediaFilter,
+  SearchResult,
+  Season,
+  SeasonEpisodes,
+  ShowState,
+  SonarrShow,
+} from "./types";
 
 export const CARD_VERSION = __CARD_VERSION__;
 const DOMAIN = "jellyseerr_search";
@@ -79,6 +89,7 @@ export class JellyseerrSearchCard extends LitElement {
     _confirmRemoveEp: { state: true },
     _downloading: { state: true },
     _followBusy: { state: true },
+    _show: { state: true },
     _library: { state: true },
     _libraryError: { state: true },
   };
@@ -116,6 +127,8 @@ export class JellyseerrSearchCard extends LitElement {
   declare _downloading: boolean;
   /** Get new episodes tapped: the server may be test-searching first. */
   declare _followBusy: boolean;
+  /** Sonarr's view of the open show (follow state), when Sonarr is set up. */
+  declare _show?: ShowState | null;
   /** What the server already has, for the Downloaded filter. */
   declare _library?: SearchResult[];
   declare _libraryError?: string;
@@ -377,6 +390,7 @@ export class JellyseerrSearchCard extends LitElement {
     this._is4k = false;
     this._confirmRemove = false;
     this._picker = false;
+    this._show = undefined;
     this._closeEpisodes();
     if (result.media_type === "tv") void this._loadSeasons(result.tmdb_id);
   }
@@ -384,7 +398,11 @@ export class JellyseerrSearchCard extends LitElement {
   private async _loadSeasons(tmdbId: number): Promise<void> {
     const current = this._latestSeasons.next();
     try {
-      const { seasons, episode_picker } = await this.hass.callWS<{ seasons: Season[]; episode_picker?: boolean }>({
+      const { seasons, episode_picker, show } = await this.hass.callWS<{
+        seasons: Season[];
+        episode_picker?: boolean;
+        show?: ShowState | null;
+      }>({
         type: `${DOMAIN}/seasons`,
         tmdb_id: tmdbId,
         ...this._entry(),
@@ -392,6 +410,7 @@ export class JellyseerrSearchCard extends LitElement {
       if (!current()) return;
       this._seasons = seasons;
       this._picker = !!episode_picker;
+      this._show = show;
       this._chosen = new Set(requestableSeasons(seasons));
     } catch (err) {
       if (current()) this._seasonsError = errorMessage(err);
@@ -655,32 +674,59 @@ export class JellyseerrSearchCard extends LitElement {
     }
   }
 
-  private async _setFollowNew(value: boolean): Promise<void> {
-    const list = this._episodes;
+  /** Get new episodes, from the show page. The server adds the show to Sonarr
+   *  if it hasn't got it, checks how it's released, then follows it. */
+  private async _setFollowShow(value: boolean): Promise<void> {
     const item = this._selected;
-    if (!list || !item || this._pickerBusy) return;
-    this._pickerBusy = true;
+    if (!item || this._followBusy) return;
     this._followBusy = true;
     try {
-      const show = await this.hass.callWS<SonarrShow & { series_type_changed?: string | null }>({
-        type: `${DOMAIN}/episodes/options`,
-        series_id: list.series_id,
+      const show = await this.hass.callWS<ShowState & { title?: string; series_type_changed?: string | null }>({
+        type: `${DOMAIN}/episodes/follow`,
+        tmdb_id: item.tmdb_id,
         follow_new: value,
         ...this._entry(),
       });
-      if (show.follow_new && this._addedSeries === list.series_id) this._addedSeries = undefined;
-      if (show.series_type_changed) toast(this, typeChangedMessage(list.title, show.series_type_changed));
-      if (value && !show.follow_new) toast(this, `${list.title} has no regular series to follow yet.`);
-      // Following changes which future episodes are monitored: reload the chips.
-      if (this._stillOn(item, list.series_id)) await this._loadEpisodes(item.tmdb_id, list.season_number);
+      if (show.series_type_changed) toast(this, typeChangedMessage(item.title, show.series_type_changed));
+      if (value && !show.follow_new) toast(this, `${item.title} has no regular series to follow yet.`);
+      else if (value) toast(this, `New episodes of ${item.title} will download as they come out.`);
+      if (this._selected !== item) return;
+      this._show = { in_sonarr: show.in_sonarr, follow_new: show.follow_new };
+      // Following changes which future episodes are monitored: refresh an open list.
+      if (this._episodes && this._episodeSeason) void this._loadEpisodes(item.tmdb_id, this._episodeSeason.season_number);
     } catch (err) {
-      if (!this._recoverIfGone(err, item, list.season_number)) toast(this, `Couldn't change it: ${errorMessage(err)}`);
-      // The box must show what Sonarr has, not what was tapped.
-      this.requestUpdate();
+      toast(this, `Couldn't change it: ${errorMessage(err)}`);
+      this.requestUpdate(); // The box must show what Sonarr has, not what was tapped.
     } finally {
-      this._pickerBusy = false;
       this._followBusy = false;
     }
+  }
+
+  private _renderFollow(item: SearchResult) {
+    if (!this._picker || this._show === undefined) return nothing;
+    if (this._show === null) return html`<div class="message">Couldn't reach Sonarr for this show.</div>`;
+    return html`
+      <div class="seasons options">
+        <label class="row option">
+          <input
+            type="checkbox"
+            .checked=${live(this._show.follow_new)}
+            ?disabled=${this._followBusy}
+            @change=${(e: Event) => this._setFollowShow((e.target as HTMLInputElement).checked)}
+          />
+          <span class="grow">
+            Get new episodes
+            ${this._followBusy
+              ? html`<span class="hint busy">Checking how it's released and setting it up… This can take a
+                  minute; it carries on if you leave.</span>`
+              : html`<span class="hint">
+                  Download new episodes of ${item.title} as they come out, including new series. Turning it off
+                  also cancels upcoming episodes you picked.
+                </span>`}
+          </span>
+        </label>
+      </div>
+    `;
   }
 
   // --- render -------------------------------------------------------------
@@ -856,6 +902,7 @@ export class JellyseerrSearchCard extends LitElement {
         </div>
         ${this._config.show_remove && isRemovable(item.status) && this._confirmRemove ? this._renderRemove(item) : nothing}
         ${item.overview ? html`<p class="overview">${item.overview}</p>` : nothing}
+        ${tv ? this._renderFollow(item) : nothing}
         ${tv ? this._renderSeasons() : nothing}
         ${this._config.show_4k && canRequest
           ? html`<label class="row">
@@ -937,27 +984,6 @@ export class JellyseerrSearchCard extends LitElement {
       const open = pickableEpisodes(list.episodes);
       const n = this._picked.size;
       body = html`
-        <div class="seasons options">
-          <label class="row option">
-            <input
-              type="checkbox"
-              .checked=${live(list.follow_new)}
-              ?disabled=${this._pickerBusy}
-              @change=${(e: Event) => this._setFollowNew((e.target as HTMLInputElement).checked)}
-            />
-            <span class="grow">
-              Get new episodes
-              ${this._followBusy
-                ? html`<span class="hint busy">Checking how it's released and setting it up… This can take a
-                    minute; it carries on if you leave.</span>`
-                : nothing}
-              <span class="hint">
-                Download new episodes of ${list.title} as they come out, even ones listed late. Turning it
-                off also cancels upcoming episodes you picked.
-              </span>
-            </span>
-          </label>
-        </div>
         <div class="seasons">
           <div class="seasons-head">
             <span>${list.episodes.length} episodes</span>

@@ -79,6 +79,51 @@ def calls(aioclient_mock, method: str, path: str):
     return [c for c in aioclient_mock.mock_calls if c[0].lower() == method and c[1].path == f"/api/v3{path}"]
 
 
+async def test_seasons_include_follow_state(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    following = {**SERIES, "monitorNewItems": "all", "seasons": [*SERIES["seasons"][:2], {"seasonNumber": 2, "monitored": True}]}
+    aioclient_mock.get(f"{API}/tv/21502", json={"id": 21502, "seasons": [], "externalIds": {"tvdbId": 252963}})
+    aioclient_mock.get(f"{SONARR}/series?tvdbId=252963", json=[following])
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/seasons", "tmdb_id": 21502})
+    result = (await ws.receive_json())["result"]
+    assert result["episode_picker"] is True
+    assert result["show"] == {"in_sonarr": True, "follow_new": True}
+
+
+async def test_follow_from_the_show_page_adds_the_show(hass, picker, aioclient_mock, hass_ws_client, monkeypatch) -> None:
+    monkeypatch.setattr("custom_components.jellyseerr_search.episodes.asyncio.sleep", _no_sleep)
+    following = {**SERIES, "monitorNewItems": "all", "seasons": [*SERIES["seasons"][:2], {"seasonNumber": 2, "monitored": True}]}
+    aioclient_mock.get(f"{API}/tv/21502", json={"externalIds": {"tvdbId": 252963}})
+    aioclient_mock.get(f"{API}/settings/sonarr", json=[{"is4k": False, "isDefault": True, "activeProfileId": 7, "activeDirectory": "/tv"}])
+    aioclient_mock.get(f"{SONARR}/series?tvdbId=252963", json=[])
+    aioclient_mock.get(f"{SONARR}/series/lookup?term=tvdb:252963", json=[{**SERIES, "id": None}])
+    aioclient_mock.post(f"{SONARR}/series", json=SERIES, status=201)
+    aioclient_mock.get(f"{SONARR}/series/5", json=SERIES)
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=5&seasonNumber=2", json=SEASON_2)
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=5", json=SEASON_2)
+    aioclient_mock.get(f"{SONARR}/release?episodeId=101", json=[{"mappedEpisodeInfo": [{"id": 101}]}])
+    aioclient_mock.put(f"{SONARR}/series/5", json=following)
+    aioclient_mock.put(f"{SONARR}/episode/monitor", json=[])
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/episodes/follow", "tmdb_id": 21502, "follow_new": True})
+    msg = await ws.receive_json()
+    assert msg["success"], msg
+    assert msg["result"]["follow_new"] is True and msg["result"]["in_sonarr"] is True
+    assert calls(aioclient_mock, "post", "/series")
+    assert 5 in picker.runtime_data.followed.shows()
+    assert picker.runtime_data.added_shows.due(dt_util.utcnow() + timedelta(days=1)) == []
+
+
+async def test_unfollow_of_a_show_sonarr_lacks_does_nothing(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    aioclient_mock.get(f"{API}/tv/21502", json={"externalIds": {"tvdbId": 252963}})
+    aioclient_mock.get(f"{SONARR}/series?tvdbId=252963", json=[])
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/episodes/follow", "tmdb_id": 21502, "follow_new": False})
+    msg = await ws.receive_json()
+    assert msg["result"] == {"in_sonarr": False, "follow_new": False}
+    assert not calls(aioclient_mock, "post", "/series")
+
+
 async def test_seasons_say_whether_picker_is_on(hass, entry, aioclient_mock, hass_ws_client) -> None:
     aioclient_mock.get(f"{API}/tv/1", json={"id": 1, "seasons": []})
     ws = await hass_ws_client(hass)
