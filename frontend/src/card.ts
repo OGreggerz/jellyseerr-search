@@ -69,6 +69,7 @@ export class JellyseerrSearchCard extends LitElement {
     _picked: { state: true },
     _pickerBusy: { state: true },
     _confirmRemoveEp: { state: true },
+    _downloading: { state: true },
     _library: { state: true },
     _libraryError: { state: true },
   };
@@ -102,6 +103,8 @@ export class JellyseerrSearchCard extends LitElement {
   declare _pickerBusy: boolean;
   /** A downloaded episode whose Remove was tapped once: the next tap deletes. */
   declare _confirmRemoveEp?: number;
+  /** Download pressed: the server may be test-searching to check the naming. */
+  declare _downloading: boolean;
   /** What the server already has, for the Downloaded filter. */
   declare _library?: SearchResult[];
   declare _libraryError?: string;
@@ -134,6 +137,7 @@ export class JellyseerrSearchCard extends LitElement {
     this._picker = false;
     this._picked = new Set();
     this._pickerBusy = false;
+    this._downloading = false;
   }
 
   static getConfigForm() {
@@ -554,15 +558,22 @@ export class JellyseerrSearchCard extends LitElement {
     if (!list || !this._picked.size || this._pickerBusy || !this._selected) return;
     const ids = [...this._picked];
     this._pickerBusy = true;
+    this._downloading = true;
     try {
-      await this.hass.callWS({
+      const result = await this.hass.callWS<SonarrShow & { series_type_changed: string | null }>({
         type: `${DOMAIN}/episodes/download`,
         series_id: list.series_id,
         episode_ids: ids,
         ...this._entry(),
       });
       this._addedSeries = undefined; // Something was picked: keep the show.
-      toast(this, `Downloading ${ids.length} episode${ids.length === 1 ? "" : "s"} of ${list.title}`);
+      const changed =
+        result.series_type_changed === "daily"
+          ? " It's released by date, so it's now set as a daily show."
+          : result.series_type_changed === "standard"
+            ? " It isn't released by date, so it's no longer set as a daily show."
+            : "";
+      toast(this, `Downloading ${ids.length} episode${ids.length === 1 ? "" : "s"} of ${list.title}.${changed}`);
       this._picked = new Set();
       const tmdbId = this._selected.tmdb_id;
       await this._loadEpisodes(tmdbId, list.season_number);
@@ -576,6 +587,7 @@ export class JellyseerrSearchCard extends LitElement {
       toast(this, `Download failed: ${errorMessage(err)}`);
     } finally {
       this._pickerBusy = false;
+      this._downloading = false;
     }
   }
 
@@ -920,8 +932,8 @@ export class JellyseerrSearchCard extends LitElement {
             <span class="grow">
               Daily show
               <span class="hint">
-                For shows released by date, like quizzes and soaps. Turning it on searches again for
-                wanted episodes.
+                Set automatically when you download: the first search checks whether this show is named by
+                date (quizzes, soaps). Change it only if that gets it wrong.
               </span>
             </span>
           </label>
@@ -975,7 +987,13 @@ export class JellyseerrSearchCard extends LitElement {
           ? html`<div class="warn">That's ${n} episodes. Check there's room before downloading.</div>`
           : nothing}
         <button class="primary" ?disabled=${!n || this._pickerBusy} @click=${this._download}>
-          ${this._pickerBusy ? "Working…" : n ? `Download ${n} episode${n === 1 ? "" : "s"}` : "Pick episodes to download"}
+          ${this._downloading
+            ? "Searching…"
+            : this._pickerBusy
+              ? "Working…"
+              : n
+                ? `Download ${n} episode${n === 1 ? "" : "s"}`
+                : "Pick episodes to download"}
         </button>
       `;
     }

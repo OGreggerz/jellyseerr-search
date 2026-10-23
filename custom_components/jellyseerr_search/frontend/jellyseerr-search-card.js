@@ -597,7 +597,7 @@ var Y = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, X, je = "0.6.1", Z = "jellyseerr_search", Me = 400, Q = 2, Ne = 36e5, Pe = [2e4, 6e4], Fe = !1, Ie = [
+}, X, je = "0.7.0", Z = "jellyseerr_search", Me = 400, Q = 2, Ne = 36e5, Pe = [2e4, 6e4], Fe = !1, Ie = [
 	{
 		value: "all",
 		label: "All"
@@ -624,7 +624,7 @@ var Y = class {
 	heading: "Popular"
 }], $ = class extends U {
 	constructor() {
-		super(), this._latestSearch = new Y(), this._latestSeasons = new Y(), this._latestBrowse = new Y(), this._latestEpisodes = new Y(), this._latestLibrary = new Y(), this._refreshTimers = [], this._browseAt = 0, this._query = "", this._filter = "all", this._browse = "trending", this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1, this._confirmRemove = !1, this._removing = !1, this._picker = !1, this._picked = /* @__PURE__ */ new Set(), this._pickerBusy = !1;
+		super(), this._latestSearch = new Y(), this._latestSeasons = new Y(), this._latestBrowse = new Y(), this._latestEpisodes = new Y(), this._latestLibrary = new Y(), this._refreshTimers = [], this._browseAt = 0, this._query = "", this._filter = "all", this._browse = "trending", this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1, this._confirmRemove = !1, this._removing = !1, this._picker = !1, this._picked = /* @__PURE__ */ new Set(), this._pickerBusy = !1, this._downloading = !1;
 	}
 	static getConfigForm() {
 		return {
@@ -707,7 +707,7 @@ var Y = class {
 	async _checkVersion() {
 		try {
 			let { version: e } = await this.hass.callWS({ type: `${Z}/version` });
-			e !== "0.6.1" && (this._staleVersion = e);
+			e !== "0.7.0" && (this._staleVersion = e);
 		} catch {}
 	}
 	async _reload() {
@@ -925,22 +925,25 @@ var Y = class {
 		let e = this._episodes;
 		if (!e || !this._picked.size || this._pickerBusy || !this._selected) return;
 		let t = [...this._picked];
-		this._pickerBusy = !0;
+		this._pickerBusy = !0, this._downloading = !0;
 		try {
-			await this.hass.callWS({
+			let n = await this.hass.callWS({
 				type: `${Z}/episodes/download`,
 				series_id: e.series_id,
 				episode_ids: t,
 				...this._entry()
-			}), this._addedSeries = void 0, W(this, `Downloading ${t.length} episode${t.length === 1 ? "" : "s"} of ${e.title}`), this._picked = /* @__PURE__ */ new Set();
-			let n = this._selected.tmdb_id;
-			await this._loadEpisodes(n, e.season_number), this._clearRefreshTimers(), this._refreshTimers = Pe.map((t) => setTimeout(() => {
-				this._episodes?.series_id === e.series_id && this._loadEpisodes(n, e.season_number);
+			});
+			this._addedSeries = void 0;
+			let r = n.series_type_changed === "daily" ? " It's released by date, so it's now set as a daily show." : n.series_type_changed === "standard" ? " It isn't released by date, so it's no longer set as a daily show." : "";
+			W(this, `Downloading ${t.length} episode${t.length === 1 ? "" : "s"} of ${e.title}.${r}`), this._picked = /* @__PURE__ */ new Set();
+			let i = this._selected.tmdb_id;
+			await this._loadEpisodes(i, e.season_number), this._clearRefreshTimers(), this._refreshTimers = Pe.map((t) => setTimeout(() => {
+				this._episodes?.series_id === e.series_id && this._loadEpisodes(i, e.season_number);
 			}, t));
 		} catch (e) {
 			W(this, `Download failed: ${G(e)}`);
 		} finally {
-			this._pickerBusy = !1;
+			this._pickerBusy = !1, this._downloading = !1;
 		}
 	}
 	_askRemoveEpisode(e, t) {
@@ -1201,8 +1204,8 @@ var Y = class {
             <span class="grow">
               Daily show
               <span class="hint">
-                For shows released by date, like quizzes and soaps. Turning it on searches again for
-                wanted episodes.
+                Set automatically when you download: the first search checks whether this show is named by
+                date (quizzes, soaps). Change it only if that gets it wrong.
               </span>
             </span>
           </label>
@@ -1245,7 +1248,7 @@ var Y = class {
         </div>
         ${t > 20 ? M`<div class="warn">That's ${t} episodes. Check there's room before downloading.</div>` : P}
         <button class="primary" ?disabled=${!t || this._pickerBusy} @click=${this._download}>
-          ${this._pickerBusy ? "Working…" : t ? `Download ${t} episode${t === 1 ? "" : "s"}` : "Pick episodes to download"}
+          ${this._downloading ? "Searching…" : this._pickerBusy ? "Working…" : t ? `Download ${t} episode${t === 1 ? "" : "s"}` : "Pick episodes to download"}
         </button>
       `;
 		}
@@ -1290,6 +1293,7 @@ X = $, X.properties = {
 	_picked: { state: !0 },
 	_pickerBusy: { state: !0 },
 	_confirmRemoveEp: { state: !0 },
+	_downloading: { state: !0 },
 	_library: { state: !0 },
 	_libraryError: { state: !0 }
 }, X.styles = o`

@@ -9,6 +9,8 @@ DOMAIN: Final = "jellyseerr_search"
 
 DEFAULT_SCAN_INTERVAL: Final = timedelta(minutes=5)
 REQUEST_TIMEOUT: Final = 15
+# Sonarr's interactive search waits for the indexers.
+SEARCH_TIMEOUT: Final = 90
 
 TMDB_POSTER_URL: Final = "https://image.tmdb.org/t/p/w342"
 
@@ -55,4 +57,4 @@ REQUEST_COUNT_KEYS: Final = ("pending", "approved", "processing", "available", "
 URL_BASE: Final = f"/{DOMAIN}"
 CARD_FILENAME: Final = "jellyseerr-search-card.js"
 CARD_URL: Final = f"{URL_BASE}/{CARD_FILENAME}"
-CARD_VERSION: Final = "0.6.1"
+CARD_VERSION: Final = "0.7.0"

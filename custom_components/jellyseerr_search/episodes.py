@@ -195,6 +195,26 @@ async def async_season_episodes(
     }
 
 
+async def _fit_series_type(sonarr: SonarrClient, series: dict[str, Any], episode_id: int) -> tuple[dict[str, Any], str | None]:
+    """Make the series type match how releases are named, by experiment.
+
+    A Standard series rejects date-named releases ("Found daily-style episode for
+    non-daily series") and a Daily one searches by air date only, so the wrong
+    type means nothing is found. Air dates can't tell (a new daily show has two
+    episodes), so search for one aired episode as the series is; if nothing
+    matches, try the other type and keep it if that matches. Returns the series
+    and the new type, or None if unchanged. Anime is left alone."""
+    current = series.get("seriesType")
+    if current not in ("standard", "daily") or await sonarr.async_release_matches(episode_id):
+        return series, None
+    other = "daily" if current == "standard" else "standard"
+    series = await sonarr.async_update_series({**series, "seriesType": other})
+    if await sonarr.async_release_matches(episode_id):
+        return series, other
+    # Neither matches: nothing is out there yet. Put it back as it was.
+    return await sonarr.async_update_series({**series, "seriesType": current}), None
+
+
 async def async_download_episodes(
     sonarr: SonarrClient,
     series_id: int,
@@ -202,9 +222,21 @@ async def async_download_episodes(
     added_shows: AddedShows | None = None,
 ) -> dict[str, Any]:
     """Monitor the chosen episodes and search for them now. Episodes that haven't
-    aired stay monitored and download when they do."""
+    aired stay monitored and download when they do. If any have aired, the series
+    type (Daily or not) is first checked against how releases are actually named."""
+    type_changed = None
     try:
         series = await sonarr.async_get_series(series_id)
+        now = dt_util.utcnow()
+        aired = [
+            ep
+            for ep in await sonarr.async_get_episodes(series_id)
+            if ep["id"] in set(episode_ids) and _aired(ep, now) and not ep.get("hasFile")
+        ]
+        if aired:
+            # The most recent is the likeliest to be on the indexers.
+            probe = max(aired, key=lambda ep: ep.get("airDateUtc") or "")
+            series, type_changed = await _fit_series_type(sonarr, series, probe["id"])
         if not series.get("monitored"):
             # Seasons are unchanged, so this doesn't touch any episode.
             series = await sonarr.async_update_series({**series, "monitored": True})
@@ -214,7 +246,7 @@ async def async_download_episodes(
         raise _error("sonarr_error", err) from err
     if added_shows is not None:
         added_shows.forget(series_id)  # Something was picked: keep it.
-    return {**_show(series), "episode_ids": episode_ids}
+    return {**_show(series), "episode_ids": episode_ids, "series_type_changed": type_changed}
 
 
 async def async_set_show_options(

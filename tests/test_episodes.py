@@ -156,6 +156,8 @@ async def _no_sleep(_seconds) -> None:
 
 async def test_download_monitors_and_searches(hass, picker, aioclient_mock, hass_ws_client) -> None:
     aioclient_mock.get(f"{SONARR}/series/5", json=SERIES)
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=5", json=SEASON_2)
+    aioclient_mock.get(f"{SONARR}/release?episodeId=102", json=[{"title": "Show.S02E02", "episodeIds": None, "mappedEpisodeInfo": [{"id": 102}]}])
     aioclient_mock.put(f"{SONARR}/episode/monitor", json=[])
     aioclient_mock.post(f"{SONARR}/command", json={"id": 1}, status=201)
     ws = await hass_ws_client(hass)
@@ -164,17 +166,74 @@ async def test_download_monitors_and_searches(hass, picker, aioclient_mock, hass
     assert msg["success"], msg
     assert calls(aioclient_mock, "put", "/episode/monitor")[0][2] == {"episodeIds": [102, 105], "monitored": True}
     assert calls(aioclient_mock, "post", "/command")[0][2] == {"name": "EpisodeSearch", "episodeIds": [102, 105]}
+    # Only the aired episode is probed, and it matched: the type is left alone.
+    assert not calls(aioclient_mock, "put", "/series/5")
+    assert msg["result"]["series_type_changed"] is None
 
 
 async def test_download_keeps_the_show(hass, picker, aioclient_mock, hass_ws_client) -> None:
     picker.runtime_data.added_shows.add(5)
     aioclient_mock.get(f"{SONARR}/series/5", json=SERIES)
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=5", json=SEASON_2)
+    aioclient_mock.get(f"{SONARR}/release?episodeId=102", json=[{"episodeIds": None, "mappedEpisodeInfo": [{"id": 102}]}])
     aioclient_mock.put(f"{SONARR}/episode/monitor", json=[])
     aioclient_mock.post(f"{SONARR}/command", json={"id": 1}, status=201)
     ws = await hass_ws_client(hass)
     await ws.send_json_auto_id({"type": f"{DOMAIN}/episodes/download", "series_id": 5, "episode_ids": [102]})
     assert (await ws.receive_json())["success"]
     assert picker.runtime_data.added_shows.due(dt_util.utcnow() + timedelta(days=1)) == []
+
+
+async def test_download_finds_a_daily_show_by_itself(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    """Standard search finds nothing, Daily does: the show becomes Daily."""
+    aioclient_mock.get(f"{SONARR}/series/5", json=SERIES)
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=5", json=SEASON_2)
+    aioclient_mock.get(
+        f"{SONARR}/release?episodeId=102",
+        side_effect=_sequence(
+            [],
+            [
+                {"title": "Show.2000.01.01", "episodeIds": None, "mappedEpisodeInfo": [{"id": 102}]},
+                {"episodeIds": None, "mappedEpisodeInfo": [{"id": 999}]},
+            ],
+        ),
+    )
+    aioclient_mock.put(f"{SONARR}/series/5", json={**SERIES, "seriesType": "daily"})
+    aioclient_mock.put(f"{SONARR}/episode/monitor", json=[])
+    aioclient_mock.post(f"{SONARR}/command", json={"id": 1}, status=201)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/episodes/download", "series_id": 5, "episode_ids": [102, 104]})
+    msg = await ws.receive_json()
+    assert msg["success"], msg
+    assert msg["result"]["series_type_changed"] == "daily" and msg["result"]["daily"] is True
+    puts = calls(aioclient_mock, "put", "/series/5")
+    assert [p[2]["seriesType"] for p in puts] == ["daily"]
+    assert calls(aioclient_mock, "post", "/command")[0][2] == {"name": "EpisodeSearch", "episodeIds": [102, 104]}
+
+
+async def test_download_puts_the_type_back_if_nothing_matches(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    aioclient_mock.get(f"{SONARR}/series/5", json=SERIES)
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=5", json=[ep(102, 2)])
+    aioclient_mock.get(f"{SONARR}/release?episodeId=102", json=[{"title": "Other.Show.S01E01", "episodeIds": None, "mappedEpisodeInfo": [{"id": 7}]}])
+    aioclient_mock.put(f"{SONARR}/series/5", json=SERIES)
+    aioclient_mock.put(f"{SONARR}/episode/monitor", json=[])
+    aioclient_mock.post(f"{SONARR}/command", json={"id": 1}, status=201)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/episodes/download", "series_id": 5, "episode_ids": [102]})
+    msg = await ws.receive_json()
+    assert msg["result"]["series_type_changed"] is None
+    assert [p[2]["seriesType"] for p in calls(aioclient_mock, "put", "/series/5")] == ["daily", "standard"]
+
+
+async def test_download_of_unaired_episodes_skips_the_check(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    aioclient_mock.get(f"{SONARR}/series/5", json=SERIES)
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=5", json=SEASON_2)
+    aioclient_mock.put(f"{SONARR}/episode/monitor", json=[])
+    aioclient_mock.post(f"{SONARR}/command", json={"id": 1}, status=201)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/episodes/download", "series_id": 5, "episode_ids": [105]})
+    assert (await ws.receive_json())["success"]
+    assert not calls(aioclient_mock, "get", "/release")
 
 
 async def test_sweep_removes_untouched_shows_after_an_hour(hass, picker, aioclient_mock, freezer) -> None:

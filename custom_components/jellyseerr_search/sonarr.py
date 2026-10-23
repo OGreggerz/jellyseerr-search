@@ -12,7 +12,7 @@ import aiohttp
 
 from homeassistant.util.json import json_loads
 
-from .const import REQUEST_TIMEOUT
+from .const import REQUEST_TIMEOUT, SEARCH_TIMEOUT
 
 
 class SonarrError(Exception):
@@ -46,6 +46,7 @@ class SonarrClient:
         *,
         params: dict[str, Any] | None = None,
         json: Any = None,
+        timeout: int = REQUEST_TIMEOUT,
     ) -> Any:
         try:
             async with self._session.request(
@@ -54,7 +55,7 @@ class SonarrClient:
                 params=params,
                 headers=self._headers,
                 json=json,
-                timeout=aiohttp.ClientTimeout(total=REQUEST_TIMEOUT),
+                timeout=aiohttp.ClientTimeout(total=timeout),
             ) as resp:
                 if resp.status in (401, 403):
                     raise SonarrAuthError(f"HTTP {resp.status}")
@@ -147,6 +148,21 @@ class SonarrClient:
         leaves the episodes monitored, so callers unmonitor them."""
         if file_ids:
             await self._request("DELETE", "/episodefile/bulk", json={"episodeFileIds": file_ids})
+
+    async def async_release_matches(self, episode_id: int) -> bool:
+        """Run Sonarr's interactive search for one episode (a live indexer search,
+        so slow) and say whether any release was matched to it, approved or not.
+        Tells whether the series type fits how the releases are named."""
+        releases = await self._request(
+            "GET", "/release", params={"episodeId": episode_id}, timeout=SEARCH_TIMEOUT
+        )
+        # Sonarr 4.0.20 leaves `episodeIds` null here; the match is in
+        # `mappedEpisodeInfo` (checked live, 2026-10-23).
+        return any(
+            episode_id in (r.get("episodeIds") or [])
+            or any(m.get("id") == episode_id for m in r.get("mappedEpisodeInfo") or [])
+            for r in releases or []
+        )
 
     async def async_first_profile_and_root(self) -> tuple[int, str]:
         """Fallback when Jellyseerr's Sonarr defaults can't be read."""
