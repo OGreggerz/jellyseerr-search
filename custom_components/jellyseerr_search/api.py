@@ -267,4 +267,6 @@ def normalize_result(item: dict[str, Any]) -> dict[str, Any]:
         "status": MEDIA_STATUS.get(media_info.get("status"), STATUS_NOT_REQUESTED)
         if media_info
         else STATUS_NOT_REQUESTED,
+        # For matching shows Sonarr knows without a TMDB id.
+        "tvdb_id": media_info.get("tvdbId") or None,
     }

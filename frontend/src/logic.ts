@@ -1,6 +1,6 @@
 // Pure helpers, kept out of the card so vitest can cover them without a DOM.
 
-import type { CheckResult, Episode, MediaStatus, ReleaseInfo, Season, WaitingItem } from "./types";
+import type { CheckResult, Episode, MediaStatus, ReleaseInfo, SearchResult, Season, WaitingItem } from "./types";
 
 const REQUESTABLE: ReadonlySet<MediaStatus> = new Set(["not_requested", "unknown", "deleted"]);
 
@@ -24,6 +24,19 @@ export function statusLabel(status: MediaStatus): string | null {
     default:
       return null;
   }
+}
+
+/** The chips on a result: Downloaded and/or Waiting from Sonarr/Radarr when they
+ *  know the title, else Jellyseerr's status. `cls` picks the colour. */
+export function resultChips(r: SearchResult): Array<{ label: string; cls: string }> {
+  if (r.arr && (r.arr.downloaded || r.arr.waiting)) {
+    const chips: Array<{ label: string; cls: string }> = [];
+    if (r.arr.downloaded) chips.push({ label: "Downloaded", cls: "available" });
+    if (r.arr.waiting) chips.push({ label: "Waiting", cls: "wanted" });
+    return chips;
+  }
+  const label = statusLabel(r.status);
+  return label ? [{ label, cls: r.status }] : [];
 }
 
 /** Titles Radarr/Sonarr hold (or are fetching), so Remove has something to delete. */

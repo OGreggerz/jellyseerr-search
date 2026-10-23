@@ -811,3 +811,37 @@ async def test_options_flow_radarr(hass: HomeAssistant, entry, aioclient_mock) -
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert entry.options == {"radarr_url": RADARR_URL, "radarr_api_key": "radarr-secret"}
+
+
+async def test_results_get_downloaded_and_waiting_chips(hass, arrs, aioclient_mock, hass_ws_client) -> None:
+    aioclient_mock.get(f"{API}/search", json={"results": [
+        {"id": 220542, "mediaType": "tv", "name": "The Apothecary Diaries"},
+        {"id": 999, "mediaType": "tv", "name": "The Chase", "mediaInfo": {"status": 4, "tvdbId": 252963}},
+        {"id": 1311034, "mediaType": "movie", "title": "Infinity Castle 2"},
+        {"id": 5, "mediaType": "movie", "title": "Unknown to Radarr"},
+    ]})
+    aioclient_mock.get(f"{RADARR}/movie", json=[{**_movie(8, "Infinity Castle 2", "announced"), "tmdbId": 1311034}])
+    aioclient_mock.get(f"{RADARR}/queue", json={"records": []})
+    aioclient_mock.get(f"{SONARR}/series", json=[
+        {**SERIES, "id": 16, "title": "The Apothecary Diaries", "tmdbId": 220542, "tvdbId": 431162, "statistics": {"episodeFileCount": 1}, "images": []},
+        {**SERIES, "id": 10, "title": "The Chase", "tmdbId": 0, "tvdbId": 252963, "statistics": {"episodeFileCount": 3}, "images": []},
+    ])
+    aioclient_mock.get(f"{SONARR}/wanted/missing", json={"records": []})
+    aioclient_mock.get(f"{SONARR}/calendar", json=[
+        {"seriesId": 16, "seasonNumber": 3, "episodeNumber": 5, "airDateUtc": "2999-01-01T00:00:00Z", "monitored": True, "hasFile": False},
+    ])
+    aioclient_mock.get(f"{SONARR}/queue", json={"records": []})
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/search", "query": "x"})
+    results = {r["title"]: r.get("arr") for r in (await ws.receive_json())["result"]["results"]}
+    assert results == {
+        "The Apothecary Diaries": {"downloaded": True, "waiting": True},   # both chips
+        "The Chase": {"downloaded": True, "waiting": False},             # matched by TVDB id
+        "Infinity Castle 2": {"downloaded": False, "waiting": True},
+        "Unknown to Radarr": None,
+    }
+    # Cached: a second search doesn't read Sonarr/Radarr again.
+    reads = len([c for c in aioclient_mock.mock_calls if "/api/v3/" in c[1].path])
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/search", "query": "y"})
+    await ws.receive_json()
+    assert len([c for c in aioclient_mock.mock_calls if "/api/v3/" in c[1].path]) == reads

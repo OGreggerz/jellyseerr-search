@@ -241,3 +241,70 @@ async def async_search_again(
         raise HomeAssistantError(
             translation_domain=DOMAIN, translation_key="sonarr_error", translation_placeholders={"error": str(err)}
         ) from err
+
+
+# How long the Sonarr/Radarr view behind the result chips is reused. Changes made
+# through the card clear it at once.
+INDEX_TTL = timedelta(seconds=60)
+
+
+class ArrIndex:
+    """What Sonarr and Radarr have of each title, for the Downloaded / Waiting
+    chips on search, browse and Downloaded results: downloaded = at least one
+    file; waiting = in the Waiting list (wanted, not all here yet). A show with
+    some episodes that's following new ones is both."""
+
+    def __init__(self) -> None:
+        self._data: dict[tuple[str, int], dict[str, bool]] | None = None
+        self._built: datetime | None = None
+
+    def invalidate(self) -> None:
+        self._data = None
+
+    async def async_get(
+        self, sonarr: SonarrClient | None, radarr: RadarrClient | None
+    ) -> dict[tuple[str, int], dict[str, bool]]:
+        now = dt_util.utcnow()
+        if self._data is not None and self._built and now - self._built < INDEX_TTL:
+            return self._data
+        waiting = {(i["media_type"], i["arr_id"]) for i in await async_waiting(sonarr, radarr)}
+        data: dict[tuple[str, int], dict[str, bool]] = {}
+        if sonarr is not None:
+            for s in await sonarr._request("GET", "/series") or []:
+                info = {
+                    "downloaded": ((s.get("statistics") or {}).get("episodeFileCount") or 0) > 0,
+                    "waiting": ("tv", s["id"]) in waiting,
+                }
+                if s.get("tmdbId"):
+                    data[("tv", s["tmdbId"])] = info
+                if s.get("tvdbId"):
+                    data[("tvdb", s["tvdbId"])] = info
+        if radarr is not None:
+            for m in await radarr.async_get_movies():
+                if m.get("tmdbId"):
+                    data[("movie", m["tmdbId"])] = {
+                        "downloaded": bool(m.get("hasFile")),
+                        "waiting": ("movie", m["id"]) in waiting,
+                    }
+        self._data, self._built = data, now
+        return data
+
+
+async def async_annotate(
+    results: list[dict[str, Any]], index: ArrIndex, sonarr: SonarrClient | None, radarr: RadarrClient | None
+) -> list[dict[str, Any]]:
+    """Add `arr` ({downloaded, waiting}) to results Sonarr/Radarr know. Never
+    fails a search: if they can't be reached, results go out as they are."""
+    if sonarr is None and radarr is None:
+        return results
+    try:
+        data = await index.async_get(sonarr, radarr)
+    except HomeAssistantError:
+        return results
+    for r in results:
+        info = data.get((r["media_type"], r["tmdb_id"]))
+        if info is None and r["media_type"] == "tv" and r.get("tvdb_id"):
+            info = data.get(("tvdb", r["tvdb_id"]))
+        if info is not None:
+            r["arr"] = info
+    return results

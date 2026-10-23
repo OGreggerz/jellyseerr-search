@@ -9,6 +9,7 @@ import {
   checkSummary,
   filterLibrary,
   releaseLine,
+  resultChips,
   waitingDetail,
   isRemovable,
   isRequestable,
@@ -182,5 +183,19 @@ describe("release line", () => {
   it("covers shows", () => {
     expect(releaseLine({ tmdb_status: "Returning Series", next_air_date: "2026-10-30" }, "tv", today)).toBe("Next episode 30 Oct 2026");
     expect(releaseLine({ tmdb_status: "Ended", last_air_date: "2019-03-19" }, "tv", today)).toBe("Ended · last aired 19 Mar 2019");
+  });
+});
+
+describe("result chips", () => {
+  const r = (over: object) => ({ tmdb_id: 1, media_type: "tv", title: "T", year: 2023, overview: "", poster_url: null, status: "not_requested", ...over }) as any;
+  it("shows both for a part-downloaded show waiting for more", () => {
+    expect(resultChips(r({ arr: { downloaded: true, waiting: true } })).map((c) => c.label)).toEqual(["Downloaded", "Waiting"]);
+  });
+  it("shows Waiting for a followed show with nothing yet, which Jellyseerr calls not requested", () => {
+    expect(resultChips(r({ arr: { downloaded: false, waiting: true } })).map((c) => c.label)).toEqual(["Waiting"]);
+  });
+  it("falls back to Jellyseerr's status", () => {
+    expect(resultChips(r({ status: "pending" })).map((c) => c.label)).toEqual(["Requested"]);
+    expect(resultChips(r({}))).toEqual([]);
   });
 });

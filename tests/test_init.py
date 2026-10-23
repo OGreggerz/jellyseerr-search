@@ -48,6 +48,7 @@ async def test_search(hass: HomeAssistant, entry, aioclient_mock) -> None:
             "overview": "Paul Atreides...",
             "poster_url": "https://image.tmdb.org/t/p/w342/d5NXSklXo0qyIYkgV94XAgMIckC.jpg",
             "status": "not_requested",
+            "tvdb_id": None,
         },
         {
             "tmdb_id": 90228,
@@ -57,6 +58,7 @@ async def test_search(hass: HomeAssistant, entry, aioclient_mock) -> None:
             "overview": "",
             "poster_url": None,
             "status": "available",
+            "tvdb_id": None,
         },
     ]
 

@@ -70,6 +70,9 @@ export interface SearchResult {
   overview: string;
   poster_url: string | null;
   status: MediaStatus;
+  /** What Sonarr/Radarr have of it, when set up: at least one file / wanted and
+   *  not all here (both for a part-downloaded show waiting for more). */
+  arr?: { downloaded: boolean; waiting: boolean };
 }
 
 export interface Season {

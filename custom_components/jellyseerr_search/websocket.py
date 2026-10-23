@@ -15,7 +15,7 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 from .const import CARD_VERSION, DOMAIN, LIBRARY_LIMIT, MEDIA_TV, MEDIA_TYPES
 from .api import JellyseerrError
-from .waiting import async_check, async_search_again, async_waiting
+from .waiting import async_annotate, async_check, async_search_again, async_waiting
 from .episodes import (
     async_discard_show,
     async_download_episodes,
@@ -95,6 +95,8 @@ async def ws_search(
 ) -> None:
     client = resolve_client(hass, msg.get("config_entry_id"))
     results = await async_search_media(client, msg["query"], msg["media_type"], SEARCH_LIMIT)
+    c = resolve_coordinator(hass, msg.get("config_entry_id"))
+    results = await async_annotate(results, c.arr_index, c.sonarr, c.radarr)
     connection.send_result(msg["id"], {"results": results})
 
 
@@ -112,6 +114,8 @@ async def ws_trending(
     """What the card shows before anything is typed."""
     client = resolve_client(hass, msg.get("config_entry_id"))
     results = await async_trending_media(client, msg["media_type"], SEARCH_LIMIT)
+    c = resolve_coordinator(hass, msg.get("config_entry_id"))
+    results = await async_annotate(results, c.arr_index, c.sonarr, c.radarr)
     connection.send_result(msg["id"], {"results": results})
 
 
@@ -128,6 +132,8 @@ async def ws_popular(
 ) -> None:
     client = resolve_client(hass, msg.get("config_entry_id"))
     results = await async_popular_media(client, msg["media_type"], SEARCH_LIMIT)
+    c = resolve_coordinator(hass, msg.get("config_entry_id"))
+    results = await async_annotate(results, c.arr_index, c.sonarr, c.radarr)
     connection.send_result(msg["id"], {"results": results})
 
 
@@ -144,6 +150,8 @@ async def ws_library(
     """The card's Downloaded list: what the server already has, newest first."""
     client = resolve_client(hass, msg.get("config_entry_id"))
     results = await async_library_media(client, LIBRARY_LIMIT)
+    c = resolve_coordinator(hass, msg.get("config_entry_id"))
+    results = await async_annotate(results, c.arr_index, c.sonarr, c.radarr)
     connection.send_result(msg["id"], {"results": results})
 
 
@@ -189,6 +197,8 @@ async def ws_request(
     result = await async_request_media(
         client, msg["media_type"], msg["tmdb_id"], seasons, msg["is_4k"]
     )
+    # Downloaded / Waiting chips must show the change at once.
+    resolve_coordinator(hass, msg.get("config_entry_id")).arr_index.invalidate()
     connection.send_result(msg["id"], result)
 
 
@@ -209,6 +219,8 @@ async def ws_remove(
     result = await async_remove_media(
         coordinator.client, msg["media_type"], msg["tmdb_id"], coordinator.sonarr
     )
+    # Downloaded / Waiting chips must show the change at once.
+    resolve_coordinator(hass, msg.get("config_entry_id")).arr_index.invalidate()
     connection.send_result(msg["id"], result)
 
 
@@ -264,6 +276,8 @@ async def ws_episodes_download(
         hass,
         async_download_episodes(c.sonarr, msg["series_id"], msg["episode_ids"], c.added_shows, c.checked),
     )
+    # Downloaded / Waiting chips must show the change at once.
+    resolve_coordinator(hass, msg.get("config_entry_id")).arr_index.invalidate()
     connection.send_result(msg["id"], result)
 
 
@@ -288,6 +302,8 @@ async def ws_episodes_options(
             c.sonarr, msg["series_id"], msg.get("follow_new"), msg.get("daily"), c.added_shows, c.followed, c.checked
         ),
     )
+    # Downloaded / Waiting chips must show the change at once.
+    resolve_coordinator(hass, msg.get("config_entry_id")).arr_index.invalidate()
     connection.send_result(msg["id"], result)
 
 
@@ -308,6 +324,8 @@ async def ws_episodes_discard(
     result = await async_discard_show(c.sonarr, msg["series_id"])
     if c.added_shows is not None:
         c.added_shows.forget(msg["series_id"])
+    # Downloaded / Waiting chips must show the change at once.
+    resolve_coordinator(hass, msg.get("config_entry_id")).arr_index.invalidate()
     connection.send_result(msg["id"], result)
 
 
@@ -332,6 +350,8 @@ async def ws_episodes_remove(
             c.sonarr, msg["series_id"], msg["episode_ids"], c.added_shows, c.client, msg.get("tmdb_id"), c.followed
         ),
     )
+    # Downloaded / Waiting chips must show the change at once.
+    resolve_coordinator(hass, msg.get("config_entry_id")).arr_index.invalidate()
     connection.send_result(msg["id"], result)
 
 
@@ -355,6 +375,8 @@ async def ws_episodes_follow(
             c.client, c.sonarr, msg["tmdb_id"], msg["follow_new"], c.added_shows, c.followed, c.checked
         ),
     )
+    # Downloaded / Waiting chips must show the change at once.
+    resolve_coordinator(hass, msg.get("config_entry_id")).arr_index.invalidate()
     connection.send_result(msg["id"], result)
 
 
@@ -397,6 +419,8 @@ async def ws_waiting_search(
     """Search now, and grab what the app's rules accept."""
     c = resolve_coordinator(hass, msg.get("config_entry_id"))
     await async_search_again(c.sonarr, c.radarr, msg["media_type"], msg["arr_id"])
+    # Downloaded / Waiting chips must show the change at once.
+    resolve_coordinator(hass, msg.get("config_entry_id")).arr_index.invalidate()
     connection.send_result(msg["id"], {"searching": True})
 
 

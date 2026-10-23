@@ -11,6 +11,7 @@ import {
   episodeLabel,
   filterLibrary,
   releaseLine,
+  resultChips,
   waitingDetail,
   waitingLabel,
   isPickable,
@@ -105,6 +106,7 @@ export class JellyseerrSearchCard extends LitElement {
     _waitingError: { state: true },
     _checks: { state: true },
     _waitingOn: { state: true },
+    _checkingAll: { state: true },
     _library: { state: true },
     _libraryError: { state: true },
   };
@@ -152,6 +154,7 @@ export class JellyseerrSearchCard extends LitElement {
   /** Indexer check results (or "checking"), by `${media_type}/${arr_id}`. */
   declare _checks: Record<string, CheckResult | "checking" | string>;
   declare _waitingOn: boolean;
+  declare _checkingAll: boolean;
   /** What the server already has, for the Downloaded filter. */
   declare _library?: SearchResult[];
   declare _libraryError?: string;
@@ -188,6 +191,7 @@ export class JellyseerrSearchCard extends LitElement {
     this._followBusy = false;
     this._checks = {};
     this._waitingOn = waitingAvailable;
+    this._checkingAll = false;
   }
 
   static getConfigForm() {
@@ -320,6 +324,21 @@ export class JellyseerrSearchCard extends LitElement {
       this._checks = { ...this._checks, [key]: result };
     } catch (err) {
       this._checks = { ...this._checks, [key]: `Check failed: ${errorMessage(err)}` };
+    }
+  }
+
+  /** Check every title not already downloading, one after another (each is an
+   *  indexer search, so not all at once). */
+  private async _checkAll(items: WaitingItem[]): Promise<void> {
+    if (this._checkingAll) return;
+    this._checkingAll = true;
+    try {
+      for (const item of items) {
+        if (this._filter !== "waiting") break;
+        await this._checkWaiting(item);
+      }
+    } finally {
+      this._checkingAll = false;
     }
   }
 
@@ -978,10 +997,16 @@ export class JellyseerrSearchCard extends LitElement {
     if (this._waitingError) return html`<div class="message error">Couldn't load the Waiting list (${this._waitingError}).</div>`;
     if (!this._waiting) return html`<div class="message">Loading…</div>`;
     const shown = filterLibrary(this._waiting, this._query);
+    const checkable = shown.filter((i) => i.state !== "downloading");
     return html`
       <div class="section stack">
         <span>Waiting · ${shown.length}</span>
         <span class="hint">Wanted but not downloaded yet: what's out, what isn't, and when.</span>
+        ${checkable.length > 1
+          ? html`<button class="secondary small checkall" ?disabled=${this._checkingAll} @click=${() => this._checkAll(checkable)}>
+              ${this._checkingAll ? "Checking…" : `Check all ${checkable.length} now`}
+            </button>`
+          : nothing}
       </div>
       ${shown.length
         ? html`<div class="waiting">${shown.map((item) => this._renderWaitingRow(item))}</div>`
@@ -1011,7 +1036,7 @@ export class JellyseerrSearchCard extends LitElement {
           ${typeof check === "string" && !checking ? html`<div class="wcheck error">${check}</div>` : nothing}
           ${item.state !== "downloading"
             ? html`<div class="wactions">
-                <button class="secondary small" ?disabled=${checking} @click=${() => this._checkWaiting(item)}>
+                <button class="secondary small" ?disabled=${checking || this._checkingAll} @click=${() => this._checkWaiting(item)}>
                   ${checking ? "Checking…" : "Check now"}
                 </button>
                 ${item.state === "not_found"
@@ -1025,14 +1050,16 @@ export class JellyseerrSearchCard extends LitElement {
   }
 
   private _renderTile(r: SearchResult) {
-    const label = statusLabel(r.status);
+    const chips = resultChips(r);
     return html`
       <button class="tile" @click=${() => this._open(r)} aria-label="${r.title} ${r.year ?? ""}">
         <div class="poster">
           ${r.poster_url
             ? html`<img src=${r.poster_url} alt="" loading="lazy" />`
             : html`<ha-icon icon=${r.media_type === "tv" ? "mdi:television-classic" : "mdi:movie-open"}></ha-icon>`}
-          ${label ? html`<span class="status ${r.status}">${label}</span>` : nothing}
+          ${chips.length
+            ? html`<span class="chipstack">${chips.map((c) => html`<span class="status ${c.cls}">${c.label}</span>`)}</span>`
+            : nothing}
           <span class="kind">${r.media_type === "tv" ? "TV" : "Movie"}</span>
         </div>
         <div class="title">${r.title}</div>
@@ -1058,7 +1085,7 @@ export class JellyseerrSearchCard extends LitElement {
             <h2>${item.title}</h2>
             <div class="meta">
               ${item.year ?? ""} · ${tv ? "TV show" : "Movie"}
-              ${label ? html`<span class="status inline ${item.status}">${label}</span>` : nothing}
+              ${resultChips(item).map((c) => html`<span class="status inline ${c.cls}">${c.label}</span>`)}
             </div>
             ${this._release && releaseLine(this._release, item.media_type, new Date().toISOString().slice(0, 10))
               ? html`<div class="release">${releaseLine(this._release, item.media_type, new Date().toISOString().slice(0, 10))}</div>`
@@ -1552,6 +1579,24 @@ export class JellyseerrSearchCard extends LitElement {
     }
     .chips {
       flex-wrap: wrap;
+    }
+    .chipstack {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+    }
+    .chipstack .status {
+      position: static;
+    }
+    .status.wanted {
+      background: var(--secondary-text-color, #727272);
+    }
+    .checkall {
+      margin-top: 6px;
     }
     .waiting {
       display: flex;
