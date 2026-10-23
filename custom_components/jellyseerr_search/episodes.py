@@ -231,6 +231,25 @@ async def async_sweep_added(sonarr: SonarrClient, added: AddedShows) -> None:
             _LOGGER.info("Removed series %s: added by the episode picker, nothing picked", series_id)
 
 
+_series_locks: dict[int, asyncio.Lock] = {}
+
+
+def series_lock(series_id: int) -> asyncio.Lock:
+    """One change at a time per series: the naming check can take a minute, and
+    two overlapping changes (two taps, two users, the card and the sweep) must
+    not interleave."""
+    return _series_locks.setdefault(series_id, asyncio.Lock())
+
+
+async def _set_type(sonarr: SonarrClient, series_id: int, series_type: str) -> dict[str, Any]:
+    """Change only the series type, on a fresh copy, so nothing else Sonarr has
+    (monitoring, seasons) is written back from an old one."""
+    fresh = await sonarr.async_get_series(series_id)
+    if fresh.get("seriesType") == series_type:
+        return fresh
+    return await sonarr.async_update_series({**fresh, "seriesType": series_type})
+
+
 def _error(key: str, err: Exception | None = None, **placeholders: str) -> HomeAssistantError:
     if err is not None:
         placeholders["error"] = str(err)
@@ -380,19 +399,19 @@ async def _fit_series_type(
             checked.confirm(series["id"], current)
         return series, None
     other = "daily" if current == "standard" else "standard"
-    series = await sonarr.async_update_series({**series, "seriesType": other})
+    series = await _set_type(sonarr, series["id"], other)
     try:
         matches = await sonarr.async_release_matches(episode_id)
     except SonarrError:
         # Don't leave it on a type nothing confirmed.
-        await sonarr.async_update_series({**series, "seriesType": current})
+        await _set_type(sonarr, series["id"], current)
         raise
     if matches:
         if checked is not None:
             checked.confirm(series["id"], other)
         return series, other
     # Neither matches: nothing is out there yet. Put it back as it was.
-    return await sonarr.async_update_series({**series, "seriesType": current}), None
+    return await _set_type(sonarr, series["id"], current), None
 
 
 async def _probe_episode(sonarr: SonarrClient, series_id: int, picked: list[int]) -> int | None:
@@ -410,7 +429,7 @@ async def _probe_episode(sonarr: SonarrClient, series_id: int, picked: list[int]
     return max(pool, key=lambda ep: ep.get("airDateUtc") or "")["id"] if pool else None
 
 
-async def async_download_episodes(
+async def _download_episodes(
     sonarr: SonarrClient,
     series_id: int,
     episode_ids: list[int],
@@ -441,7 +460,7 @@ async def async_download_episodes(
     return {**_show(series), "episode_ids": episode_ids, "series_type_changed": type_changed}
 
 
-async def async_set_show_options(
+async def _set_show_options(
     sonarr: SonarrClient,
     series_id: int,
     follow_new: bool | None,
@@ -463,6 +482,8 @@ async def async_set_show_options(
         if follow_new and (probe := await _probe_episode(sonarr, series_id, [])) is not None:
             # Following new episodes is useless if their names won't match.
             series, type_changed = await _fit_series_type(sonarr, series, probe, checked)
+            # The searches can take a while: work from what Sonarr has now.
+            series = await sonarr.async_get_series(series_id)
         old_type = series.get("seriesType")
         update = {**series}
         if daily is not None:
@@ -519,7 +540,7 @@ async def async_set_show_options(
     return {**_show(series), "series_type_changed": type_changed}
 
 
-async def async_discard_show(sonarr: SonarrClient, series_id: int) -> dict[str, Any]:
+async def _discard_show(sonarr: SonarrClient, series_id: int) -> dict[str, Any]:
     """Remove a show the picker added if nothing was picked: no files and no
     monitored episodes. Anything else is left alone."""
     try:
@@ -536,7 +557,7 @@ async def async_discard_show(sonarr: SonarrClient, series_id: int) -> dict[str, 
     return {"series_id": series_id, "removed": True}
 
 
-async def async_remove_episodes(
+async def _remove_episodes(
     sonarr: SonarrClient,
     series_id: int,
     episode_ids: list[int],
@@ -560,7 +581,7 @@ async def async_remove_episodes(
         affected = [ep["id"] for ep in episodes if ep["id"] in chosen or ep.get("episodeFileId") in file_ids]
         await sonarr.async_delete_episode_files(file_ids)
         await sonarr.async_set_monitored(affected, False)
-        result = await async_discard_show(sonarr, series_id)
+        result = await _discard_show(sonarr, series_id)
     except SonarrNotFoundError as err:
         # Removed meanwhile (the sweep, another user, or by hand in Sonarr).
         raise ServiceValidationError(translation_domain=DOMAIN, translation_key="series_gone") from err
@@ -626,3 +647,26 @@ async def async_follow_show(
         sonarr, series["id"], follow_new, None, added_shows, followed, checked
     )
     return {**result, "in_sonarr": True}
+
+
+# Public entry points: the same, one at a time per series (see series_lock).
+
+
+async def async_download_episodes(sonarr: SonarrClient, series_id: int, *args: Any) -> dict[str, Any]:
+    async with series_lock(series_id):
+        return await _download_episodes(sonarr, series_id, *args)
+
+
+async def async_set_show_options(sonarr: SonarrClient, series_id: int, *args: Any) -> dict[str, Any]:
+    async with series_lock(series_id):
+        return await _set_show_options(sonarr, series_id, *args)
+
+
+async def async_discard_show(sonarr: SonarrClient, series_id: int) -> dict[str, Any]:
+    async with series_lock(series_id):
+        return await _discard_show(sonarr, series_id)
+
+
+async def async_remove_episodes(sonarr: SonarrClient, series_id: int, *args: Any) -> dict[str, Any]:
+    async with series_lock(series_id):
+        return await _remove_episodes(sonarr, series_id, *args)

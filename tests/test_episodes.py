@@ -265,7 +265,8 @@ async def test_download_finds_a_daily_show_by_itself(hass, picker, aioclient_moc
 
 
 async def test_download_puts_the_type_back_if_nothing_matches(hass, picker, aioclient_mock, hass_ws_client) -> None:
-    aioclient_mock.get(f"{SONARR}/series/5", json=SERIES)
+    # Fresh reads: as it was, before the switch, then after it (Daily).
+    aioclient_mock.get(f"{SONARR}/series/5", side_effect=_sequence(SERIES, SERIES, {**SERIES, "seriesType": "daily"}))
     aioclient_mock.get(f"{SONARR}/episode?seriesId=5", json=[ep(102, 2)])
     aioclient_mock.get(f"{SONARR}/release?episodeId=102", json=[{"title": "Other.Show.S01E01", "episodeIds": None, "mappedEpisodeInfo": [{"id": 7}]}])
     aioclient_mock.put(f"{SONARR}/series/5", json=SERIES)
@@ -640,7 +641,8 @@ async def test_removed_episode_of_a_followed_show_stays_removed(hass, picker, ai
 
 
 async def test_type_is_put_back_if_the_second_search_fails(hass, picker, aioclient_mock, hass_ws_client) -> None:
-    aioclient_mock.get(f"{SONARR}/series/5", json=SERIES)
+    # Fresh reads: as it was, before the switch, then after it (Daily).
+    aioclient_mock.get(f"{SONARR}/series/5", side_effect=_sequence(SERIES, SERIES, {**SERIES, "seriesType": "daily"}))
     aioclient_mock.get(f"{SONARR}/episode?seriesId=5", json=[ep(102, 2)])
     aioclient_mock.get(f"{SONARR}/release?episodeId=102", side_effect=_sequence_status([], 500))
     aioclient_mock.put(f"{SONARR}/series/5", json=SERIES)
