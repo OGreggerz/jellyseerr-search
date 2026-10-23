@@ -15,6 +15,7 @@ from .const import CARD_VERSION, DOMAIN, MEDIA_TV, MEDIA_TYPES
 from .episodes import (
     async_discard_show,
     async_download_episodes,
+    async_remove_episodes,
     async_season_episodes,
     async_set_show_options,
 )
@@ -48,6 +49,7 @@ def async_register_websocket(hass: HomeAssistant) -> None:
         ws_episodes_download,
         ws_episodes_options,
         ws_episodes_discard,
+        ws_episodes_remove,
     ):
         websocket_api.async_register_command(hass, command)
 
@@ -254,4 +256,22 @@ async def ws_episodes_discard(
     result = await async_discard_show(c.sonarr, msg["series_id"])
     if c.added_shows is not None:
         c.added_shows.forget(msg["series_id"])
+    connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/episodes/remove",
+        vol.Required("series_id"): vol.All(int, vol.Range(min=1)),
+        vol.Required("episode_ids"): vol.All([vol.All(int, vol.Range(min=1))], vol.Length(min=1)),
+        vol.Optional("config_entry_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_episodes_remove(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Deletes episode files. The card only offers it when show_remove is set."""
+    c = _picker(hass, msg.get("config_entry_id"))
+    result = await async_remove_episodes(c.sonarr, msg["series_id"], msg["episode_ids"], c.added_shows)
     connection.send_result(msg["id"], result)

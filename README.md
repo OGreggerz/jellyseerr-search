@@ -46,7 +46,10 @@ and can be badly wrong for long-running shows. Sonarr only lists episodes of
 shows it has, so opening the picker on a new show adds it to Sonarr with
 nothing monitored; leaving the show without picking removes it again, and
 anything still untouched after an hour is removed anyway (checked every 15
-minutes, in case the card was closed instead). These downloads aren't Jellyseerr requests: Jellyseerr shows
+minutes, in case the card was closed instead). With `show_remove` on, downloaded episodes get a **Remove** button (asks first):
+it deletes the file and unmonitors the episode so Sonarr doesn't fetch it
+again; if that leaves nothing of the show, the show leaves Sonarr too.
+These downloads aren't Jellyseerr requests: Jellyseerr shows
 them as available once it syncs with Sonarr.
 
 **Sensors**: pending, approved, processing, available and total request counts.

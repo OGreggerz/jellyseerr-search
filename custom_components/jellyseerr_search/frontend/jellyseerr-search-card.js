@@ -593,7 +593,7 @@ var Y = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, X, Ae = "0.5.3", Z = "jellyseerr_search", je = 400, Q = 2, Me = 36e5, Ne = [2e4, 6e4], Pe = !1, Fe = [
+}, X, Ae = "0.5.4", Z = "jellyseerr_search", je = 400, Q = 2, Me = 36e5, Ne = [2e4, 6e4], Pe = !1, Fe = [
 	{
 		value: "all",
 		label: "All"
@@ -699,7 +699,7 @@ var Y = class {
 	async _checkVersion() {
 		try {
 			let { version: e } = await this.hass.callWS({ type: `${Z}/version` });
-			e !== "0.5.3" && (this._staleVersion = e);
+			e !== "0.5.4" && (this._staleVersion = e);
 		} catch {}
 	}
 	async _reload() {
@@ -878,7 +878,7 @@ var Y = class {
 		this._refreshTimers.forEach(clearTimeout), this._refreshTimers = [];
 	}
 	_closeEpisodes() {
-		this._clearRefreshTimers(), this._latestEpisodes.next(), this._episodeSeason = void 0, this._episodes = void 0, this._episodesError = void 0, this._picked = /* @__PURE__ */ new Set();
+		this._confirmRemoveEp = void 0, this._clearRefreshTimers(), this._latestEpisodes.next(), this._episodeSeason = void 0, this._episodes = void 0, this._episodesError = void 0, this._picked = /* @__PURE__ */ new Set();
 	}
 	_leaveShow() {
 		let e = this._addedSeries;
@@ -919,6 +919,28 @@ var Y = class {
 			W(this, `Download failed: ${G(e)}`);
 		} finally {
 			this._pickerBusy = !1;
+		}
+	}
+	_askRemoveEpisode(e, t) {
+		t.preventDefault(), t.stopPropagation(), this._confirmRemoveEp = e;
+	}
+	async _removeEpisode(e) {
+		let t = this._episodes;
+		if (t && !this._pickerBusy && this._selected) {
+			this._pickerBusy = !0;
+			try {
+				let n = await this.hass.callWS({
+					type: `${Z}/episodes/remove`,
+					series_id: t.series_id,
+					episode_ids: [e.id],
+					...this._entry()
+				});
+				this._confirmRemoveEp = void 0, n.show_removed ? (W(this, `Removed episode ${e.episode_number}. Nothing else was left, so ${t.title} is out of Sonarr too.`), this._addedSeries = void 0, this._closeEpisodes()) : (W(this, `Removed episode ${e.episode_number} of ${t.title}`), await this._loadEpisodes(this._selected.tmdb_id, t.season_number));
+			} catch (e) {
+				W(this, `Remove failed: ${G(e)}`);
+			} finally {
+				this._pickerBusy = !1;
+			}
 		}
 	}
 	async _setOption(e, t) {
@@ -1161,7 +1183,19 @@ var Y = class {
                     <span class="hint">${ke(e.air_date)}</span>
                   </span>
                   ${n ? M`<span class="status inline ep ${e.status}">${n}</span>` : P}
-                </label>`;
+                  ${this._config.show_remove && e.status === "downloaded" && this._confirmRemoveEp !== e.id ? M`<button class="link ep-remove" @click=${(t) => this._askRemoveEpisode(e.id, t)}>
+                        Remove
+                      </button>` : P}
+                </label>
+                ${this._confirmRemoveEp === e.id ? M`<div class="ep-confirm" role="alert">
+                      <span class="grow">Delete episode ${e.episode_number}'s file? This can't be undone.</span>
+                      <button class="secondary small" ?disabled=${this._pickerBusy} @click=${() => this._confirmRemoveEp = void 0}>
+                        Cancel
+                      </button>
+                      <button class="danger solid small" ?disabled=${this._pickerBusy} @click=${() => this._removeEpisode(e)}>
+                        ${this._pickerBusy ? "Deleting…" : "Delete file"}
+                      </button>
+                    </div>` : P}`;
 			}) : M`<div class="message">Sonarr lists no episodes for this season yet.</div>`}
         </div>
         ${t > 20 ? M`<div class="warn">That's ${t} episodes. Check there's room before downloading.</div>` : P}
@@ -1209,7 +1243,8 @@ X = $, X.properties = {
 	_episodes: { state: !0 },
 	_episodesError: { state: !0 },
 	_picked: { state: !0 },
-	_pickerBusy: { state: !0 }
+	_pickerBusy: { state: !0 },
+	_confirmRemoveEp: { state: !0 }
 }, X.styles = o`
     :host {
       --js-gap: 12px;
@@ -1494,6 +1529,29 @@ X = $, X.properties = {
     }
     .status.not_aired {
       background: var(--secondary-text-color, #727272);
+    }
+    .link.ep-remove {
+      flex: none;
+      font-size: 14px;
+      color: var(--error-color, #db4437);
+    }
+    .ep-confirm {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px 10px;
+      color: var(--error-color, #db4437);
+      font-size: 14px;
+      line-height: 1.35;
+    }
+    .ep-confirm .grow {
+      flex-basis: 100%;
+    }
+    .small {
+      height: 36px;
+      padding: 0 16px;
+      font-size: 14px;
     }
     .warn {
       color: var(--warning-color, #ffa600);

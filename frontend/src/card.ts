@@ -14,7 +14,7 @@ import {
   requestableSeasons,
   statusLabel,
 } from "./logic";
-import type { Browse, CardConfig, MediaFilter, SearchResult, Season, SeasonEpisodes, SonarrShow } from "./types";
+import type { Browse, CardConfig, Episode, MediaFilter, SearchResult, Season, SeasonEpisodes, SonarrShow } from "./types";
 
 export const CARD_VERSION = __CARD_VERSION__;
 const DOMAIN = "jellyseerr_search";
@@ -66,6 +66,7 @@ export class JellyseerrSearchCard extends LitElement {
     _episodesError: { state: true },
     _picked: { state: true },
     _pickerBusy: { state: true },
+    _confirmRemoveEp: { state: true },
   };
 
   declare hass: HomeAssistant;
@@ -95,6 +96,8 @@ export class JellyseerrSearchCard extends LitElement {
   declare _episodesError?: string;
   declare _picked: Set<number>;
   declare _pickerBusy: boolean;
+  /** A downloaded episode whose Remove was tapped once: the next tap deletes. */
+  declare _confirmRemoveEp?: number;
 
   private _debounce?: ReturnType<typeof setTimeout>;
   private _latestSearch = new Latest();
@@ -478,6 +481,7 @@ export class JellyseerrSearchCard extends LitElement {
   }
 
   private _closeEpisodes(): void {
+    this._confirmRemoveEp = undefined;
     this._clearRefreshTimers();
     this._latestEpisodes.next();
     this._episodeSeason = undefined;
@@ -538,6 +542,39 @@ export class JellyseerrSearchCard extends LitElement {
       );
     } catch (err) {
       toast(this, `Download failed: ${errorMessage(err)}`);
+    } finally {
+      this._pickerBusy = false;
+    }
+  }
+
+  private _askRemoveEpisode(id: number, ev: Event): void {
+    ev.preventDefault();
+    ev.stopPropagation();
+    this._confirmRemoveEp = id;
+  }
+
+  private async _removeEpisode(ep: Episode): Promise<void> {
+    const list = this._episodes;
+    if (!list || this._pickerBusy || !this._selected) return;
+    this._pickerBusy = true;
+    try {
+      const result = await this.hass.callWS<{ show_removed: boolean }>({
+        type: `${DOMAIN}/episodes/remove`,
+        series_id: list.series_id,
+        episode_ids: [ep.id],
+        ...this._entry(),
+      });
+      this._confirmRemoveEp = undefined;
+      if (result.show_removed) {
+        toast(this, `Removed episode ${ep.episode_number}. Nothing else was left, so ${list.title} is out of Sonarr too.`);
+        this._addedSeries = undefined;
+        this._closeEpisodes();
+      } else {
+        toast(this, `Removed episode ${ep.episode_number} of ${list.title}`);
+        await this._loadEpisodes(this._selected.tmdb_id, list.season_number);
+      }
+    } catch (err) {
+      toast(this, `Remove failed: ${errorMessage(err)}`);
     } finally {
       this._pickerBusy = false;
     }
@@ -852,7 +889,23 @@ export class JellyseerrSearchCard extends LitElement {
                     <span class="hint">${airDateLabel(ep.air_date)}</span>
                   </span>
                   ${label ? html`<span class="status inline ep ${ep.status}">${label}</span>` : nothing}
-                </label>`;
+                  ${this._config.show_remove && ep.status === "downloaded" && this._confirmRemoveEp !== ep.id
+                    ? html`<button class="link ep-remove" @click=${(e: Event) => this._askRemoveEpisode(ep.id, e)}>
+                        Remove
+                      </button>`
+                    : nothing}
+                </label>
+                ${this._confirmRemoveEp === ep.id
+                  ? html`<div class="ep-confirm" role="alert">
+                      <span class="grow">Delete episode ${ep.episode_number}'s file? This can't be undone.</span>
+                      <button class="secondary small" ?disabled=${this._pickerBusy} @click=${() => (this._confirmRemoveEp = undefined)}>
+                        Cancel
+                      </button>
+                      <button class="danger solid small" ?disabled=${this._pickerBusy} @click=${() => this._removeEpisode(ep)}>
+                        ${this._pickerBusy ? "Deleting…" : "Delete file"}
+                      </button>
+                    </div>`
+                  : nothing}`;
               })
             : html`<div class="message">Sonarr lists no episodes for this season yet.</div>`}
         </div>
@@ -1162,6 +1215,29 @@ export class JellyseerrSearchCard extends LitElement {
     }
     .status.not_aired {
       background: var(--secondary-text-color, #727272);
+    }
+    .link.ep-remove {
+      flex: none;
+      font-size: 14px;
+      color: var(--error-color, #db4437);
+    }
+    .ep-confirm {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px 10px;
+      color: var(--error-color, #db4437);
+      font-size: 14px;
+      line-height: 1.35;
+    }
+    .ep-confirm .grow {
+      flex-basis: 100%;
+    }
+    .small {
+      height: 36px;
+      padding: 0 16px;
+      font-size: 14px;
     }
     .warn {
       color: var(--warning-color, #ffa600);

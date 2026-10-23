@@ -299,3 +299,30 @@ async def async_discard_show(sonarr: SonarrClient, series_id: int) -> dict[str, 
     except SonarrError as err:
         raise _error("sonarr_error", err) from err
     return {"series_id": series_id, "removed": True}
+
+
+async def async_remove_episodes(
+    sonarr: SonarrClient,
+    series_id: int,
+    episode_ids: list[int],
+    added_shows: AddedShows | None = None,
+) -> dict[str, Any]:
+    """Delete the files of downloaded episodes and unmonitor them, so Sonarr
+    doesn't fetch them again. If nothing is left (no files, nothing monitored,
+    not following new episodes), the show is removed from Sonarr too."""
+    try:
+        episodes = await sonarr.async_get_episodes(series_id)
+        chosen = {ep["id"] for ep in episodes if ep["id"] in set(episode_ids)}
+        file_ids = sorted(
+            {ep["episodeFileId"] for ep in episodes if ep["id"] in chosen and ep.get("hasFile") and ep.get("episodeFileId")}
+        )
+        # One file can hold two episodes: both lose it, so unmonitor both.
+        affected = [ep["id"] for ep in episodes if ep["id"] in chosen or ep.get("episodeFileId") in file_ids]
+        await sonarr.async_delete_episode_files(file_ids)
+        await sonarr.async_set_monitored(affected, False)
+        result = await async_discard_show(sonarr, series_id)
+    except SonarrError as err:
+        raise _error("sonarr_error", err) from err
+    if added_shows is not None and result["removed"]:
+        added_shows.forget(series_id)
+    return {"series_id": series_id, "files_removed": len(file_ids), "show_removed": result["removed"]}

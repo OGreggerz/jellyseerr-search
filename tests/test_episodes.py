@@ -264,6 +264,40 @@ async def test_discard_of_a_show_already_gone(hass, picker, aioclient_mock, hass
     assert msg["result"] == {"series_id": 5, "removed": True}
 
 
+async def test_remove_episode_deletes_file_and_unmonitors(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    before = [
+        {**ep(101, 1, has_file=True, monitored=True), "episodeFileId": 900},
+        {**ep(103, 3, has_file=True, monitored=True), "episodeFileId": 901},
+    ]
+    after = [{**before[0], "hasFile": False, "monitored": False, "episodeFileId": 0}, before[1]]
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=5", side_effect=_sequence(before, after))
+    aioclient_mock.delete(f"{SONARR}/episodefile/bulk", json={})
+    aioclient_mock.put(f"{SONARR}/episode/monitor", json=[])
+    aioclient_mock.get(f"{SONARR}/series/5", json={**SERIES, "statistics": {"episodeFileCount": 1}})
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/episodes/remove", "series_id": 5, "episode_ids": [101]})
+    msg = await ws.receive_json()
+    assert msg["result"] == {"series_id": 5, "files_removed": 1, "show_removed": False}
+    assert calls(aioclient_mock, "delete", "/episodefile/bulk")[0][2] == {"episodeFileIds": [900]}
+    assert calls(aioclient_mock, "put", "/episode/monitor")[0][2] == {"episodeIds": [101], "monitored": False}
+    assert not calls(aioclient_mock, "delete", "/series/5")
+
+
+async def test_removing_the_last_episode_removes_the_show(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    before = [{**ep(101, 1, has_file=True, monitored=True), "episodeFileId": 900}]
+    after = [{**before[0], "hasFile": False, "monitored": False, "episodeFileId": 0}]
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=5", side_effect=_sequence(before, after))
+    aioclient_mock.delete(f"{SONARR}/episodefile/bulk", json={})
+    aioclient_mock.put(f"{SONARR}/episode/monitor", json=[])
+    aioclient_mock.get(f"{SONARR}/series/5", json=SERIES)
+    aioclient_mock.delete(f"{SONARR}/series/5", status=200)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/episodes/remove", "series_id": 5, "episode_ids": [101]})
+    msg = await ws.receive_json()
+    assert msg["result"]["show_removed"] is True
+    assert calls(aioclient_mock, "delete", "/series/5")
+
+
 async def test_sonarr_error_reaches_card(hass, picker, aioclient_mock, hass_ws_client) -> None:
     aioclient_mock.get(f"{SONARR}/series/5", json={"message": "Database is locked"}, status=500)
     ws = await hass_ws_client(hass)

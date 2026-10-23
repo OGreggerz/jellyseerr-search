@@ -142,6 +142,12 @@ class SonarrClient:
                 "POST", "/command", json={"name": "EpisodeSearch", "episodeIds": episode_ids}
             )
 
+    async def async_delete_episode_files(self, file_ids: list[int]) -> None:
+        """Delete files from disk (Sonarr's recycle bin applies if set). Sonarr
+        leaves the episodes monitored, so callers unmonitor them."""
+        if file_ids:
+            await self._request("DELETE", "/episodefile/bulk", json={"episodeFileIds": file_ids})
+
     async def async_first_profile_and_root(self) -> tuple[int, str]:
         """Fallback when Jellyseerr's Sonarr defaults can't be read."""
         profiles = await self._request("GET", "/qualityprofile")
