@@ -390,6 +390,37 @@ async def test_removing_the_last_episode_removes_the_show(hass, picker, aioclien
     assert any(c[0].lower() == "delete" and c[1].path == "/api/v1/media/12" for c in aioclient_mock.mock_calls)
 
 
+async def test_remove_all_falls_back_to_sonarr(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    """A picker download Jellyseerr hasn't scanned yet: removed straight from Sonarr."""
+    aioclient_mock.get(f"{API}/tv/21502", json={"id": 21502, "mediaInfo": None, "externalIds": {"tvdbId": 252963}})
+    aioclient_mock.get(f"{SONARR}/series?tvdbId=252963", json=[SERIES])
+    aioclient_mock.delete(f"{SONARR}/series/5", status=200)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/remove", "tmdb_id": 21502, "media_type": "tv"})
+    msg = await ws.receive_json()
+    assert msg["success"], msg
+    delete = calls(aioclient_mock, "delete", "/series/5")[0]
+    assert dict(delete[1].query) == {"deleteFiles": "true", "addImportListExclusion": "false"}
+
+
+async def test_remove_all_prefers_jellyseerr(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    aioclient_mock.get(f"{API}/tv/21502", json={"id": 21502, "mediaInfo": {"id": 11}, "externalIds": {"tvdbId": 252963}})
+    aioclient_mock.delete(f"{API}/media/11/file", status=204)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/remove", "tmdb_id": 21502, "media_type": "tv"})
+    assert (await ws.receive_json())["success"]
+    assert not calls(aioclient_mock, "delete", "/series/5")
+
+
+async def test_remove_all_when_nobody_has_it(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    aioclient_mock.get(f"{API}/tv/21502", json={"id": 21502, "mediaInfo": None, "externalIds": {"tvdbId": 252963}})
+    aioclient_mock.get(f"{SONARR}/series?tvdbId=252963", json=[])
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/remove", "tmdb_id": 21502, "media_type": "tv"})
+    msg = await ws.receive_json()
+    assert msg["error"]["translation_key"] == "not_in_library"
+
+
 async def test_sonarr_error_reaches_card(hass, picker, aioclient_mock, hass_ws_client) -> None:
     aioclient_mock.get(f"{SONARR}/series/5", json={"message": "Database is locked"}, status=500)
     ws = await hass_ws_client(hass)

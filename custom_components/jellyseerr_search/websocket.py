@@ -185,8 +185,10 @@ async def ws_remove(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Deletes files. The card only offers it when show_remove is set."""
-    client = resolve_client(hass, msg.get("config_entry_id"))
-    result = await async_remove_media(client, msg["media_type"], msg["tmdb_id"])
+    coordinator = resolve_coordinator(hass, msg.get("config_entry_id"))
+    result = await async_remove_media(
+        coordinator.client, msg["media_type"], msg["tmdb_id"], coordinator.sonarr
+    )
     connection.send_result(msg["id"], result)
 
 

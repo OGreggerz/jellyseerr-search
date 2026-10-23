@@ -841,8 +841,14 @@ export class JellyseerrSearchCard extends LitElement {
               ${item.year ?? ""} · ${tv ? "TV show" : "Movie"}
               ${label ? html`<span class="status inline ${item.status}">${label}</span>` : nothing}
             </div>
+            ${this._config.show_remove && isRemovable(item.status) && !this._confirmRemove
+              ? html`<button class="danger small head-remove" @click=${this._remove}>
+                  ${tv ? "Remove all…" : "Remove…"}
+                </button>`
+              : nothing}
           </div>
         </div>
+        ${this._config.show_remove && isRemovable(item.status) && this._confirmRemove ? this._renderRemove(item) : nothing}
         ${item.overview ? html`<p class="overview">${item.overview}</p>` : nothing}
         ${tv ? this._renderSeasons() : nothing}
         ${this._config.show_4k && canRequest
@@ -854,21 +860,16 @@ export class JellyseerrSearchCard extends LitElement {
         <button class="primary" ?disabled=${!canRequest || this._requesting} @click=${this._request}>
           ${this._requesting ? "Requesting…" : canRequest ? "Request" : label ?? "Unavailable"}
         </button>
-        ${this._config.show_remove && isRemovable(item.status) ? this._renderRemove(item) : nothing}
       </div>
     `;
   }
 
+  /** The "are you sure" for Remove all / Remove, shown under the header. */
   private _renderRemove(item: SearchResult) {
-    const what = item.media_type === "tv" ? "the whole show" : "this movie";
-    if (!this._confirmRemove) {
-      return html`<button class="danger" @click=${this._remove}>Remove…</button>`;
-    }
+    const what =
+      item.media_type === "tv" ? `${item.title} and all its downloaded episodes` : `${item.title} and its file`;
     return html`
-      <div class="confirm" role="alert">
-        Delete ${what} and its files from ${item.media_type === "tv" ? "Sonarr" : "Radarr"}? This can't be
-        undone.
-      </div>
+      <div class="confirm" role="alert">Delete ${what}? This can't be undone.</div>
       <div class="confirm-row">
         <button class="secondary" ?disabled=${this._removing} @click=${() => (this._confirmRemove = false)}>
           Cancel
@@ -1304,6 +1305,10 @@ export class JellyseerrSearchCard extends LitElement {
     }
     .status.not_aired {
       background: var(--secondary-text-color, #727272);
+    }
+    .head-remove {
+      margin-top: 10px;
+      align-self: flex-start;
     }
     .link.ep-remove {
       flex: none;

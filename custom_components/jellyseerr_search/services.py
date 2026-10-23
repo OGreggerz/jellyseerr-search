@@ -22,6 +22,7 @@ import homeassistant.helpers.config_validation as cv
 from .api import JellyseerrClient, JellyseerrError
 from .const import DOMAIN, MEDIA_TV, MEDIA_TYPES, REQUESTABLE_STATUSES
 from .coordinator import JellyseerrCoordinator
+from .sonarr import SonarrClient, SonarrError
 
 SERVICE_SEARCH = "search"
 SERVICE_REQUEST = "request"
@@ -170,10 +171,22 @@ async def async_popular_media(
 
 
 async def async_remove_media(
-    client: JellyseerrClient, media_type: str, tmdb_id: int
+    client: JellyseerrClient, media_type: str, tmdb_id: int, sonarr: SonarrClient | None = None
 ) -> dict[str, Any]:
+    """Remove a title and its files. Through Jellyseerr when it has a record
+    (it then marks the title deleted and keeps the request history); for a show
+    it doesn't know yet (an episode-picker download before Jellyseerr's next
+    scan), straight from Sonarr when that's set up."""
     try:
         removed = await client.async_remove(media_type, tmdb_id)
+        if not removed and media_type == MEDIA_TV and sonarr is not None:
+            removed = await _remove_from_sonarr(client, sonarr, tmdb_id)
+    except SonarrError as err:
+        raise HomeAssistantError(
+            translation_domain=DOMAIN,
+            translation_key="sonarr_error",
+            translation_placeholders={"error": str(err)},
+        ) from err
     except JellyseerrError as err:
         raise HomeAssistantError(
             translation_domain=DOMAIN,
@@ -216,6 +229,16 @@ async def async_tv_seasons(client: JellyseerrClient, tmdb_id: int) -> list[dict[
             translation_key="api_error",
             translation_placeholders={"error": str(err)},
         ) from err
+
+
+async def _remove_from_sonarr(client: JellyseerrClient, sonarr: SonarrClient, tmdb_id: int) -> bool:
+    """Delete the show and its files from Sonarr. False if Sonarr hasn't got it."""
+    tvdb_id = await client.async_get_tvdb_id(tmdb_id)
+    series = await sonarr.async_get_series_by_tvdb(tvdb_id) if tvdb_id else None
+    if series is None:
+        return False
+    await sonarr.async_delete_series(series["id"])
+    return True
 
 
 @callback

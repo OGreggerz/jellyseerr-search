@@ -657,7 +657,7 @@ var Y = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, X, Be = "0.8.1", Z = "jellyseerr_search", Ve = 400, Q = 2, He = 36e5, Ue = [2e4, 6e4], We = !1, Ge = [
+}, X, Be = "0.8.2", Z = "jellyseerr_search", Ve = 400, Q = 2, He = 36e5, Ue = [2e4, 6e4], We = !1, Ge = [
 	{
 		value: "all",
 		label: "All"
@@ -771,7 +771,7 @@ var $ = class extends H {
 	async _checkVersion() {
 		try {
 			let { version: e } = await this.hass.callWS({ type: `${Z}/version` });
-			e !== "0.8.1" && (this._staleVersion = e);
+			e !== "0.8.2" && (this._staleVersion = e);
 		} catch {}
 	}
 	async _reload() {
@@ -1174,8 +1174,12 @@ var $ = class extends H {
               ${e.year ?? ""} · ${n ? "TV show" : "Movie"}
               ${t ? j`<span class="status inline ${e.status}">${t}</span>` : N}
             </div>
+            ${this._config.show_remove && Ne(e.status) && !this._confirmRemove ? j`<button class="danger small head-remove" @click=${this._remove}>
+                  ${n ? "Remove all…" : "Remove…"}
+                </button>` : N}
           </div>
         </div>
+        ${this._config.show_remove && Ne(e.status) && this._confirmRemove ? this._renderRemove(e) : N}
         ${e.overview ? j`<p class="overview">${e.overview}</p>` : N}
         ${n ? this._renderSeasons() : N}
         ${this._config.show_4k && r ? j`<label class="row">
@@ -1185,17 +1189,12 @@ var $ = class extends H {
         <button class="primary" ?disabled=${!r || this._requesting} @click=${this._request}>
           ${this._requesting ? "Requesting…" : r ? "Request" : t ?? "Unavailable"}
         </button>
-        ${this._config.show_remove && Ne(e.status) ? this._renderRemove(e) : N}
       </div>
     `;
 	}
 	_renderRemove(e) {
-		let t = e.media_type === "tv" ? "the whole show" : "this movie";
-		return this._confirmRemove ? j`
-      <div class="confirm" role="alert">
-        Delete ${t} and its files from ${e.media_type === "tv" ? "Sonarr" : "Radarr"}? This can't be
-        undone.
-      </div>
+		return j`
+      <div class="confirm" role="alert">Delete ${e.media_type === "tv" ? `${e.title} and all its downloaded episodes` : `${e.title} and its file`}? This can't be undone.</div>
       <div class="confirm-row">
         <button class="secondary" ?disabled=${this._removing} @click=${() => this._confirmRemove = !1}>
           Cancel
@@ -1204,7 +1203,7 @@ var $ = class extends H {
           ${this._removing ? "Removing…" : "Delete files"}
         </button>
       </div>
-    ` : j`<button class="danger" @click=${this._remove}>Remove…</button>`;
+    `;
 	}
 	_renderSeasons() {
 		if (this._seasonsError) return j`<div class="message error">Couldn't load seasons (${this._seasonsError}). Request will ask for all.</div>`;
@@ -1631,6 +1630,10 @@ X = $, X.properties = {
     }
     .status.not_aired {
       background: var(--secondary-text-color, #727272);
+    }
+    .head-remove {
+      margin-top: 10px;
+      align-self: flex-start;
     }
     .link.ep-remove {
       flex: none;
