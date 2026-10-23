@@ -290,7 +290,7 @@ var ye = (e, t) => {
 						index: a,
 						name: r[2],
 						strings: n,
-						ctor: r[1] === "." ? be : r[1] === "?" ? xe : r[1] === "@" ? Se : I
+						ctor: r[1] === "." ? xe : r[1] === "?" ? Se : r[1] === "@" ? Ce : F
 					}), i.removeAttribute(e);
 				} else e.startsWith(y) && (c.push({
 					type: 6,
@@ -333,7 +333,7 @@ function N(e, t, n = e, r) {
 	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = C(t) ? void 0 : t._$litDirective$;
 	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = N(e, i._$AS(e, t.values), i, r)), t;
 }
-var P = class {
+var be = class {
 	constructor(e, t) {
 		this._$AV = [], this._$AN = void 0, this._$AD = e, this._$AM = t;
 	}
@@ -350,7 +350,7 @@ var P = class {
 		for (; s !== void 0;) {
 			if (a === s.index) {
 				let t;
-				s.type === 2 ? t = new F(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new L(i, this, e)), this._$AV.push(t), s = n[++o];
+				s.type === 2 ? t = new P(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new I(i, this, e)), this._$AV.push(t), s = n[++o];
 			}
 			a !== s?.index && (i = j.nextNode(), a++);
 		}
@@ -360,7 +360,7 @@ var P = class {
 		let t = 0;
 		for (let n of this._$AV) n !== void 0 && (n.strings === void 0 ? n._$AI(e[t]) : (n._$AI(e, n, t), t += n.strings.length - 2)), t++;
 	}
-}, F = class e {
+}, P = class e {
 	get _$AU() {
 		return this._$AM?._$AU ?? this._$Cv;
 	}
@@ -393,7 +393,7 @@ var P = class {
 		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = M.createElement(ve(n.h, n.h[0]), this.options)), n);
 		if (this._$AH?._$AD === r) this._$AH.p(t);
 		else {
-			let e = new P(r, this), n = e.u(this.options);
+			let e = new be(r, this), n = e.u(this.options);
 			e.p(t), this.T(n), this._$AH = e;
 		}
 	}
@@ -416,7 +416,7 @@ var P = class {
 	setConnected(e) {
 		this._$AM === void 0 && (this._$Cv = e, this._$AP?.(e));
 	}
-}, I = class {
+}, F = class {
 	get tagName() {
 		return this.element.tagName;
 	}
@@ -438,21 +438,21 @@ var P = class {
 	j(e) {
 		e === A ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
 	}
-}, be = class extends I {
+}, xe = class extends F {
 	constructor() {
 		super(...arguments), this.type = 3;
 	}
 	j(e) {
 		this.element[this.name] = e === A ? void 0 : e;
 	}
-}, xe = class extends I {
+}, Se = class extends F {
 	constructor() {
 		super(...arguments), this.type = 4;
 	}
 	j(e) {
 		this.element.toggleAttribute(this.name, !!e && e !== A);
 	}
-}, Se = class extends I {
+}, Ce = class extends F {
 	constructor(e, t, n, r, i) {
 		super(e, t, n, r, i), this.type = 5;
 	}
@@ -464,7 +464,7 @@ var P = class {
 	handleEvent(e) {
 		typeof this._$AH == "function" ? this._$AH.call(this.options?.host ?? this.element, e) : this._$AH.handleEvent(e);
 	}
-}, L = class {
+}, I = class {
 	constructor(e, t, n) {
 		this.element = e, this.type = 6, this._$AN = void 0, this._$AM = t, this.options = n;
 	}
@@ -474,31 +474,31 @@ var P = class {
 	_$AI(e) {
 		N(this, e);
 	}
-}, Ce = {
+}, we = {
 	M: v,
 	P: y,
 	A: b,
 	C: 1,
 	L: ye,
-	R: P,
+	R: be,
 	D: de,
 	V: N,
-	I: F,
-	H: I,
-	N: xe,
-	U: Se,
-	B: be,
-	F: L
-}, we = g.litHtmlPolyfillSupport;
-we?.(M, F), (g.litHtmlVersions ??= []).push("3.3.3");
-var Te = (e, t, n) => {
+	I: P,
+	H: F,
+	N: Se,
+	U: Ce,
+	B: xe,
+	F: I
+}, Te = g.litHtmlPolyfillSupport;
+Te?.(M, P), (g.litHtmlVersions ??= []).push("3.3.3");
+var Ee = (e, t, n) => {
 	let r = n?.renderBefore ?? t, i = r._$litPart$;
 	if (i === void 0) {
 		let e = n?.renderBefore ?? null;
-		r._$litPart$ = i = new F(t.insertBefore(S(), e), e, void 0, n ?? {});
+		r._$litPart$ = i = new P(t.insertBefore(S(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
-}, R = globalThis, z = class extends h {
+}, L = globalThis, R = class extends h {
 	constructor() {
 		super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
 	}
@@ -508,7 +508,7 @@ var Te = (e, t, n) => {
 	}
 	update(e) {
 		let t = this.render();
-		this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(e), this._$Do = Te(t, this.renderRoot, this.renderOptions);
+		this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(e), this._$Do = Ee(t, this.renderRoot, this.renderOptions);
 	}
 	connectedCallback() {
 		super.connectedCallback(), this._$Do?.setConnected(!0);
@@ -520,22 +520,22 @@ var Te = (e, t, n) => {
 		return k;
 	}
 };
-z._$litElement$ = !0, z.finalized = !0, R.litElementHydrateSupport?.({ LitElement: z });
-var Ee = R.litElementPolyfillSupport;
-Ee?.({ LitElement: z }), (R.litElementVersions ??= []).push("4.2.2");
+R._$litElement$ = !0, R.finalized = !0, L.litElementHydrateSupport?.({ LitElement: R });
+var De = L.litElementPolyfillSupport;
+De?.({ LitElement: R }), (L.litElementVersions ??= []).push("4.2.2");
 //#endregion
 //#region node_modules/lit-html/directive.js
-var B = {
+var z = {
 	ATTRIBUTE: 1,
 	CHILD: 2,
 	PROPERTY: 3,
 	BOOLEAN_ATTRIBUTE: 4,
 	EVENT: 5,
 	ELEMENT: 6
-}, De = (e) => (...t) => ({
+}, Oe = (e) => (...t) => ({
 	_$litDirective$: e,
 	values: t
-}), Oe = class {
+}), ke = class {
 	constructor(e) {}
 	get _$AU() {
 		return this._$AM._$AU;
@@ -549,10 +549,10 @@ var B = {
 	update(e, t) {
 		return this.render(...t);
 	}
-}, { I: ke } = Ce, Ae = (e) => e.strings === void 0, je = {}, Me = (e, t = je) => e._$AH = t, Ne = De(class extends Oe {
+}, { I: Ae } = we, je = (e) => e.strings === void 0, Me = {}, Ne = (e, t = Me) => e._$AH = t, Pe = Oe(class extends ke {
 	constructor(e) {
-		if (super(e), e.type !== B.PROPERTY && e.type !== B.ATTRIBUTE && e.type !== B.BOOLEAN_ATTRIBUTE) throw Error("The `live` directive is not allowed on child or event bindings");
-		if (!Ae(e)) throw Error("`live` bindings can only contain a single expression");
+		if (super(e), e.type !== z.PROPERTY && e.type !== z.ATTRIBUTE && e.type !== z.BOOLEAN_ATTRIBUTE) throw Error("The `live` directive is not allowed on child or event bindings");
+		if (!je(e)) throw Error("`live` bindings can only contain a single expression");
 	}
 	render(e) {
 		return e;
@@ -560,40 +560,40 @@ var B = {
 	update(e, [t]) {
 		if (t === k || t === A) return t;
 		let n = e.element, r = e.name;
-		if (e.type === B.PROPERTY) {
+		if (e.type === z.PROPERTY) {
 			if (t === n[r]) return k;
-		} else if (e.type === B.BOOLEAN_ATTRIBUTE) {
+		} else if (e.type === z.BOOLEAN_ATTRIBUTE) {
 			if (!!t === n.hasAttribute(r)) return k;
-		} else if (e.type === B.ATTRIBUTE && n.getAttribute(r) === t + "") return k;
-		return Me(e), t;
+		} else if (e.type === z.ATTRIBUTE && n.getAttribute(r) === t + "") return k;
+		return Ne(e), t;
 	}
 });
 //#endregion
 //#region src/ha.ts
-function Pe(e, t, n) {
+function Fe(e, t, n) {
 	e.dispatchEvent(new CustomEvent(t, {
 		detail: n,
 		bubbles: !0,
 		composed: !0
 	}));
 }
-function V(e, t) {
-	Pe(e, "hass-notification", { message: t });
+function B(e, t) {
+	Fe(e, "hass-notification", { message: t });
 }
-function H(e) {
+function V(e) {
 	return e && typeof e == "object" && "message" in e ? String(e.message) : String(e);
 }
 //#endregion
 //#region src/logic.ts
-var Fe = /* @__PURE__ */ new Set([
+var Ie = /* @__PURE__ */ new Set([
 	"not_requested",
 	"unknown",
 	"deleted"
 ]);
-function U(e) {
-	return Fe.has(e);
+function H(e) {
+	return Ie.has(e);
 }
-function W(e) {
+function U(e) {
 	switch (e) {
 		case "pending": return "Requested";
 		case "processing": return "Processing";
@@ -603,7 +603,7 @@ function W(e) {
 		default: return null;
 	}
 }
-function Ie(e) {
+function Le(e) {
 	if (e.arr && (e.arr.downloaded || e.arr.waiting)) {
 		let t = [];
 		return e.arr.downloaded && t.push({
@@ -614,28 +614,28 @@ function Ie(e) {
 			cls: "wanted"
 		}), t;
 	}
-	let t = W(e.status);
+	let t = U(e.status);
 	return t ? [{
 		label: t,
 		cls: e.status
 	}] : [];
 }
-function Le(e) {
+function Re(e) {
 	return e === "available" || e === "partially_available" || e === "processing";
 }
-function G(e) {
-	return e.filter((e) => U(e.status)).map((e) => e.season_number);
-}
-function Re(e) {
-	return U(e) || e === "partially_available";
+function W(e) {
+	return e.filter((e) => H(e.status)).map((e) => e.season_number);
 }
 function ze(e) {
-	return e.status === "missing" || e.status === "not_aired" && !e.monitored;
+	return H(e) || e === "partially_available";
 }
 function Be(e) {
-	return e.filter(ze).map((e) => e.id);
+	return e.status === "missing" || e.status === "not_aired" && !e.monitored;
 }
 function Ve(e) {
+	return e.filter(Be).map((e) => e.id);
+}
+function He(e) {
 	switch (e.status) {
 		case "downloaded": return "Downloaded";
 		case "downloading": return "Downloading";
@@ -644,7 +644,7 @@ function Ve(e) {
 		default: return null;
 	}
 }
-function He(e) {
+function Ue(e) {
 	if (!e) return "No air date";
 	let [t, n, r] = e.split("-").map(Number), i = [
 		"Jan",
@@ -662,7 +662,7 @@ function He(e) {
 	][n - 1];
 	return i ? `${r} ${i} ${t}` : e;
 }
-var Ue = [
+var We = [
 	"Jan",
 	"Feb",
 	"Mar",
@@ -676,11 +676,11 @@ var Ue = [
 	"Nov",
 	"Dec"
 ];
-function K(e) {
+function G(e) {
 	let [t, n, r] = e.slice(0, 10).split("-").map(Number);
-	return `${r} ${Ue[n - 1]} ${t}`;
+	return `${r} ${We[n - 1]} ${t}`;
 }
-function We(e, t = /* @__PURE__ */ new Date()) {
+function Ge(e, t = /* @__PURE__ */ new Date()) {
 	let n = new Date(e), r = n.toLocaleTimeString("en-GB", {
 		hour: "2-digit",
 		minute: "2-digit"
@@ -691,50 +691,50 @@ function We(e, t = /* @__PURE__ */ new Date()) {
 		month: "short"
 	})}, ${r}`;
 }
-function Ge(e, t = /* @__PURE__ */ new Date()) {
+function Ke(e, t = /* @__PURE__ */ new Date()) {
 	let n = Math.max(0, Math.round((t.getTime() - new Date(e).getTime()) / 6e4));
 	if (n < 60) return n <= 1 ? "just now" : `${n} minutes ago`;
 	let r = Math.round(n / 60);
 	return r < 48 ? `${r} hour${r === 1 ? "" : "s"} ago` : `${Math.round(r / 24)} days ago`;
 }
-function Ke(e) {
+function qe(e) {
 	return {
 		downloading: "Downloading",
 		not_found: "Not found yet",
 		not_out: "Not out yet"
 	}[e.state];
 }
-function qe(e, t = /* @__PURE__ */ new Date()) {
+function Je(e, t = /* @__PURE__ */ new Date()) {
 	if (e.state === "downloading") return "Downloading now.";
 	if (e.media_type === "tv") {
 		let n = [];
 		e.missing && n.push(`${e.missing} episode${e.missing === 1 ? "" : "s"} out but not found yet`);
 		let r = e.next_episode;
-		return r && n.push(`Next: S${r.season}E${r.episode} ${We(r.air_date_utc, t)}`), e.state === "not_found" && e.last_search && n.push(`last searched ${Ge(e.last_search, t)}`), n.length ? n.join(" · ") : "No upcoming episodes listed yet.";
+		return r && n.push(`Next: S${r.season}E${r.episode} ${Ge(r.air_date_utc, t)}`), e.state === "not_found" && e.last_search && n.push(`last searched ${Ke(e.last_search, t)}`), n.length ? n.join(" · ") : "No upcoming episodes listed yet.";
 	}
 	if (e.state === "not_found") {
-		let n = e.digital_release ?? e.physical_release, r = n ? `Out since ${K(n)}` : "Out";
-		return e.last_search ? `${r} · last searched ${Ge(e.last_search, t)}` : r;
+		let n = e.digital_release ?? e.physical_release, r = n ? `Out since ${G(n)}` : "Out";
+		return e.last_search ? `${r} · last searched ${Ke(e.last_search, t)}` : r;
 	}
-	return e.expected_basis === "digital" ? `Digital release ${K(e.expected)}` : e.expected_basis === "physical" ? `Blu-ray/DVD release ${K(e.expected)}` : e.expected_basis === "cinema_plus_90" && e.in_cinemas ? `${`In cinemas from ${K(e.in_cinemas)}`} · no home release date yet (counted as out around ${K(e.expected)})` : e.release_status === "announced" ? "Announced · no release date yet" : "No release date yet";
+	return e.expected_basis === "digital" ? `Digital release ${G(e.expected)}` : e.expected_basis === "physical" ? `Blu-ray/DVD release ${G(e.expected)}` : e.expected_basis === "cinema_plus_90" && e.in_cinemas ? `${`In cinemas from ${G(e.in_cinemas)}`} · no home release date yet (counted as out around ${G(e.expected)})` : e.release_status === "announced" ? "Announced · no release date yet" : "No release date yet";
 }
-function Je(e) {
+function Ye(e) {
 	let t = e.episode ? ` for S${e.episode.season}E${e.episode.episode}` : "";
 	if (!e.found) return `Nothing posted yet${t}.`;
 	if (e.accepted) return `${e.accepted} suitable cop${e.accepted === 1 ? "y" : "ies"} found${t}${e.best ? `: ${e.best}` : ""}.`;
 	let n = e.reasons.length ? ` (${e.reasons[0]})` : "";
 	return `${e.found} cop${e.found === 1 ? "y" : "ies"} found${t}, none your profile accepts${n}.`;
 }
-function Ye(e, t, n) {
-	if (t === "tv") return e.next_air_date ? `Next episode ${K(e.next_air_date)}` : e.tmdb_status === "Ended" || e.tmdb_status === "Canceled" ? `Ended${e.last_air_date ? ` · last aired ${K(e.last_air_date)}` : ""}` : e.last_air_date ? `No next episode announced · last aired ${K(e.last_air_date)}` : null;
+function Xe(e, t, n) {
+	if (t === "tv") return e.next_air_date ? `Next episode ${G(e.next_air_date)}` : e.tmdb_status === "Ended" || e.tmdb_status === "Canceled" ? `Ended${e.last_air_date ? ` · last aired ${G(e.last_air_date)}` : ""}` : e.last_air_date ? `No next episode announced · last aired ${G(e.last_air_date)}` : null;
 	let r = [e.digital, e.physical].filter((e) => !!e).sort()[0];
-	return r && r <= n ? `Out to buy or stream since ${K(r)}` : e.digital && e.digital > n ? `Digital release ${K(e.digital)}` : e.physical && e.physical > n ? `Blu-ray/DVD release ${K(e.physical)}` : e.theatrical && e.theatrical <= n ? `In cinemas from ${K(e.theatrical)} · no digital release date yet` : e.theatrical ? `In cinemas ${K(e.theatrical)}` : e.tmdb_status && e.tmdb_status !== "Released" ? `Not released yet (${e.tmdb_status.toLowerCase()})` : null;
+	return r && r <= n ? `Out to buy or stream since ${G(r)}` : e.digital && e.digital > n ? `Digital release ${G(e.digital)}` : e.physical && e.physical > n ? `Blu-ray/DVD release ${G(e.physical)}` : e.theatrical && e.theatrical <= n ? `In cinemas from ${G(e.theatrical)} · no digital release date yet` : e.theatrical ? `In cinemas ${G(e.theatrical)}` : e.tmdb_status && e.tmdb_status !== "Released" ? `Not released yet (${e.tmdb_status.toLowerCase()})` : null;
 }
-function q(e, t) {
+function K(e, t) {
 	let n = t.trim().toLowerCase();
 	return n ? e.filter((e) => e.title.toLowerCase().includes(n)) : [...e];
 }
-var J = class {
+var q = class {
 	constructor() {
 		this._seq = 0;
 	}
@@ -742,7 +742,7 @@ var J = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, Y, Xe = "0.10.1", X = "jellyseerr_search", Ze = 400, Z = 2, Qe = 36e5, $e = [2e4, 6e4], et = !1, Q = !1, tt = [
+}, J, Ze = "0.11.0", Y = "jellyseerr_search", Qe = 400, X = 2, $e = 36e5, et = [2e4, 6e4], tt = !1, Z = !1, nt = [
 	{
 		value: "all",
 		label: "All"
@@ -763,7 +763,7 @@ var J = class {
 		value: "waiting",
 		label: "Waiting"
 	}
-], nt = [{
+], rt = [{
 	value: "trending",
 	label: "Trending",
 	heading: "Trending today"
@@ -772,12 +772,12 @@ var J = class {
 	label: "Popular",
 	heading: "Popular"
 }];
-function rt(e, t) {
+function Q(e, t) {
 	return t === "daily" ? `${e} is released by date, so it's now set up as a daily show.` : `${e} isn't released by date, so it's no longer set up as a daily show.`;
 }
-var $ = class extends z {
+var $ = class extends R {
 	constructor() {
-		super(), this._latestSearch = new J(), this._latestSeasons = new J(), this._latestBrowse = new J(), this._latestEpisodes = new J(), this._latestLibrary = new J(), this._refreshTimers = [], this._browseAt = 0, this._query = "", this._filter = "all", this._browse = "trending", this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1, this._confirmRemove = !1, this._removing = !1, this._picker = !1, this._picked = /* @__PURE__ */ new Set(), this._pickerBusy = !1, this._downloading = !1, this._followBusy = !1, this._checks = {}, this._waitingOn = Q, this._checkingAll = !1;
+		super(), this._latestSearch = new q(), this._latestSeasons = new q(), this._latestBrowse = new q(), this._latestEpisodes = new q(), this._latestLibrary = new q(), this._refreshTimers = [], this._browseAt = 0, this._query = "", this._filter = "all", this._browse = "trending", this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1, this._confirmRemove = !1, this._removing = !1, this._picker = !1, this._picked = /* @__PURE__ */ new Set(), this._pickerBusy = !1, this._downloading = !1, this._followBusy = !1, this._checks = {}, this._waitingOn = Z, this._checkingAll = !1;
 	}
 	static getConfigForm() {
 		return {
@@ -820,7 +820,7 @@ var $ = class extends z {
 				},
 				{
 					name: "config_entry_id",
-					selector: { config_entry: { integration: X } }
+					selector: { config_entry: { integration: Y } }
 				}
 			],
 			computeLabel: (e) => ({
@@ -838,7 +838,7 @@ var $ = class extends z {
 	}
 	setConfig(e) {
 		if (!e) throw Error("Invalid configuration");
-		if (e.media_type && !tt.some((t) => t.value === e.media_type)) throw Error("media_type must be all, movie or tv");
+		if (e.media_type && !nt.some((t) => t.value === e.media_type)) throw Error("media_type must be all, movie or tv");
 		this._config = e, this._filter = e.media_type ?? "all";
 	}
 	getCardSize() {
@@ -855,12 +855,12 @@ var $ = class extends z {
 		super.disconnectedCallback(), clearTimeout(this._debounce), this._clearRefreshTimers();
 	}
 	updated(e) {
-		e.has("hass") && this.hass && !et && (et = !0, this._checkVersion()), e.has("hass") && this.hass && this._browseDue() && this._loadBrowse();
+		e.has("hass") && this.hass && !tt && (tt = !0, this._checkVersion()), e.has("hass") && this.hass && this._browseDue() && this._loadBrowse();
 	}
 	async _checkVersion() {
 		try {
-			let { version: e, waiting: t } = await this.hass.callWS({ type: `${X}/version` });
-			e !== "0.10.1" && (this._staleVersion = e), Q = !!t, this._waitingOn = Q;
+			let { version: e, waiting: t } = await this.hass.callWS({ type: `${Y}/version` });
+			e !== "0.11.0" && (this._staleVersion = e), Z = !!t, this._waitingOn = Z;
 		} catch {}
 	}
 	async _reload() {
@@ -877,12 +877,12 @@ var $ = class extends z {
 		this._waitingError = void 0;
 		try {
 			let { results: e } = await this.hass.callWS({
-				type: `${X}/waiting`,
+				type: `${Y}/waiting`,
 				...this._entry()
 			});
 			this._filter === "waiting" && (this._waiting = e);
 		} catch (e) {
-			this._filter === "waiting" && (this._waitingError = H(e));
+			this._filter === "waiting" && (this._waitingError = V(e));
 		}
 	}
 	_key(e) {
@@ -896,7 +896,7 @@ var $ = class extends z {
 		};
 		try {
 			let n = await this.hass.callWS({
-				type: `${X}/waiting/check`,
+				type: `${Y}/waiting/check`,
 				media_type: e.media_type,
 				arr_id: e.arr_id,
 				...this._entry()
@@ -908,7 +908,7 @@ var $ = class extends z {
 		} catch (e) {
 			this._checks = {
 				...this._checks,
-				[t]: `Check failed: ${H(e)}`
+				[t]: `Check failed: ${V(e)}`
 			};
 		}
 	}
@@ -928,15 +928,15 @@ var $ = class extends z {
 	async _searchWaiting(e) {
 		try {
 			await this.hass.callWS({
-				type: `${X}/waiting/search`,
+				type: `${Y}/waiting/search`,
 				media_type: e.media_type,
 				arr_id: e.arr_id,
 				...this._entry()
-			}), V(this, `Searching for ${e.title} now. It downloads by itself if a suitable copy turns up.`), setTimeout(() => {
+			}), B(this, `Searching for ${e.title} now. It downloads by itself if a suitable copy turns up.`), setTimeout(() => {
 				this._filter === "waiting" && !this._selected && this._loadWaiting();
 			}, 3e4);
 		} catch (e) {
-			V(this, `Search failed: ${H(e)}`);
+			B(this, `Search failed: ${V(e)}`);
 		}
 	}
 	_openWaiting(e) {
@@ -951,43 +951,43 @@ var $ = class extends z {
 		});
 	}
 	_showBrowse() {
-		return this._filter !== "downloaded" && this._filter !== "waiting" && this._config.show_trending !== !1 && this._query.trim().length < Z;
+		return this._filter !== "downloaded" && this._filter !== "waiting" && this._config.show_trending !== !1 && this._query.trim().length < X;
 	}
 	async _loadLibrary() {
 		let e = this._latestLibrary.next();
 		this._libraryError = void 0;
 		try {
 			let { results: t } = await this.hass.callWS({
-				type: `${X}/library`,
+				type: `${Y}/library`,
 				...this._entry()
 			});
 			e() && (this._library = t);
 		} catch (t) {
-			e() && (this._libraryError = H(t));
+			e() && (this._libraryError = V(t));
 		}
 	}
 	_browseDue() {
-		return !this._showBrowse() || this._selected ? !1 : this._browseKey !== `${this._browse}/${this._filter}` || Date.now() - this._browseAt > Qe;
+		return !this._showBrowse() || this._selected ? !1 : this._browseKey !== `${this._browse}/${this._filter}` || Date.now() - this._browseAt > $e;
 	}
 	async _loadBrowse() {
 		let e = this._latestBrowse.next(), t = `${this._browse}/${this._filter}`;
 		this._browseKey !== t && (this._browseResults = void 0), this._browseKey = t, this._browseAt = Date.now(), this._browseError = void 0;
 		try {
 			let { results: t } = await this.hass.callWS({
-				type: `${X}/${this._browse}`,
+				type: `${Y}/${this._browse}`,
 				media_type: this._filter,
 				...this._entry()
 			});
 			e() && (this._browseResults = t);
 		} catch (t) {
-			e() && (this._browseError = H(t));
+			e() && (this._browseError = V(t));
 		}
 	}
 	_setBrowse(e) {
 		e !== this._browse && (this._browse = e, this._browseDue() && this._loadBrowse());
 	}
 	_onInput(e) {
-		this._query = e.target.value, clearTimeout(this._debounce), this._filter !== "downloaded" && this._filter !== "waiting" && (this._debounce = setTimeout(() => void this._search(), Ze));
+		this._query = e.target.value, clearTimeout(this._debounce), this._filter !== "downloaded" && this._filter !== "waiting" && (this._debounce = setTimeout(() => void this._search(), Qe));
 	}
 	_onKeydown(e) {
 		e.key === "Enter" && (clearTimeout(this._debounce), e.target.blur(), this._search());
@@ -996,12 +996,12 @@ var $ = class extends z {
 		this._leaveShow(), clearTimeout(this._debounce), this._latestSearch.next(), this._query = "", this._results = void 0, this._error = void 0, this._loading = !1, this._selected = void 0;
 	}
 	_setFilter(e) {
-		e !== this._filter && (this._filter = e, e === "downloaded" ? this._loadLibrary() : e === "waiting" ? this._loadWaiting() : this._query.trim().length >= Z ? this._search() : this._browseDue() && this._loadBrowse());
+		e !== this._filter && (this._filter = e, e === "downloaded" ? this._loadLibrary() : e === "waiting" ? this._loadWaiting() : this._query.trim().length >= X ? this._search() : this._browseDue() && this._loadBrowse());
 	}
 	async _search() {
 		if (this._filter === "downloaded" || this._filter === "waiting") return;
 		let e = this._query.trim();
-		if (e.length < Z) {
+		if (e.length < X) {
 			this._latestSearch.next(), this._results = void 0, this._loading = !1;
 			return;
 		}
@@ -1009,7 +1009,7 @@ var $ = class extends z {
 		this._loading = !0, this._error = void 0;
 		try {
 			let { results: n } = await this.hass.callWS({
-				type: `${X}/search`,
+				type: `${Y}/search`,
 				query: e,
 				media_type: this._filter,
 				...this._entry()
@@ -1017,18 +1017,18 @@ var $ = class extends z {
 			if (!t()) return;
 			this._results = n, this._selected = void 0;
 		} catch (e) {
-			t() && (this._error = H(e));
+			t() && (this._error = V(e));
 		} finally {
 			t() && (this._loading = !1);
 		}
 	}
 	_open(e) {
-		this._leaveShow(), this._selected = e, this._seasons = void 0, this._seasonsError = void 0, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._confirmRemove = !1, this._picker = !1, this._show = void 0, this._release = void 0, this._closeEpisodes(), this._loadRelease(e), e.media_type === "tv" && this._loadSeasons(e.tmdb_id);
+		this._leaveShow(), this._selected = e, this._seasons = void 0, this._seasonsError = void 0, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._confirmRemove = !1, this._picker = !1, this._show = void 0, this._release = void 0, this._seasonSource = void 0, this._closeEpisodes(), this._loadRelease(e), e.media_type === "tv" && this._loadSeasons(e.tmdb_id);
 	}
 	async _loadRelease(e) {
 		try {
 			let t = await this.hass.callWS({
-				type: `${X}/release`,
+				type: `${Y}/release`,
 				tmdb_id: e.tmdb_id,
 				media_type: e.media_type,
 				...this._entry()
@@ -1039,15 +1039,15 @@ var $ = class extends z {
 	async _loadSeasons(e) {
 		let t = this._latestSeasons.next();
 		try {
-			let { seasons: n, episode_picker: r, show: i } = await this.hass.callWS({
-				type: `${X}/seasons`,
+			let { seasons: n, episode_picker: r, show: i, season_source: a } = await this.hass.callWS({
+				type: `${Y}/seasons`,
 				tmdb_id: e,
 				...this._entry()
 			});
 			if (!t()) return;
-			this._seasons = n, this._picker = !!r, this._show = i, this._chosen = new Set(G(n));
+			this._seasons = n, this._picker = !!r, this._show = i, this._seasonSource = a, this._chosen = a === "sonarr" ? /* @__PURE__ */ new Set() : new Set(W(n));
 		} catch (e) {
-			t() && (this._seasonsError = H(e));
+			t() && (this._seasonsError = V(e));
 		}
 	}
 	_toggleSeason(e) {
@@ -1055,14 +1055,18 @@ var $ = class extends z {
 		t.has(e) ? t.delete(e) : t.add(e), this._chosen = t;
 	}
 	_toggleAllSeasons() {
-		let e = G(this._seasons ?? []);
+		let e = W(this._seasons ?? []);
 		this._chosen = this._chosen.size === e.length ? /* @__PURE__ */ new Set() : new Set(e);
 	}
 	async _request() {
 		let e = this._selected;
 		if (!e || this._requesting) return;
+		if (e.media_type === "tv" && this._seasonSource === "sonarr" && this._seasons) {
+			await this._requestThroughSonarr(e);
+			return;
+		}
 		let t = {
-			type: `${X}/request`,
+			type: `${Y}/request`,
 			tmdb_id: e.tmdb_id,
 			media_type: e.media_type,
 			is_4k: this._is4k,
@@ -1070,11 +1074,30 @@ var $ = class extends z {
 		};
 		e.media_type === "tv" && (t.seasons = this._seasons ? [...this._chosen].sort((e, t) => e - t) : "all"), this._requesting = !0;
 		try {
-			await this.hass.callWS(t), V(this, `Requested ${e.title}`), this._markRequested(e);
+			await this.hass.callWS(t), B(this, `Requested ${e.title}`), this._markRequested(e);
 		} catch (e) {
-			V(this, `Request failed: ${H(e)}`);
+			B(this, `Request failed: ${V(e)}`);
 		} finally {
 			this._requesting = !1;
+		}
+	}
+	async _requestThroughSonarr(e) {
+		let t = [...this._chosen].sort((e, t) => e - t);
+		if (t.length) {
+			this._requesting = !0;
+			try {
+				let n = await this.hass.callWS({
+					type: `${Y}/episodes/request`,
+					tmdb_id: e.tmdb_id,
+					seasons: t,
+					...this._entry()
+				}), r = n.series_type_changed ? ` ${Q(e.title, n.series_type_changed)}` : "", i = t.length === 1 ? `series ${t[0]}` : `series ${t.join(", ")}`;
+				B(this, `Getting ${i} of ${e.title}.${r}`), this._addedSeries !== void 0 && (this._addedSeries = void 0), this._selected === e && this._loadSeasons(e.tmdb_id);
+			} catch (e) {
+				B(this, `Request failed: ${V(e)}`);
+			} finally {
+				this._requesting = !1;
+			}
 		}
 	}
 	async _remove() {
@@ -1087,13 +1110,13 @@ var $ = class extends z {
 			this._removing = !0;
 			try {
 				await this.hass.callWS({
-					type: `${X}/remove`,
+					type: `${Y}/remove`,
 					tmdb_id: e.tmdb_id,
 					media_type: e.media_type,
 					...this._entry()
-				}), V(this, `Removed ${e.title}`), this._setStatus(e, "deleted"), this._library = this._library?.filter((t) => t.tmdb_id !== e.tmdb_id || t.media_type !== e.media_type);
+				}), B(this, `Removed ${e.title}`), this._setStatus(e, "deleted"), this._library = this._library?.filter((t) => t.tmdb_id !== e.tmdb_id || t.media_type !== e.media_type);
 			} catch (e) {
-				V(this, `Remove failed: ${H(e)}`);
+				B(this, `Remove failed: ${V(e)}`);
 			} finally {
 				this._removing = !1, this._confirmRemove = !1;
 			}
@@ -1126,7 +1149,7 @@ var $ = class extends z {
 		let n = this._latestEpisodes.next();
 		try {
 			let r = await this.hass.callWS({
-				type: `${X}/episodes`,
+				type: `${Y}/episodes`,
 				tmdb_id: e,
 				season_number: t,
 				...this._entry()
@@ -1134,7 +1157,7 @@ var $ = class extends z {
 			if (!n()) return;
 			r.added && (this._addedSeries = r.series_id), this._episodes = r;
 		} catch (e) {
-			n() && (this._episodesError = H(e));
+			n() && (this._episodesError = V(e));
 		}
 	}
 	_clearRefreshTimers() {
@@ -1146,7 +1169,7 @@ var $ = class extends z {
 	_leaveShow() {
 		let e = this._addedSeries;
 		this._addedSeries = void 0, e !== void 0 && this.hass && this.hass.callWS({
-			type: `${X}/episodes/discard`,
+			type: `${Y}/episodes/discard`,
 			series_id: e,
 			...this._entry()
 		}).catch(() => void 0);
@@ -1159,14 +1182,14 @@ var $ = class extends z {
 		t.has(e) ? t.delete(e) : t.add(e), this._picked = t;
 	}
 	_toggleAllPicks() {
-		let e = Be(this._episodes?.episodes ?? []);
+		let e = Ve(this._episodes?.episodes ?? []);
 		this._picked = this._picked.size === e.length ? /* @__PURE__ */ new Set() : new Set(e);
 	}
 	_stillOn(e, t) {
 		return this._selected === e && this._episodes?.series_id === t;
 	}
 	_recoverIfGone(e, t, n) {
-		return e?.translation_key === "series_gone" && (V(this, `${t.title} had been tidied out of Sonarr. It's back now: try again.`), this._selected === t && this._loadEpisodes(t.tmdb_id, n), !0);
+		return e?.translation_key === "series_gone" && (B(this, `${t.title} had been tidied out of Sonarr. It's back now: try again.`), this._selected === t && this._loadEpisodes(t.tmdb_id, n), !0);
 	}
 	async _download() {
 		let e = this._episodes, t = this._selected;
@@ -1175,19 +1198,19 @@ var $ = class extends z {
 		this._pickerBusy = !0, this._downloading = !0;
 		try {
 			let r = await this.hass.callWS({
-				type: `${X}/episodes/download`,
+				type: `${Y}/episodes/download`,
 				series_id: e.series_id,
 				episode_ids: n,
 				...this._entry()
 			});
 			this._addedSeries === e.series_id && (this._addedSeries = void 0);
-			let i = r.series_type_changed ? ` ${rt(e.title, r.series_type_changed)}` : "";
-			if (V(this, `Downloading ${n.length} episode${n.length === 1 ? "" : "s"} of ${e.title}.${i}`), !this._stillOn(t, e.series_id)) return;
-			this._picked = /* @__PURE__ */ new Set(), await this._loadEpisodes(t.tmdb_id, e.season_number), this._clearRefreshTimers(), this._refreshTimers = $e.map((n) => setTimeout(() => {
+			let i = r.series_type_changed ? ` ${Q(e.title, r.series_type_changed)}` : "";
+			if (B(this, `Downloading ${n.length} episode${n.length === 1 ? "" : "s"} of ${e.title}.${i}`), !this._stillOn(t, e.series_id)) return;
+			this._picked = /* @__PURE__ */ new Set(), await this._loadEpisodes(t.tmdb_id, e.season_number), this._clearRefreshTimers(), this._refreshTimers = et.map((n) => setTimeout(() => {
 				this._stillOn(t, e.series_id) && this._loadEpisodes(t.tmdb_id, e.season_number);
 			}, n));
 		} catch (n) {
-			this._recoverIfGone(n, t, e.season_number) || V(this, `Download failed: ${H(n)}`);
+			this._recoverIfGone(n, t, e.season_number) || B(this, `Download failed: ${V(n)}`);
 		} finally {
 			this._pickerBusy = !1, this._downloading = !1;
 		}
@@ -1201,15 +1224,15 @@ var $ = class extends z {
 			this._pickerBusy = !0;
 			try {
 				let r = await this.hass.callWS({
-					type: `${X}/episodes/remove`,
+					type: `${Y}/episodes/remove`,
 					series_id: t.series_id,
 					tmdb_id: n.tmdb_id,
 					episode_ids: [e.id],
 					...this._entry()
 				});
-				this._confirmRemoveEp = void 0, r.show_removed ? (V(this, `Removed episode ${e.episode_number}. Nothing else was left, so ${t.title} is gone.`), this._addedSeries === t.series_id && (this._addedSeries = void 0), this._library = this._library?.filter((e) => e.tmdb_id !== n.tmdb_id || e.media_type !== n.media_type), this._setStatus(n, "not_requested"), this._stillOn(n, t.series_id) && (this._closeEpisodes(), this._loadSeasons(n.tmdb_id))) : (V(this, `Removed episode ${e.episode_number} of ${t.title}`), this._stillOn(n, t.series_id) && await this._loadEpisodes(n.tmdb_id, t.season_number));
+				this._confirmRemoveEp = void 0, r.show_removed ? (B(this, `Removed episode ${e.episode_number}. Nothing else was left, so ${t.title} is gone.`), this._addedSeries === t.series_id && (this._addedSeries = void 0), this._library = this._library?.filter((e) => e.tmdb_id !== n.tmdb_id || e.media_type !== n.media_type), this._setStatus(n, "not_requested"), this._stillOn(n, t.series_id) && (this._closeEpisodes(), this._loadSeasons(n.tmdb_id))) : (B(this, `Removed episode ${e.episode_number} of ${t.title}`), this._stillOn(n, t.series_id) && await this._loadEpisodes(n.tmdb_id, t.season_number));
 			} catch (e) {
-				this._recoverIfGone(e, n, t.season_number) || V(this, `Remove failed: ${H(e)}`);
+				this._recoverIfGone(e, n, t.season_number) || B(this, `Remove failed: ${V(e)}`);
 			} finally {
 				this._pickerBusy = !1;
 			}
@@ -1221,18 +1244,18 @@ var $ = class extends z {
 			this._followBusy = !0;
 			try {
 				let n = await this.hass.callWS({
-					type: `${X}/episodes/follow`,
+					type: `${Y}/episodes/follow`,
 					tmdb_id: t.tmdb_id,
 					follow_new: e,
 					...this._entry()
 				});
-				if (n.series_type_changed && V(this, rt(t.title, n.series_type_changed)), e && !n.follow_new ? V(this, `${t.title} has no regular series to follow yet.`) : e && V(this, `New episodes of ${t.title} will download as they come out.`), this._selected !== t) return;
+				if (n.series_type_changed && B(this, Q(t.title, n.series_type_changed)), e && !n.follow_new ? B(this, `${t.title} has no regular series to follow yet.`) : e && B(this, `New episodes of ${t.title} will download as they come out.`), this._selected !== t) return;
 				this._show = {
 					in_sonarr: n.in_sonarr,
 					follow_new: n.follow_new
 				}, this._episodes && this._episodeSeason && this._loadEpisodes(t.tmdb_id, this._episodeSeason.season_number);
 			} catch (e) {
-				V(this, `Couldn't change it: ${H(e)}`), this.requestUpdate();
+				B(this, `Couldn't change it: ${V(e)}`), this.requestUpdate();
 			} finally {
 				this._followBusy = !1;
 			}
@@ -1244,7 +1267,7 @@ var $ = class extends z {
         <label class="row option">
           <input
             type="checkbox"
-            .checked=${Ne(this._show.follow_new)}
+            .checked=${Pe(this._show.follow_new)}
             ?disabled=${this._followBusy}
             @change=${(e) => this._setFollowShow(e.target.checked)}
           />
@@ -1291,7 +1314,7 @@ var $ = class extends z {
               </button>` : A}
         </div>
         <div class="chips" role="radiogroup" aria-label="Media type">
-          ${tt.filter((e) => e.value !== "waiting" || this._waitingOn).map((e) => O`<button
+          ${nt.filter((e) => e.value !== "waiting" || this._waitingOn).map((e) => O`<button
               class="chip ${e.value === this._filter ? "on" : ""}"
               role="radio"
               aria-checked=${e.value === this._filter}
@@ -1312,12 +1335,12 @@ var $ = class extends z {
     ` : O`<div class="message">No movies or shows found.</div>` : A;
 	}
 	_renderBrowse() {
-		let e = nt.find((e) => e.value === this._browse).heading, t;
+		let e = rt.find((e) => e.value === this._browse).heading, t;
 		return t = this._browseError ? O`<div class="message error">Couldn't load ${e.toLowerCase()} (${this._browseError}).</div>` : this._browseResults ? this._browseResults.length ? O`<div class="grid">${this._browseResults.map((e) => this._renderTile(e))}</div>` : O`<div class="message">Nothing to show.</div>` : O`<div class="message">Loading…</div>`, O`
       <div class="section">
         <span>${e}</span>
         <div class="chips small" role="radiogroup" aria-label="Browse">
-          ${nt.map((e) => O`<button
+          ${rt.map((e) => O`<button
               class="chip ${e.value === this._browse ? "on" : ""}"
               role="radio"
               aria-checked=${e.value === this._browse}
@@ -1335,14 +1358,14 @@ var $ = class extends z {
 		if (this._libraryError) e = O`<div class="message error">Couldn't load what's downloaded (${this._libraryError}).</div>`;
 		else if (!this._library) e = O`<div class="message">Loading…</div>`;
 		else {
-			let t = q(this._library, this._query);
+			let t = K(this._library, this._query);
 			e = t.length ? O`<div class="grid">${t.map((e) => this._renderTile(e))}</div>` : O`<div class="message">
             ${this._library.length ? `Nothing downloaded matches “${this._query.trim()}”.` : "Nothing downloaded yet."}
           </div>`;
 		}
 		return O`
       <div class="section stack">
-        <span>Downloaded${this._library ? O` · ${q(this._library, this._query).length}` : A}</span>
+        <span>Downloaded${this._library ? O` · ${K(this._library, this._query).length}` : A}</span>
         <span class="hint">Newest first. Tap one to remove it or get more episodes.</span>
       </div>
       ${e}
@@ -1351,7 +1374,7 @@ var $ = class extends z {
 	_renderWaiting() {
 		if (this._waitingError) return O`<div class="message error">Couldn't load the Waiting list (${this._waitingError}).</div>`;
 		if (!this._waiting) return O`<div class="message">Loading…</div>`;
-		let e = q(this._waiting, this._query), t = e.filter((e) => e.state !== "downloading");
+		let e = K(this._waiting, this._query), t = e.filter((e) => e.state !== "downloading");
 		return O`
       <div class="section stack">
         <span>Waiting · ${e.length}</span>
@@ -1375,10 +1398,10 @@ var $ = class extends z {
         <div class="wbody">
           <div class="wtitle">
             <span>${e.title}${e.year ? O` <span class="count">(${e.year})</span>` : A}</span>
-            <span class="status inline w-${e.state}">${Ke(e)}</span>
+            <span class="status inline w-${e.state}">${qe(e)}</span>
           </div>
-          <div class="hint">${qe(e)}</div>
-          ${typeof t == "object" ? O`<div class="wcheck">${Je(t)}</div>` : A}
+          <div class="hint">${Je(e)}</div>
+          ${typeof t == "object" ? O`<div class="wcheck">${Ye(t)}</div>` : A}
           ${typeof t == "string" && !n ? O`<div class="wcheck error">${t}</div>` : A}
           ${e.state === "downloading" ? A : O`<div class="wactions">
                 <button class="secondary small" ?disabled=${n || this._checkingAll} @click=${() => this._checkWaiting(e)}>
@@ -1391,7 +1414,7 @@ var $ = class extends z {
     `;
 	}
 	_renderTile(e) {
-		let t = Ie(e);
+		let t = Le(e);
 		return O`
       <button class="tile" @click=${() => this._open(e)} aria-label="${e.title} ${e.year ?? ""}">
         <div class="poster">
@@ -1405,7 +1428,7 @@ var $ = class extends z {
     `;
 	}
 	_renderDetail(e) {
-		let t = W(e.status), n = e.media_type === "tv", r = n ? Re(e.status) && (!this._seasons || this._chosen.size > 0) : U(e.status);
+		let t = U(e.status), n = e.media_type === "tv", r = n ? ze(e.status) && (!this._seasons || this._chosen.size > 0) : H(e.status);
 		return O`
       <div class="detail">
         <button class="back" @click=${this._back}>
@@ -1417,15 +1440,15 @@ var $ = class extends z {
             <h2>${e.title}</h2>
             <div class="meta">
               ${e.year ?? ""} · ${n ? "TV show" : "Movie"}
-              ${Ie(e).map((e) => O`<span class="status inline ${e.cls}">${e.label}</span>`)}
+              ${Le(e).map((e) => O`<span class="status inline ${e.cls}">${e.label}</span>`)}
             </div>
-            ${this._release && Ye(this._release, e.media_type, (/* @__PURE__ */ new Date()).toISOString().slice(0, 10)) ? O`<div class="release">${Ye(this._release, e.media_type, (/* @__PURE__ */ new Date()).toISOString().slice(0, 10))}</div>` : A}
-            ${this._config.show_remove && Le(e.status) && !this._confirmRemove ? O`<button class="danger small head-remove" @click=${this._remove}>
+            ${this._release && Xe(this._release, e.media_type, (/* @__PURE__ */ new Date()).toISOString().slice(0, 10)) ? O`<div class="release">${Xe(this._release, e.media_type, (/* @__PURE__ */ new Date()).toISOString().slice(0, 10))}</div>` : A}
+            ${this._config.show_remove && Re(e.status) && !this._confirmRemove ? O`<button class="danger small head-remove" @click=${this._remove}>
                   ${n ? "Remove all…" : "Remove…"}
                 </button>` : A}
           </div>
         </div>
-        ${this._config.show_remove && Le(e.status) && this._confirmRemove ? this._renderRemove(e) : A}
+        ${this._config.show_remove && Re(e.status) && this._confirmRemove ? this._renderRemove(e) : A}
         ${e.overview ? O`<p class="overview">${e.overview}</p>` : A}
         ${n ? this._renderFollow(e) : A}
         ${n ? this._renderSeasons() : A}
@@ -1455,7 +1478,7 @@ var $ = class extends z {
 	_renderSeasons() {
 		if (this._seasonsError) return O`<div class="message error">Couldn't load seasons (${this._seasonsError}). Request will ask for all.</div>`;
 		if (!this._seasons) return O`<div class="message">Loading seasons…</div>`;
-		let e = G(this._seasons);
+		let e = W(this._seasons);
 		return O`
       <div class="seasons">
         <div class="seasons-head">
@@ -1465,7 +1488,7 @@ var $ = class extends z {
               </button>` : A}
         </div>
         ${this._seasons.map((e) => {
-			let t = U(e.status), n = W(e.status);
+			let t = H(e.status), n = U(e.status);
 			return O`<label class="row season ${t ? "" : "done"}">
             <input
               type="checkbox"
@@ -1488,7 +1511,7 @@ var $ = class extends z {
 		if (this._episodesError) r = O`<div class="message error">Couldn't load episodes (${this._episodesError}).</div>`;
 		else if (!n) r = O`<div class="message">Loading episodes from Sonarr…</div>`;
 		else {
-			let e = Be(n.episodes), t = this._picked.size;
+			let e = Ve(n.episodes), t = this._picked.size;
 			r = O`
         <div class="seasons">
           <div class="seasons-head">
@@ -1498,7 +1521,7 @@ var $ = class extends z {
                 </button>` : A}
           </div>
           ${n.episodes.length ? n.episodes.map((e) => {
-				let t = ze(e), n = Ve(e);
+				let t = Be(e), n = He(e);
 				return O`<label class="row season episode ${t ? "" : "done"}">
                   <input
                     type="checkbox"
@@ -1508,7 +1531,7 @@ var $ = class extends z {
                   />
                   <span class="grow">
                     <span class="ep-title">${e.episode_number}. ${e.title || `Episode ${e.episode_number}`}</span>
-                    <span class="hint">${He(e.air_date)}</span>
+                    <span class="hint">${Ue(e.air_date)}</span>
                   </span>
                   ${n ? O`<span class="status inline ep ${e.status}">${n}</span>` : A}
                   ${this._config.show_remove && e.status === "downloaded" && this._confirmRemoveEp !== e.id ? O`<button class="link ep-remove" @click=${(t) => this._askRemoveEpisode(e.id, t)}>
@@ -1546,7 +1569,7 @@ var $ = class extends z {
     `;
 	}
 };
-Y = $, Y.properties = {
+J = $, J.properties = {
 	hass: { attribute: !1 },
 	_config: { state: !0 },
 	_query: { state: !0 },
@@ -1578,13 +1601,14 @@ Y = $, Y.properties = {
 	_show: { state: !0 },
 	_waiting: { state: !0 },
 	_release: { state: !0 },
+	_seasonSource: { state: !0 },
 	_waitingError: { state: !0 },
 	_checks: { state: !0 },
 	_waitingOn: { state: !0 },
 	_checkingAll: { state: !0 },
 	_library: { state: !0 },
 	_libraryError: { state: !0 }
-}, Y.styles = o`
+}, J.styles = o`
     :host {
       --js-gap: 12px;
       --js-radius: var(--ha-card-border-radius, 12px);
@@ -2070,4 +2094,4 @@ Y = $, Y.properties = {
 	preview: !1
 }));
 //#endregion
-export { Xe as CARD_VERSION, $ as JellyseerrSearchCard };
+export { Ze as CARD_VERSION, $ as JellyseerrSearchCard };

@@ -103,6 +103,7 @@ export class JellyseerrSearchCard extends LitElement {
     _show: { state: true },
     _waiting: { state: true },
     _release: { state: true },
+    _seasonSource: { state: true },
     _waitingError: { state: true },
     _checks: { state: true },
     _waitingOn: { state: true },
@@ -146,6 +147,8 @@ export class JellyseerrSearchCard extends LitElement {
   declare _followBusy: boolean;
   /** Sonarr's view of the open show (follow state), when Sonarr is set up. */
   declare _show?: ShowState | null;
+  /** "sonarr" when the season list is Sonarr's (its numbering), so Request goes there. */
+  declare _seasonSource?: string;
   /** TMDB's release dates for the open title ("Is it out?"). */
   declare _release?: ReleaseInfo;
   /** Wanted but not downloaded (Sonarr/Radarr), for the Waiting filter. */
@@ -510,6 +513,7 @@ export class JellyseerrSearchCard extends LitElement {
     this._picker = false;
     this._show = undefined;
     this._release = undefined;
+    this._seasonSource = undefined;
     this._closeEpisodes();
     void this._loadRelease(result);
     if (result.media_type === "tv") void this._loadSeasons(result.tmdb_id);
@@ -532,10 +536,11 @@ export class JellyseerrSearchCard extends LitElement {
   private async _loadSeasons(tmdbId: number): Promise<void> {
     const current = this._latestSeasons.next();
     try {
-      const { seasons, episode_picker, show } = await this.hass.callWS<{
+      const { seasons, episode_picker, show, season_source } = await this.hass.callWS<{
         seasons: Season[];
         episode_picker?: boolean;
         show?: ShowState | null;
+        season_source?: string;
       }>({
         type: `${DOMAIN}/seasons`,
         tmdb_id: tmdbId,
@@ -545,7 +550,9 @@ export class JellyseerrSearchCard extends LitElement {
       this._seasons = seasons;
       this._picker = !!episode_picker;
       this._show = show;
-      this._chosen = new Set(requestableSeasons(seasons));
+      this._seasonSource = season_source;
+      // Requests through Sonarr download straight away: nothing pre-ticked.
+      this._chosen = season_source === "sonarr" ? new Set() : new Set(requestableSeasons(seasons));
     } catch (err) {
       if (current()) this._seasonsError = errorMessage(err);
     }
@@ -565,6 +572,10 @@ export class JellyseerrSearchCard extends LitElement {
   private async _request(): Promise<void> {
     const item = this._selected;
     if (!item || this._requesting) return;
+    if (item.media_type === "tv" && this._seasonSource === "sonarr" && this._seasons) {
+      await this._requestThroughSonarr(item);
+      return;
+    }
     const msg: Record<string, unknown> = {
       type: `${DOMAIN}/request`,
       tmdb_id: item.tmdb_id,
@@ -581,6 +592,30 @@ export class JellyseerrSearchCard extends LitElement {
       await this.hass.callWS(msg);
       toast(this, `Requested ${item.title}`);
       this._markRequested(item);
+    } catch (err) {
+      toast(this, `Request failed: ${errorMessage(err)}`);
+    } finally {
+      this._requesting = false;
+    }
+  }
+
+  /** Seasons in Sonarr's numbering go to Sonarr: it monitors and searches them. */
+  private async _requestThroughSonarr(item: SearchResult): Promise<void> {
+    const seasons = [...this._chosen].sort((a, b) => a - b);
+    if (!seasons.length) return;
+    this._requesting = true;
+    try {
+      const result = await this.hass.callWS<{ series_type_changed?: string | null }>({
+        type: `${DOMAIN}/episodes/request`,
+        tmdb_id: item.tmdb_id,
+        seasons,
+        ...this._entry(),
+      });
+      const changed = result.series_type_changed ? ` ${typeChangedMessage(item.title, result.series_type_changed)}` : "";
+      const which = seasons.length === 1 ? `series ${seasons[0]}` : `series ${seasons.join(", ")}`;
+      toast(this, `Getting ${which} of ${item.title}.${changed}`);
+      if (this._addedSeries !== undefined) this._addedSeries = undefined;
+      if (this._selected === item) void this._loadSeasons(item.tmdb_id);
     } catch (err) {
       toast(this, `Request failed: ${errorMessage(err)}`);
     } finally {

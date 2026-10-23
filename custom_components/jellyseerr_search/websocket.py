@@ -15,12 +15,15 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 from .const import CARD_VERSION, DOMAIN, LIBRARY_LIMIT, MEDIA_TV, MEDIA_TYPES
 from .api import JellyseerrError
+from .sonarr import SonarrError
 from .waiting import async_annotate, async_check, async_search_again, async_waiting
 from .episodes import (
     async_discard_show,
     async_download_episodes,
     async_follow_show,
+    async_request_seasons,
     async_show_state,
+    async_sonarr_seasons,
     async_remove_episodes,
     async_season_episodes,
     async_set_show_options,
@@ -59,6 +62,7 @@ def async_register_websocket(hass: HomeAssistant) -> None:
         ws_episodes_discard,
         ws_episodes_remove,
         ws_episodes_follow,
+        ws_episodes_request,
         ws_waiting,
         ws_release,
         ws_waiting_check,
@@ -175,6 +179,14 @@ async def ws_seasons(
             result["show"] = await async_show_state(coordinator.client, coordinator.sonarr, msg["tmdb_id"])
         except HomeAssistantError:
             result["show"] = None  # Sonarr down: the seasons still show.
+        # Sonarr's numbering, so the list, Episodes and Request match what
+        # downloads (TMDB and TVDB can number a show's seasons differently).
+        try:
+            sonarr_seasons = await async_sonarr_seasons(coordinator.client, coordinator.sonarr, msg["tmdb_id"])
+        except (JellyseerrError, SonarrError):
+            sonarr_seasons = None
+        if sonarr_seasons is not None:
+            result["seasons"], result["season_source"] = sonarr_seasons, "sonarr"
     connection.send_result(msg["id"], result)
 
 
@@ -445,3 +457,24 @@ async def ws_release(
             translation_domain=DOMAIN, translation_key="api_error", translation_placeholders={"error": str(err)}
         ) from err
     connection.send_result(msg["id"], info)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/episodes/request",
+        vol.Required("tmdb_id"): vol.All(int, vol.Range(min=1)),
+        vol.Required("seasons"): vol.All([vol.All(int, vol.Range(min=1))], vol.Length(min=1)),
+        vol.Optional("config_entry_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_episodes_request(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Request whole seasons through Sonarr (its numbering)."""
+    c = _picker(hass, msg.get("config_entry_id"))
+    result = await _finish_regardless(
+        hass, async_request_seasons(c.client, c.sonarr, msg["tmdb_id"], msg["seasons"], c.added_shows, c.checked)
+    )
+    c.arr_index.invalidate()
+    connection.send_result(msg["id"], result)

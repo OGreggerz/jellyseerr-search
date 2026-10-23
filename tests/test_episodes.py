@@ -845,3 +845,60 @@ async def test_results_get_downloaded_and_waiting_chips(hass, arrs, aioclient_mo
     await ws.send_json_auto_id({"type": f"{DOMAIN}/search", "query": "y"})
     await ws.receive_json()
     assert len([c for c in aioclient_mock.mock_calls if "/api/v3/" in c[1].path]) == reads
+
+
+APOTHECARY = {
+    **SERIES, "id": 16, "title": "The Apothecary Diaries", "tvdbId": 431162,
+    "seasons": [
+        {"seasonNumber": 0, "monitored": False, "statistics": {"episodeFileCount": 0, "totalEpisodeCount": 54}},
+        {"seasonNumber": 1, "monitored": False, "statistics": {"episodeFileCount": 24, "percentOfEpisodes": 100, "totalEpisodeCount": 24}},
+        {"seasonNumber": 2, "monitored": False, "statistics": {"episodeFileCount": 3, "percentOfEpisodes": 12.5, "totalEpisodeCount": 24}},
+        {"seasonNumber": 3, "monitored": True, "statistics": {"episodeFileCount": 0, "totalEpisodeCount": 24}},
+    ],
+}
+
+
+async def test_seasons_come_from_sonarr(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    """TMDB has one 60-episode season; Sonarr (TVDB) has three: the card lists Sonarr's."""
+    aioclient_mock.get(f"{API}/tv/220542", json={
+        "id": 220542, "externalIds": {"tvdbId": 431162},
+        "seasons": [{"seasonNumber": 1, "name": "Season 1", "episodeCount": 60}],
+    })
+    aioclient_mock.get(f"{SONARR}/series?tvdbId=431162", json=[APOTHECARY])
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/seasons", "tmdb_id": 220542})
+    result = (await ws.receive_json())["result"]
+    assert result["season_source"] == "sonarr"
+    assert [(s["season_number"], s["status"]) for s in result["seasons"]] == [
+        (1, "available"), (2, "partially_available"), (3, "processing"),
+    ]
+
+
+async def test_seasons_of_a_show_sonarr_lacks_come_from_its_lookup(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    aioclient_mock.get(f"{API}/tv/220542", json={"id": 220542, "externalIds": {"tvdbId": 431162}, "seasons": []})
+    aioclient_mock.get(f"{SONARR}/series?tvdbId=431162", json=[])
+    aioclient_mock.get(f"{SONARR}/series/lookup?term=tvdb:431162", json=[{**APOTHECARY, "id": None}])
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/seasons", "tmdb_id": 220542})
+    result = (await ws.receive_json())["result"]
+    assert [(s["season_number"], s["status"]) for s in result["seasons"]] == [
+        (1, "not_requested"), (2, "not_requested"), (3, "not_requested"),
+    ]
+    assert not calls(aioclient_mock, "post", "/series")
+
+
+async def test_request_seasons_through_sonarr(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    aioclient_mock.get(f"{API}/tv/220542", json={"externalIds": {"tvdbId": 431162}})
+    aioclient_mock.get(f"{SONARR}/series?tvdbId=431162", json=[APOTHECARY])
+    aioclient_mock.get(f"{SONARR}/series/16", json=APOTHECARY)
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=16", json=[{**ep(201, 1), "seasonNumber": 2}])
+    aioclient_mock.get(f"{SONARR}/release?episodeId=201", json=[{"mappedEpisodeInfo": [{"id": 201}]}])
+    aioclient_mock.put(f"{SONARR}/series/16", json=APOTHECARY)
+    aioclient_mock.post(f"{SONARR}/command", json={"id": 1}, status=201)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/episodes/request", "tmdb_id": 220542, "seasons": [2]})
+    msg = await ws.receive_json()
+    assert msg["success"], msg
+    put = calls(aioclient_mock, "put", "/series/16")[-1][2]
+    assert [(s["seasonNumber"], s["monitored"]) for s in put["seasons"]] == [(0, False), (1, False), (2, True), (3, True)]
+    assert calls(aioclient_mock, "post", "/command")[-1][2] == {"name": "SeasonSearch", "seriesId": 16, "seasonNumber": 2}
