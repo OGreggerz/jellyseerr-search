@@ -225,9 +225,22 @@ async def test_download_puts_the_type_back_if_nothing_matches(hass, picker, aioc
     assert [p[2]["seriesType"] for p in calls(aioclient_mock, "put", "/series/5")] == ["daily", "standard"]
 
 
-async def test_download_of_unaired_episodes_skips_the_check(hass, picker, aioclient_mock, hass_ws_client) -> None:
+async def test_download_of_unaired_episodes_checks_an_aired_one(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    """Only a future episode picked: the show's latest aired episode is tested instead."""
     aioclient_mock.get(f"{SONARR}/series/5", json=SERIES)
     aioclient_mock.get(f"{SONARR}/episode?seriesId=5", json=SEASON_2)
+    aioclient_mock.get(f"{SONARR}/release?episodeId=101", json=[{"mappedEpisodeInfo": [{"id": 101}]}])
+    aioclient_mock.put(f"{SONARR}/episode/monitor", json=[])
+    aioclient_mock.post(f"{SONARR}/command", json={"id": 1}, status=201)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/episodes/download", "series_id": 5, "episode_ids": [105]})
+    assert (await ws.receive_json())["success"]
+    assert [c[1].query["episodeId"] for c in calls(aioclient_mock, "get", "/release")] == ["101"]
+
+
+async def test_nothing_aired_skips_the_check(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    aioclient_mock.get(f"{SONARR}/series/5", json=SERIES)
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=5", json=[ep(105, 5, aired=False)])
     aioclient_mock.put(f"{SONARR}/episode/monitor", json=[])
     aioclient_mock.post(f"{SONARR}/command", json={"id": 1}, status=201)
     ws = await hass_ws_client(hass)
@@ -263,6 +276,8 @@ async def test_follow_new_keeps_aired_episodes_as_they_were(hass, picker, aiocli
     followed = {**SERIES, "monitorNewItems": "all", "seasons": [*SERIES["seasons"][:2], {"seasonNumber": 2, "monitored": True}]}
     aioclient_mock.get(f"{SONARR}/series/5", json=SERIES)
     aioclient_mock.get(f"{SONARR}/episode?seriesId=5&seasonNumber=2", side_effect=_sequence(SEASON_2, after))
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=5", json=SEASON_2)
+    aioclient_mock.get(f"{SONARR}/release?episodeId=101", json=[{"mappedEpisodeInfo": [{"id": 101}]}])
     aioclient_mock.put(f"{SONARR}/series/5", json=followed)
     aioclient_mock.put(f"{SONARR}/episode/monitor", json=[])
     ws = await hass_ws_client(hass)
@@ -270,6 +285,9 @@ async def test_follow_new_keeps_aired_episodes_as_they_were(hass, picker, aiocli
     msg = await ws.receive_json()
     assert msg["success"], msg
     assert msg["result"]["follow_new"] is True
+    # Naming checked before following (it matched, so the type wasn't touched).
+    assert msg["result"]["series_type_changed"] is None
+    assert calls(aioclient_mock, "get", "/release")
     put = calls(aioclient_mock, "put", "/series/5")[0][2]
     assert put["monitorNewItems"] == "all"
     assert [s["monitored"] for s in put["seasons"]] == [False, False, True]

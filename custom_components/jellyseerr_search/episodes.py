@@ -215,6 +215,17 @@ async def _fit_series_type(sonarr: SonarrClient, series: dict[str, Any], episode
     return await sonarr.async_update_series({**series, "seriesType": current}), None
 
 
+async def _probe_episode(sonarr: SonarrClient, series_id: int, picked: list[int]) -> int | None:
+    """The episode to test-search with: the latest aired pick still missing, or
+    else the show's latest aired episode (so picking only future episodes, or
+    following new ones, is checked too). None if nothing has aired."""
+    now = dt_util.utcnow()
+    aired = [ep for ep in await sonarr.async_get_episodes(series_id) if _aired(ep, now)]
+    preferred = [ep for ep in aired if ep["id"] in set(picked) and not ep.get("hasFile")]
+    pool = preferred or aired
+    return max(pool, key=lambda ep: ep.get("airDateUtc") or "")["id"] if pool else None
+
+
 async def async_download_episodes(
     sonarr: SonarrClient,
     series_id: int,
@@ -222,21 +233,14 @@ async def async_download_episodes(
     added_shows: AddedShows | None = None,
 ) -> dict[str, Any]:
     """Monitor the chosen episodes and search for them now. Episodes that haven't
-    aired stay monitored and download when they do. If any have aired, the series
-    type (Daily or not) is first checked against how releases are actually named."""
+    aired stay monitored and download when they do. The series type (Daily or
+    not) is first checked against how releases are actually named."""
     type_changed = None
     try:
         series = await sonarr.async_get_series(series_id)
-        now = dt_util.utcnow()
-        aired = [
-            ep
-            for ep in await sonarr.async_get_episodes(series_id)
-            if ep["id"] in set(episode_ids) and _aired(ep, now) and not ep.get("hasFile")
-        ]
-        if aired:
-            # The most recent is the likeliest to be on the indexers.
-            probe = max(aired, key=lambda ep: ep.get("airDateUtc") or "")
-            series, type_changed = await _fit_series_type(sonarr, series, probe["id"])
+        # The most recent is the likeliest to be on the indexers.
+        if (probe := await _probe_episode(sonarr, series_id, episode_ids)) is not None:
+            series, type_changed = await _fit_series_type(sonarr, series, probe)
         if not series.get("monitored"):
             # Seasons are unchanged, so this doesn't touch any episode.
             series = await sonarr.async_update_series({**series, "monitored": True})
@@ -263,8 +267,12 @@ async def async_set_show_options(
     have already aired are put back as they were: only future ones follow.
     Sonarr can't tell a future episode picked by hand from one monitored by
     following, so turning following off unmonitors both (the card says so)."""
+    type_changed = None
     try:
         series = await sonarr.async_get_series(series_id)
+        if follow_new and (probe := await _probe_episode(sonarr, series_id, [])) is not None:
+            # Following new episodes is useless if their names won't match.
+            series, type_changed = await _fit_series_type(sonarr, series, probe)
         old_type = series.get("seriesType")
         update = {**series}
         if daily is not None:
@@ -313,7 +321,7 @@ async def async_set_show_options(
         raise _error("sonarr_error", err) from err
     if follow_new and added_shows is not None:
         added_shows.forget(series_id)  # Following new episodes: keep it.
-    return _show(series)
+    return {**_show(series), "series_type_changed": type_changed}
 
 
 async def async_discard_show(sonarr: SonarrClient, series_id: int) -> dict[str, Any]:

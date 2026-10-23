@@ -41,6 +41,13 @@ const BROWSE: Array<{ value: Browse; label: string; heading: string }> = [
   { value: "popular", label: "Popular", heading: "Popular" },
 ];
 
+/** Said when the server found the show's releases are (or aren't) named by date. */
+function typeChangedMessage(title: string, type: string): string {
+  return type === "daily"
+    ? `${title} is released by date, so it's now set up as a daily show.`
+    : `${title} isn't released by date, so it's no longer set up as a daily show.`;
+}
+
 export class JellyseerrSearchCard extends LitElement {
   static override properties = {
     hass: { attribute: false },
@@ -567,12 +574,7 @@ export class JellyseerrSearchCard extends LitElement {
         ...this._entry(),
       });
       this._addedSeries = undefined; // Something was picked: keep the show.
-      const changed =
-        result.series_type_changed === "daily"
-          ? " It's released by date, so it's now set as a daily show."
-          : result.series_type_changed === "standard"
-            ? " It isn't released by date, so it's no longer set as a daily show."
-            : "";
+      const changed = result.series_type_changed ? ` ${typeChangedMessage(list.title, result.series_type_changed)}` : "";
       toast(this, `Downloading ${ids.length} episode${ids.length === 1 ? "" : "s"} of ${list.title}.${changed}`);
       this._picked = new Set();
       const tmdbId = this._selected.tmdb_id;
@@ -630,21 +632,20 @@ export class JellyseerrSearchCard extends LitElement {
     }
   }
 
-  private async _setOption(option: "follow_new" | "daily", value: boolean): Promise<void> {
+  private async _setFollowNew(value: boolean): Promise<void> {
     const list = this._episodes;
     if (!list || this._pickerBusy || !this._selected) return;
     this._pickerBusy = true;
     try {
-      const show = await this.hass.callWS<SonarrShow>({
+      const show = await this.hass.callWS<SonarrShow & { series_type_changed?: string | null }>({
         type: `${DOMAIN}/episodes/options`,
         series_id: list.series_id,
-        [option]: value,
+        follow_new: value,
         ...this._entry(),
       });
       if (show.follow_new) this._addedSeries = undefined;
-      // Following changes which future episodes are monitored, so reload them.
-      // Following changes which future episodes are monitored, and Daily searches
-      // wanted episodes again: reload either way so the chips are current.
+      if (show.series_type_changed) toast(this, typeChangedMessage(list.title, show.series_type_changed));
+      // Following changes which future episodes are monitored: reload the chips.
       await this._loadEpisodes(this._selected.tmdb_id, list.season_number);
     } catch (err) {
       toast(this, `Couldn't change it: ${errorMessage(err)}`);
@@ -912,28 +913,13 @@ export class JellyseerrSearchCard extends LitElement {
               type="checkbox"
               .checked=${list.follow_new}
               ?disabled=${this._pickerBusy}
-              @change=${(e: Event) => this._setOption("follow_new", (e.target as HTMLInputElement).checked)}
+              @change=${(e: Event) => this._setFollowNew((e.target as HTMLInputElement).checked)}
             />
             <span class="grow">
               Get new episodes
               <span class="hint">
                 Download future episodes of ${list.title} when they air. Turning it off also cancels
                 upcoming episodes you picked.
-              </span>
-            </span>
-          </label>
-          <label class="row option">
-            <input
-              type="checkbox"
-              .checked=${list.daily}
-              ?disabled=${this._pickerBusy}
-              @change=${(e: Event) => this._setOption("daily", (e.target as HTMLInputElement).checked)}
-            />
-            <span class="grow">
-              Daily show
-              <span class="hint">
-                Set automatically when you download: the first search checks whether this show is named by
-                date (quizzes, soaps). Change it only if that gets it wrong.
               </span>
             </span>
           </label>

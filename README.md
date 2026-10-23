@@ -47,8 +47,11 @@ when they air. **Daily show** (programmes named by date, like quizzes and
 soaps, which Sonarr can't match as a normal series) is set automatically: on
 Download, Sonarr test-searches the latest aired pick; if nothing matches, the
 other series type is tried and kept if it matches. That works from a show's
-first episode, where air dates can't tell. The switch stays as an override
-(turning it on searches again for episodes already wanted). Episode lists come from Sonarr
+first episode, where air dates can't tell. If only future episodes are picked,
+or Get new episodes is switched on, the show's latest aired episode is tested
+instead. There's no switch for it any more; if neither type can be tested
+(nothing released yet) and it's wrong later, change it in Sonarr (the show →
+Edit → Series Type). Episode lists come from Sonarr
 (TVDB). The season list shows no episode counts: Jellyseerr's come from TMDB
 and can be badly wrong for long-running shows. Sonarr only lists episodes of
 shows it has, so opening the picker on a new show adds it to Sonarr with

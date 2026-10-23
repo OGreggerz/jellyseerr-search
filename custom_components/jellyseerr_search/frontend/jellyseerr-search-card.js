@@ -597,7 +597,7 @@ var Y = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, X, je = "0.7.0", Z = "jellyseerr_search", Me = 400, Q = 2, Ne = 36e5, Pe = [2e4, 6e4], Fe = !1, Ie = [
+}, X, je = "0.7.1", Z = "jellyseerr_search", Me = 400, Q = 2, Ne = 36e5, Pe = [2e4, 6e4], Fe = !1, Ie = [
 	{
 		value: "all",
 		label: "All"
@@ -622,7 +622,11 @@ var Y = class {
 	value: "popular",
 	label: "Popular",
 	heading: "Popular"
-}], $ = class extends U {
+}];
+function Re(e, t) {
+	return t === "daily" ? `${e} is released by date, so it's now set up as a daily show.` : `${e} isn't released by date, so it's no longer set up as a daily show.`;
+}
+var $ = class extends U {
 	constructor() {
 		super(), this._latestSearch = new Y(), this._latestSeasons = new Y(), this._latestBrowse = new Y(), this._latestEpisodes = new Y(), this._latestLibrary = new Y(), this._refreshTimers = [], this._browseAt = 0, this._query = "", this._filter = "all", this._browse = "trending", this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1, this._confirmRemove = !1, this._removing = !1, this._picker = !1, this._picked = /* @__PURE__ */ new Set(), this._pickerBusy = !1, this._downloading = !1;
 	}
@@ -707,7 +711,7 @@ var Y = class {
 	async _checkVersion() {
 		try {
 			let { version: e } = await this.hass.callWS({ type: `${Z}/version` });
-			e !== "0.7.0" && (this._staleVersion = e);
+			e !== "0.7.1" && (this._staleVersion = e);
 		} catch {}
 	}
 	async _reload() {
@@ -934,7 +938,7 @@ var Y = class {
 				...this._entry()
 			});
 			this._addedSeries = void 0;
-			let r = n.series_type_changed === "daily" ? " It's released by date, so it's now set as a daily show." : n.series_type_changed === "standard" ? " It isn't released by date, so it's no longer set as a daily show." : "";
+			let r = n.series_type_changed ? ` ${Re(e.title, n.series_type_changed)}` : "";
 			W(this, `Downloading ${t.length} episode${t.length === 1 ? "" : "s"} of ${e.title}.${r}`), this._picked = /* @__PURE__ */ new Set();
 			let i = this._selected.tmdb_id;
 			await this._loadEpisodes(i, e.season_number), this._clearRefreshTimers(), this._refreshTimers = Pe.map((t) => setTimeout(() => {
@@ -973,17 +977,18 @@ var Y = class {
 			}
 		}
 	}
-	async _setOption(e, t) {
-		let n = this._episodes;
-		if (n && !this._pickerBusy && this._selected) {
+	async _setFollowNew(e) {
+		let t = this._episodes;
+		if (t && !this._pickerBusy && this._selected) {
 			this._pickerBusy = !0;
 			try {
-				(await this.hass.callWS({
+				let n = await this.hass.callWS({
 					type: `${Z}/episodes/options`,
-					series_id: n.series_id,
-					[e]: t,
+					series_id: t.series_id,
+					follow_new: e,
 					...this._entry()
-				})).follow_new && (this._addedSeries = void 0), await this._loadEpisodes(this._selected.tmdb_id, n.season_number);
+				});
+				n.follow_new && (this._addedSeries = void 0), n.series_type_changed && W(this, Re(t.title, n.series_type_changed)), await this._loadEpisodes(this._selected.tmdb_id, t.season_number);
 			} catch (e) {
 				W(this, `Couldn't change it: ${G(e)}`);
 			} finally {
@@ -1184,28 +1189,13 @@ var Y = class {
               type="checkbox"
               .checked=${n.follow_new}
               ?disabled=${this._pickerBusy}
-              @change=${(e) => this._setOption("follow_new", e.target.checked)}
+              @change=${(e) => this._setFollowNew(e.target.checked)}
             />
             <span class="grow">
               Get new episodes
               <span class="hint">
                 Download future episodes of ${n.title} when they air. Turning it off also cancels
                 upcoming episodes you picked.
-              </span>
-            </span>
-          </label>
-          <label class="row option">
-            <input
-              type="checkbox"
-              .checked=${n.daily}
-              ?disabled=${this._pickerBusy}
-              @change=${(e) => this._setOption("daily", e.target.checked)}
-            />
-            <span class="grow">
-              Daily show
-              <span class="hint">
-                Set automatically when you download: the first search checks whether this show is named by
-                date (quizzes, soaps). Change it only if that gets it wrong.
               </span>
             </span>
           </label>
