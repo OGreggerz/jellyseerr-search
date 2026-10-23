@@ -83,6 +83,7 @@ async def test_seasons_include_follow_state(hass, picker, aioclient_mock, hass_w
     following = {**SERIES, "monitorNewItems": "all", "seasons": [*SERIES["seasons"][:2], {"seasonNumber": 2, "monitored": True}]}
     aioclient_mock.get(f"{API}/tv/21502", json={"id": 21502, "seasons": [], "externalIds": {"tvdbId": 252963}})
     aioclient_mock.get(f"{SONARR}/series?tvdbId=252963", json=[following])
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=5", json=[])
     ws = await hass_ws_client(hass)
     await ws.send_json_auto_id({"type": f"{DOMAIN}/seasons", "tmdb_id": 21502})
     result = (await ws.receive_json())["result"]
@@ -852,19 +853,26 @@ APOTHECARY = {
     "seasons": [
         {"seasonNumber": 0, "monitored": False, "statistics": {"episodeFileCount": 0, "totalEpisodeCount": 54}},
         {"seasonNumber": 1, "monitored": False, "statistics": {"episodeFileCount": 24, "percentOfEpisodes": 100, "totalEpisodeCount": 24}},
-        {"seasonNumber": 2, "monitored": False, "statistics": {"episodeFileCount": 3, "percentOfEpisodes": 12.5, "totalEpisodeCount": 24}},
+        {"seasonNumber": 2, "monitored": False, "statistics": {"episodeFileCount": 3, "percentOfEpisodes": 100, "totalEpisodeCount": 24}},
         {"seasonNumber": 3, "monitored": True, "statistics": {"episodeFileCount": 0, "totalEpisodeCount": 24}},
     ],
 }
 
 
 async def test_seasons_come_from_sonarr(hass, picker, aioclient_mock, hass_ws_client) -> None:
-    """TMDB has one 60-episode season; Sonarr (TVDB) has three: the card lists Sonarr's."""
+    """TMDB has one 60-episode season; Sonarr (TVDB) has three: the card lists Sonarr's.
+    Series 2 has 3 picked episodes of 4 aired: Sonarr says 100% (it counts only
+    monitored episodes), the card says partly there."""
     aioclient_mock.get(f"{API}/tv/220542", json={
         "id": 220542, "externalIds": {"tvdbId": 431162},
         "seasons": [{"seasonNumber": 1, "name": "Season 1", "episodeCount": 60}],
     })
     aioclient_mock.get(f"{SONARR}/series?tvdbId=431162", json=[APOTHECARY])
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=16", json=[
+        ep(101, 1, season=1, has_file=True), ep(102, 2, season=1, aired=False),  # unaired doesn't count
+        *(ep(200 + n, n, has_file=True, monitored=True) for n in (1, 2, 3)), ep(204, 4),
+        ep(301, 1, season=3, aired=False, monitored=True),
+    ])
     ws = await hass_ws_client(hass)
     await ws.send_json_auto_id({"type": f"{DOMAIN}/seasons", "tmdb_id": 220542})
     result = (await ws.receive_json())["result"]
@@ -914,7 +922,10 @@ async def test_downloaded_comes_from_sonarr_and_radarr(hass, arrs, aioclient_moc
     ])
     aioclient_mock.get(f"{RADARR}/queue", json={"records": []})
     aioclient_mock.get(f"{SONARR}/series", json=[
-        {**APOTHECARY, "tmdbId": 220542, "images": [], "statistics": {"episodeFileCount": 3, "percentOfEpisodes": 12.5}},
+        {**APOTHECARY, "tmdbId": 220542, "images": [], "statistics": {"episodeFileCount": 3, "percentOfEpisodes": 100}},
+    ])
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=16", json=[
+        *(ep(300 + n, n, season=3, has_file=True, monitored=True) for n in (1, 2, 3)), ep(304, 4, season=3),
     ])
     aioclient_mock.get(f"{SONARR}/episodefile?seriesId=16", json=[{"dateAdded": "2026-10-23T10:34:01Z"}, {"dateAdded": "2026-10-23T10:34:00Z"}])
     aioclient_mock.get(f"{SONARR}/wanted/missing", json={"records": []})

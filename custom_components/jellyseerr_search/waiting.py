@@ -11,6 +11,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, SEARCH_TIMEOUT
+from .episodes import show_files_status
 from .radarr import RadarrClient, RadarrError
 from .sonarr import SonarrClient, SonarrError
 
@@ -339,12 +340,13 @@ async def async_downloaded(
                 if not stats.get("episodeFileCount"):
                     continue
                 files = await sonarr._request("GET", "/episodefile", params={"seriesId": s["id"]}) or []
+                episodes = await sonarr.async_get_episodes(s["id"]) or []
                 seerr = by_tvdb.get(s.get("tvdbId"))
                 items.append({
                     "tmdb_id": s.get("tmdbId") or (seerr or {}).get("tmdb_id"), "media_type": "tv",
                     "title": s.get("title", ""), "year": s.get("year") or None, "overview": s.get("overview") or "",
                     "poster_url": (seerr or {}).get("poster_url") or _poster(s),
-                    "status": "available" if (stats.get("percentOfEpisodes") or 0) >= 100 else "partially_available",
+                    "status": show_files_status(episodes, dt_util.utcnow()) or "partially_available",
                     "tvdb_id": s.get("tvdbId"),
                     "arr": {"downloaded": True, "waiting": ("tv", s["id"]) in waiting},
                     "added": max((f.get("dateAdded") or "" for f in files), default=""),

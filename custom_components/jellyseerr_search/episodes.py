@@ -672,14 +672,28 @@ async def async_remove_episodes(sonarr: SonarrClient, series_id: int, *args: Any
         return await _remove_episodes(sonarr, series_id, *args)
 
 
-def sonarr_season_status(season: dict[str, Any]) -> str:
-    """A season's status in the card's terms, from Sonarr's statistics."""
-    stats = season.get("statistics") or {}
-    files = stats.get("episodeFileCount") or 0
-    if files and (stats.get("percentOfEpisodes") or 0) >= 100:
+def files_status(episodes: list[dict[str, Any]], now: datetime) -> str | None:
+    """available if every aired episode has a file, partially_available if
+    some do, None if none do. Counted from the episodes, not Sonarr's
+    percentOfEpisodes: that counts monitored episodes only, so 3 picked
+    episodes of an aired 24 read as 100%."""
+    if not any(ep.get("hasFile") for ep in episodes):
+        return None
+    if all(ep.get("hasFile") for ep in episodes if _aired(ep, now)):
         return "available"
-    if files:
-        return "partially_available"
+    return "partially_available"
+
+
+def show_files_status(episodes: list[dict[str, Any]], now: datetime) -> str | None:
+    """files_status over the regular seasons (specials don't count)."""
+    return files_status([ep for ep in episodes if ep.get("seasonNumber", 0) > 0], now)
+
+
+def sonarr_season_status(season: dict[str, Any], episodes: list[dict[str, Any]], now: datetime) -> str:
+    """A season's status in the card's terms, from its episodes in Sonarr."""
+    status = files_status([ep for ep in episodes if ep.get("seasonNumber") == season["seasonNumber"]], now)
+    if status:
+        return status
     if season.get("monitored"):
         return "processing"  # wanted, nothing yet
     return "not_requested"
@@ -697,12 +711,14 @@ async def async_sonarr_seasons(
         series = await sonarr.async_lookup(tvdb_id)
     if series is None:
         return None
+    episodes = await sonarr.async_get_episodes(series["id"]) if series.get("id") else []
+    now = dt_util.utcnow()
     return [
         {
             "season_number": s["seasonNumber"],
             "name": f"Series {s['seasonNumber']}",
             "episode_count": (s.get("statistics") or {}).get("totalEpisodeCount", 0),
-            "status": sonarr_season_status(s) if series.get("id") else "not_requested",
+            "status": sonarr_season_status(s, episodes, now) if series.get("id") else "not_requested",
         }
         for s in sorted(series.get("seasons", []), key=lambda s: s["seasonNumber"])
         if s.get("seasonNumber", 0) > 0
