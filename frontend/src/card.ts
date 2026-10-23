@@ -1037,9 +1037,13 @@ export class JellyseerrSearchCard extends LitElement {
       <div class="section stack">
         <span>Waiting · ${shown.length}</span>
         <span class="hint">Wanted but not downloaded yet: what's out, what isn't, and when.</span>
+        <span class="hint">
+          Sonarr and Radarr watch for new releases by themselves and download anything suitable. Check now runs an
+          extra full search on demand.
+        </span>
         ${checkable.length > 1
           ? html`<button class="secondary small checkall" ?disabled=${this._checkingAll} @click=${() => this._checkAll(checkable)}>
-              ${this._checkingAll ? "Checking…" : `Check all ${checkable.length} now`}
+              ${this._checkingAll ? "Checking…" : "Check all now"}
             </button>`
           : nothing}
       </div>

@@ -44,7 +44,7 @@ Sonarr and Radarr want but haven't got, each marked *Not out yet*, *Not found
 yet* or *Downloading*, with the reason: a film's digital or physical release
 date (or, for a cinema-only film, roughly when Radarr will count it as out: 90
 days after the cinema date), a show's next episode, when it was last searched.
-**Check now** runs the app's interactive search (one indexer hit, grabs nothing)
+Sonarr and Radarr keep watching their indexers' new-release feeds by themselves (every 15 and 30 minutes by default) and grab what fits. **Check now** (and **Check all now**) runs the app's interactive search on demand (one indexer hit, grabs nothing)
 and says whether suitable copies are out there, or why the ones found would be
 turned down (e.g. a cinema recording). **Search again** asks the app to search
 and grab. Every title's page also says whether it's out (TMDB's dates via

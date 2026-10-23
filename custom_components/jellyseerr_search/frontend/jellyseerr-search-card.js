@@ -742,7 +742,7 @@ var q = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, J, Ze = "0.11.0", Y = "jellyseerr_search", Qe = 400, X = 2, $e = 36e5, et = [2e4, 6e4], tt = !1, Z = !1, nt = [
+}, J, Ze = "0.11.1", Y = "jellyseerr_search", Qe = 400, X = 2, $e = 36e5, et = [2e4, 6e4], tt = !1, Z = !1, nt = [
 	{
 		value: "all",
 		label: "All"
@@ -860,7 +860,7 @@ var $ = class extends R {
 	async _checkVersion() {
 		try {
 			let { version: e, waiting: t } = await this.hass.callWS({ type: `${Y}/version` });
-			e !== "0.11.0" && (this._staleVersion = e), Z = !!t, this._waitingOn = Z;
+			e !== "0.11.1" && (this._staleVersion = e), Z = !!t, this._waitingOn = Z;
 		} catch {}
 	}
 	async _reload() {
@@ -1379,8 +1379,12 @@ var $ = class extends R {
       <div class="section stack">
         <span>Waiting · ${e.length}</span>
         <span class="hint">Wanted but not downloaded yet: what's out, what isn't, and when.</span>
+        <span class="hint">
+          Sonarr and Radarr watch for new releases by themselves and download anything suitable. Check now runs an
+          extra full search on demand.
+        </span>
         ${t.length > 1 ? O`<button class="secondary small checkall" ?disabled=${this._checkingAll} @click=${() => this._checkAll(t)}>
-              ${this._checkingAll ? "Checking…" : `Check all ${t.length} now`}
+              ${this._checkingAll ? "Checking…" : "Check all now"}
             </button>` : A}
       </div>
       ${e.length ? O`<div class="waiting">${e.map((e) => this._renderWaitingRow(e))}</div>` : O`<div class="message">
