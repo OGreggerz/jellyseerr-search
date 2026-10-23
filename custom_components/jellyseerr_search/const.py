@@ -40,6 +40,10 @@ CONF_SONARR_API_KEY: Final = "sonarr_api_key"
 # on Sonarr 4.0.20); wait up to this long for them.
 EPISODE_WAIT_SECONDS: Final = 15
 
+# The card's Downloaded list: newest this many, details fetched this many at a time.
+LIBRARY_LIMIT: Final = 60
+LIBRARY_CONCURRENCY: Final = 6
+
 # Statuses a new request makes sense for.
 REQUESTABLE_STATUSES: Final = (STATUS_NOT_REQUESTED, "unknown", "deleted")
 
@@ -51,4 +55,4 @@ REQUEST_COUNT_KEYS: Final = ("pending", "approved", "processing", "available", "
 URL_BASE: Final = f"/{DOMAIN}"
 CARD_FILENAME: Final = "jellyseerr-search-card.js"
 CARD_URL: Final = f"{URL_BASE}/{CARD_FILENAME}"
-CARD_VERSION: Final = "0.5.4"
+CARD_VERSION: Final = "0.6.0"

@@ -123,6 +123,18 @@ async def async_search_media(
     return results[:limit]
 
 
+async def async_library_media(client: JellyseerrClient, limit: int) -> list[dict[str, Any]]:
+    """Movies and shows the server has, newest first."""
+    try:
+        return await client.async_library(limit)
+    except JellyseerrError as err:
+        raise HomeAssistantError(
+            translation_domain=DOMAIN,
+            translation_key="api_error",
+            translation_placeholders={"error": str(err)},
+        ) from err
+
+
 async def async_trending_media(
     client: JellyseerrClient, media_type: str, limit: int
 ) -> list[dict[str, Any]]:

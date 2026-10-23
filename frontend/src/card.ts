@@ -7,6 +7,7 @@ import {
   airDateLabel,
   canRequestMore,
   episodeLabel,
+  filterLibrary,
   isPickable,
   isRemovable,
   isRequestable,
@@ -32,6 +33,7 @@ const FILTERS: Array<{ value: MediaFilter; label: string }> = [
   { value: "all", label: "All" },
   { value: "movie", label: "Movies" },
   { value: "tv", label: "TV" },
+  { value: "downloaded", label: "Downloaded" },
 ];
 
 const BROWSE: Array<{ value: Browse; label: string; heading: string }> = [
@@ -67,6 +69,8 @@ export class JellyseerrSearchCard extends LitElement {
     _picked: { state: true },
     _pickerBusy: { state: true },
     _confirmRemoveEp: { state: true },
+    _library: { state: true },
+    _libraryError: { state: true },
   };
 
   declare hass: HomeAssistant;
@@ -98,12 +102,16 @@ export class JellyseerrSearchCard extends LitElement {
   declare _pickerBusy: boolean;
   /** A downloaded episode whose Remove was tapped once: the next tap deletes. */
   declare _confirmRemoveEp?: number;
+  /** What the server already has, for the Downloaded filter. */
+  declare _library?: SearchResult[];
+  declare _libraryError?: string;
 
   private _debounce?: ReturnType<typeof setTimeout>;
   private _latestSearch = new Latest();
   private _latestSeasons = new Latest();
   private _latestBrowse = new Latest();
   private _latestEpisodes = new Latest();
+  private _latestLibrary = new Latest();
   /** A Sonarr series the picker added for the open show; removed again on leaving
    *  the show unless something was picked (Sonarr checks that too). */
   private _addedSeries?: number;
@@ -224,7 +232,25 @@ export class JellyseerrSearchCard extends LitElement {
   // --- trending / popular -------------------------------------------------
 
   private _showBrowse(): boolean {
-    return this._config.show_trending !== false && this._query.trim().length < MIN_QUERY;
+    return (
+      this._filter !== "downloaded" && this._config.show_trending !== false && this._query.trim().length < MIN_QUERY
+    );
+  }
+
+  // --- downloaded ---------------------------------------------------------
+
+  private async _loadLibrary(): Promise<void> {
+    const current = this._latestLibrary.next();
+    this._libraryError = undefined;
+    try {
+      const { results } = await this.hass.callWS<{ results: SearchResult[] }>({
+        type: `${DOMAIN}/library`,
+        ...this._entry(),
+      });
+      if (current()) this._library = results;
+    } catch (err) {
+      if (current()) this._libraryError = errorMessage(err);
+    }
   }
 
   /** Missing, for another list or filter, or older than the TTL, and on screen. */
@@ -265,6 +291,7 @@ export class JellyseerrSearchCard extends LitElement {
   private _onInput(ev: InputEvent): void {
     this._query = (ev.target as HTMLInputElement).value;
     clearTimeout(this._debounce);
+    if (this._filter === "downloaded") return; // Narrows the list; nothing to fetch.
     this._debounce = setTimeout(() => void this._search(), DEBOUNCE_MS);
   }
 
@@ -289,11 +316,13 @@ export class JellyseerrSearchCard extends LitElement {
   private _setFilter(filter: MediaFilter): void {
     if (filter === this._filter) return;
     this._filter = filter;
-    if (this._query.trim().length >= MIN_QUERY) void this._search();
+    if (filter === "downloaded") void this._loadLibrary();
+    else if (this._query.trim().length >= MIN_QUERY) void this._search();
     else if (this._browseDue()) void this._loadBrowse();
   }
 
   private async _search(): Promise<void> {
+    if (this._filter === "downloaded") return;
     const query = this._query.trim();
     if (query.length < MIN_QUERY) {
       this._latestSearch.next();
@@ -504,6 +533,8 @@ export class JellyseerrSearchCard extends LitElement {
     this._leaveShow();
     this._closeEpisodes();
     this._selected = undefined;
+    // Something may have been removed or downloaded meanwhile.
+    if (this._filter === "downloaded") void this._loadLibrary();
   }
 
   private _togglePick(id: number): void {
@@ -663,6 +694,7 @@ export class JellyseerrSearchCard extends LitElement {
   }
 
   private _renderResults() {
+    if (this._filter === "downloaded") return this._renderLibrary();
     if (this._showBrowse()) return this._renderBrowse();
     if (this._error) return html`<div class="message error">${this._error}</div>`;
     if (this._loading && !this._results) return html`<div class="message">Searching…</div>`;
@@ -702,6 +734,29 @@ export class JellyseerrSearchCard extends LitElement {
             </button>`,
           )}
         </div>
+      </div>
+      ${body}
+    `;
+  }
+
+  private _renderLibrary() {
+    let body;
+    if (this._libraryError) {
+      body = html`<div class="message error">Couldn't load what's downloaded (${this._libraryError}).</div>`;
+    } else if (!this._library) {
+      body = html`<div class="message">Loading…</div>`;
+    } else {
+      const shown = filterLibrary(this._library, this._query);
+      body = shown.length
+        ? html`<div class="grid">${shown.map((r) => this._renderTile(r))}</div>`
+        : html`<div class="message">
+            ${this._library.length ? `Nothing downloaded matches “${this._query.trim()}”.` : "Nothing downloaded yet."}
+          </div>`;
+    }
+    return html`
+      <div class="section stack">
+        <span>Downloaded${this._library ? html` · ${filterLibrary(this._library, this._query).length}` : nothing}</span>
+        <span class="hint">Newest first. Tap one to remove it or get more episodes.</span>
       </div>
       ${body}
     `;
@@ -1238,6 +1293,14 @@ export class JellyseerrSearchCard extends LitElement {
       height: 36px;
       padding: 0 16px;
       font-size: 14px;
+    }
+    .section.stack {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+    }
+    .section.stack .hint {
+      font-weight: 400;
     }
     .warn {
       color: var(--warning-color, #ffa600);

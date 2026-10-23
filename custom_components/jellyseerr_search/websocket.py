@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant, callback
 
 from homeassistant.exceptions import ServiceValidationError
 
-from .const import CARD_VERSION, DOMAIN, MEDIA_TV, MEDIA_TYPES
+from .const import CARD_VERSION, DOMAIN, LIBRARY_LIMIT, MEDIA_TV, MEDIA_TYPES
 from .episodes import (
     async_discard_show,
     async_download_episodes,
@@ -24,6 +24,7 @@ from .services import (
     parse_seasons,
     async_request_media,
     async_search_media,
+    async_library_media,
     async_popular_media,
     async_remove_media,
     async_trending_media,
@@ -42,6 +43,7 @@ def async_register_websocket(hass: HomeAssistant) -> None:
         ws_search,
         ws_trending,
         ws_popular,
+        ws_library,
         ws_seasons,
         ws_request,
         ws_remove,
@@ -110,6 +112,22 @@ async def ws_popular(
 ) -> None:
     client = resolve_client(hass, msg.get("config_entry_id"))
     results = await async_popular_media(client, msg["media_type"], SEARCH_LIMIT)
+    connection.send_result(msg["id"], {"results": results})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/library",
+        vol.Optional("config_entry_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_library(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """The card's Downloaded list: what the server already has, newest first."""
+    client = resolve_client(hass, msg.get("config_entry_id"))
+    results = await async_library_media(client, LIBRARY_LIMIT)
     connection.send_result(msg["id"], {"results": results})
 
 

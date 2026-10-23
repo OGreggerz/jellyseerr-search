@@ -4,6 +4,7 @@ import {
   airDateLabel,
   canRequestMore,
   episodeLabel,
+  filterLibrary,
   isRemovable,
   isRequestable,
   pickableEpisodes,
@@ -99,5 +100,13 @@ describe("episode picker", () => {
   it("formats air dates without a time zone shift", () => {
     expect(airDateLabel("2026-11-04")).toBe("4 Nov 2026");
     expect(airDateLabel(null)).toBe("No air date");
+  });
+});
+
+describe("downloaded list", () => {
+  it("narrows by title, ignoring case and spaces around the query", () => {
+    const items = [{ title: "The Chase" }, { title: "The Celebrity Traitors" }, { title: "Dune" }];
+    expect(filterLibrary(items, "  the c ").map((i) => i.title)).toEqual(["The Chase", "The Celebrity Traitors"]);
+    expect(filterLibrary(items, "")).toHaveLength(3);
   });
 });

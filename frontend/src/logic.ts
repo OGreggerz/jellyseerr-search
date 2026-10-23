@@ -74,6 +74,12 @@ export function airDateLabel(date: string | null): string {
   return month ? `${d} ${month} ${y}` : date;
 }
 
+/** The Downloaded list narrowed by what's typed in the search box. */
+export function filterLibrary<T extends { title: string }>(items: readonly T[], query: string): T[] {
+  const q = query.trim().toLowerCase();
+  return q ? items.filter((i) => i.title.toLowerCase().includes(q)) : [...items];
+}
+
 /**
  * Latest-wins guard for overlapping async calls: typing "dune" fires searches
  * for "du", "dun", "dune", and only the newest may update the card.

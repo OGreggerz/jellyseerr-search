@@ -148,3 +148,35 @@ async def test_remove_unknown_title(
     msg = await ws.receive_json()
     assert not msg["success"]
     assert not any(call[0] == "DELETE" for call in aioclient_mock.mock_calls)
+
+
+async def test_library(hass: HomeAssistant, entry, aioclient_mock, hass_ws_client) -> None:
+    aioclient_mock.get(
+        f"{API}/media",
+        json={
+            "pageInfo": {"results": 3},
+            "results": [
+                {"tmdbId": 90228, "mediaType": "tv", "status": 4},
+                {"tmdbId": 438631, "mediaType": "movie", "status": 5},
+                {"tmdbId": 5, "mediaType": "movie", "status": 5},
+            ],
+        },
+    )
+    aioclient_mock.get(f"{API}/tv/90228", json={"id": 90228, "name": "Dune: Prophecy", "firstAirDate": "2024-11-17", "mediaInfo": {"status": 4}})
+    aioclient_mock.get(f"{API}/movie/438631", json={"id": 438631, "title": "Dune", "releaseDate": "2021-09-15", "posterPath": "/p.jpg", "mediaInfo": {"status": 5}})
+    aioclient_mock.get(f"{API}/movie/5", status=500)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/library"})
+    msg = await ws.receive_json()
+    assert msg["success"], msg
+    assert [(r["title"], r["media_type"], r["status"]) for r in msg["result"]["results"]] == [
+        ("Dune: Prophecy", "tv", "partially_available"),
+        ("Dune", "movie", "available"),
+    ]
+    media_call = next(c for c in aioclient_mock.mock_calls if c[1].path == "/api/v1/media")
+    assert dict(media_call[1].query) == {
+        "filter": "allavailable",
+        "sort": "mediaAdded",
+        "take": "60",
+        "skip": "0",
+    }

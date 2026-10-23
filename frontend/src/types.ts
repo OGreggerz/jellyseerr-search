@@ -1,5 +1,6 @@
 export type MediaType = "movie" | "tv";
-export type MediaFilter = MediaType | "all";
+/** "downloaded" lists what the server already has instead of searching. */
+export type MediaFilter = MediaType | "all" | "downloaded";
 /** What the card lists while the search box is empty. */
 export type Browse = "trending" | "popular";
 

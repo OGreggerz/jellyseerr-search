@@ -34,6 +34,11 @@ show_remove: false   # a Remove button on titles you have; deletes the files (as
 If your dashboards are in YAML mode, add `/jellyseerr_search/jellyseerr-search-card.js`
 as a JavaScript module resource yourself.
 
+**Downloaded.** A fourth chip beside All / Movies / TV lists what the server
+already has (available or partly available in Jellyseerr), newest first;
+typing narrows it. Tap a title for the usual screen: Remove, or Episodes to get
+more.
+
 **Episode picker (optional, needs Sonarr).** Jellyseerr requests whole seasons
 only. Add Sonarr's URL and API key under the integration's **Configure** button
 and each season in the card gets an **Episodes** link: tick single episodes and

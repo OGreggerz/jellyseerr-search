@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 from urllib.parse import quote, urlencode
 
@@ -9,6 +10,7 @@ import aiohttp
 from yarl import URL
 
 from .const import (
+    LIBRARY_CONCURRENCY,
     MEDIA_MOVIE,
     MEDIA_STATUS,
     POPULAR_TV_MIN_VOTES,
@@ -112,6 +114,26 @@ class JellyseerrClient:
             for item in data.get("results", [])
             if item.get("mediaType") in MEDIA_TYPES
         ]
+
+    async def async_library(self, limit: int) -> list[dict[str, Any]]:
+        """What the server has (available or partly available), newest first,
+        normalized like search hits. Jellyseerr's /media list has no titles or
+        posters, so each title's details are fetched too (a few at a time)."""
+        data = await self._request(
+            "GET", "/media", params={"filter": "allavailable", "sort": "mediaAdded", "take": limit, "skip": 0}
+        )
+        items = [m for m in data.get("results", []) if m.get("mediaType") in MEDIA_TYPES and m.get("tmdbId")]
+        gate = asyncio.Semaphore(LIBRARY_CONCURRENCY)
+
+        async def details(media: dict[str, Any]) -> dict[str, Any] | None:
+            async with gate:
+                try:
+                    found = await self._request("GET", f"/{media['mediaType']}/{media['tmdbId']}")
+                except JellyseerrError:
+                    return None  # One title's details failing shouldn't hide the rest.
+            return normalize_result({**found, "mediaType": media["mediaType"], "mediaInfo": found.get("mediaInfo") or media})
+
+        return [r for r in await asyncio.gather(*(details(m) for m in items)) if r]
 
     async def async_get_tv_seasons(self, tmdb_id: int) -> list[dict[str, Any]]:
         """A show's seasons (specials excluded) with what the server has of each."""
