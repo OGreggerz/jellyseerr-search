@@ -78,6 +78,7 @@ export class JellyseerrSearchCard extends LitElement {
     _pickerBusy: { state: true },
     _confirmRemoveEp: { state: true },
     _downloading: { state: true },
+    _followBusy: { state: true },
     _library: { state: true },
     _libraryError: { state: true },
   };
@@ -113,6 +114,8 @@ export class JellyseerrSearchCard extends LitElement {
   declare _confirmRemoveEp?: number;
   /** Download pressed: the server may be test-searching to check the naming. */
   declare _downloading: boolean;
+  /** Get new episodes tapped: the server may be test-searching first. */
+  declare _followBusy: boolean;
   /** What the server already has, for the Downloaded filter. */
   declare _library?: SearchResult[];
   declare _libraryError?: string;
@@ -146,6 +149,7 @@ export class JellyseerrSearchCard extends LitElement {
     this._picked = new Set();
     this._pickerBusy = false;
     this._downloading = false;
+    this._followBusy = false;
   }
 
   static getConfigForm() {
@@ -656,6 +660,7 @@ export class JellyseerrSearchCard extends LitElement {
     const item = this._selected;
     if (!list || !item || this._pickerBusy) return;
     this._pickerBusy = true;
+    this._followBusy = true;
     try {
       const show = await this.hass.callWS<SonarrShow & { series_type_changed?: string | null }>({
         type: `${DOMAIN}/episodes/options`,
@@ -674,6 +679,7 @@ export class JellyseerrSearchCard extends LitElement {
       this.requestUpdate();
     } finally {
       this._pickerBusy = false;
+      this._followBusy = false;
     }
   }
 
@@ -941,6 +947,10 @@ export class JellyseerrSearchCard extends LitElement {
             />
             <span class="grow">
               Get new episodes
+              ${this._followBusy
+                ? html`<span class="hint busy">Checking how it's released and setting it up… This can take a
+                    minute; it carries on if you leave.</span>`
+                : nothing}
               <span class="hint">
                 Download new episodes of ${list.title} as they come out, even ones listed late. Turning it
                 off also cancels upcoming episodes you picked.
@@ -998,7 +1008,7 @@ export class JellyseerrSearchCard extends LitElement {
           : nothing}
         <button class="primary" ?disabled=${!n || this._pickerBusy} @click=${this._download}>
           ${this._downloading
-            ? "Searching…"
+            ? "Searching… (carries on if you leave)"
             : this._pickerBusy
               ? "Working…"
               : n
@@ -1340,6 +1350,9 @@ export class JellyseerrSearchCard extends LitElement {
     }
     .section.stack .hint {
       font-weight: 400;
+    }
+    .hint.busy {
+      color: var(--primary-color);
     }
     .warn {
       color: var(--warning-color, #ffa600);

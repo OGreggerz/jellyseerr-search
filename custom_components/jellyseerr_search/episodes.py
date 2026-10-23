@@ -398,9 +398,13 @@ async def _fit_series_type(
 async def _probe_episode(sonarr: SonarrClient, series_id: int, picked: list[int]) -> int | None:
     """The episode to test-search with: the latest aired pick still missing, or
     else the show's latest aired episode (so picking only future episodes, or
-    following new ones, is checked too). None if nothing has aired."""
+    following new ones, is checked too). Regular seasons only when there are
+    any: specials are rarely on indexers, so testing one finds nothing either
+    way and costs three searches (seen with The Apothecary Diaries, S00E54).
+    None if nothing has aired."""
     now = dt_util.utcnow()
     aired = [ep for ep in await sonarr.async_get_episodes(series_id) if _aired(ep, now)]
+    aired = [ep for ep in aired if (ep.get("seasonNumber") or 0) > 0] or aired
     preferred = [ep for ep in aired if ep["id"] in set(picked) and not ep.get("hasFile")]
     pool = preferred or aired
     return max(pool, key=lambda ep: ep.get("airDateUtc") or "")["id"] if pool else None

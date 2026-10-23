@@ -657,7 +657,7 @@ var Y = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, X, Be = "0.8.2", Z = "jellyseerr_search", Ve = 400, Q = 2, He = 36e5, Ue = [2e4, 6e4], We = !1, Ge = [
+}, X, Be = "0.8.3", Z = "jellyseerr_search", Ve = 400, Q = 2, He = 36e5, Ue = [2e4, 6e4], We = !1, Ge = [
 	{
 		value: "all",
 		label: "All"
@@ -688,7 +688,7 @@ function qe(e, t) {
 }
 var $ = class extends H {
 	constructor() {
-		super(), this._latestSearch = new Y(), this._latestSeasons = new Y(), this._latestBrowse = new Y(), this._latestEpisodes = new Y(), this._latestLibrary = new Y(), this._refreshTimers = [], this._browseAt = 0, this._query = "", this._filter = "all", this._browse = "trending", this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1, this._confirmRemove = !1, this._removing = !1, this._picker = !1, this._picked = /* @__PURE__ */ new Set(), this._pickerBusy = !1, this._downloading = !1;
+		super(), this._latestSearch = new Y(), this._latestSeasons = new Y(), this._latestBrowse = new Y(), this._latestEpisodes = new Y(), this._latestLibrary = new Y(), this._refreshTimers = [], this._browseAt = 0, this._query = "", this._filter = "all", this._browse = "trending", this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1, this._confirmRemove = !1, this._removing = !1, this._picker = !1, this._picked = /* @__PURE__ */ new Set(), this._pickerBusy = !1, this._downloading = !1, this._followBusy = !1;
 	}
 	static getConfigForm() {
 		return {
@@ -771,7 +771,7 @@ var $ = class extends H {
 	async _checkVersion() {
 		try {
 			let { version: e } = await this.hass.callWS({ type: `${Z}/version` });
-			e !== "0.8.2" && (this._staleVersion = e);
+			e !== "0.8.3" && (this._staleVersion = e);
 		} catch {}
 	}
 	async _reload() {
@@ -1041,7 +1041,7 @@ var $ = class extends H {
 	async _setFollowNew(e) {
 		let t = this._episodes, n = this._selected;
 		if (t && n && !this._pickerBusy) {
-			this._pickerBusy = !0;
+			this._pickerBusy = !0, this._followBusy = !0;
 			try {
 				let r = await this.hass.callWS({
 					type: `${Z}/episodes/options`,
@@ -1053,7 +1053,7 @@ var $ = class extends H {
 			} catch (e) {
 				this._recoverIfGone(e, n, t.season_number) || W(this, `Couldn't change it: ${G(e)}`), this.requestUpdate();
 			} finally {
-				this._pickerBusy = !1;
+				this._pickerBusy = !1, this._followBusy = !1;
 			}
 		}
 	}
@@ -1253,6 +1253,8 @@ var $ = class extends H {
             />
             <span class="grow">
               Get new episodes
+              ${this._followBusy ? j`<span class="hint busy">Checking how it's released and setting it up… This can take a
+                    minute; it carries on if you leave.</span>` : N}
               <span class="hint">
                 Download new episodes of ${n.title} as they come out, even ones listed late. Turning it
                 off also cancels upcoming episodes you picked.
@@ -1298,7 +1300,7 @@ var $ = class extends H {
         </div>
         ${t > 20 ? j`<div class="warn">That's ${t} episodes. Check there's room before downloading.</div>` : N}
         <button class="primary" ?disabled=${!t || this._pickerBusy} @click=${this._download}>
-          ${this._downloading ? "Searching…" : this._pickerBusy ? "Working…" : t ? `Download ${t} episode${t === 1 ? "" : "s"}` : "Pick episodes to download"}
+          ${this._downloading ? "Searching… (carries on if you leave)" : this._pickerBusy ? "Working…" : t ? `Download ${t} episode${t === 1 ? "" : "s"}` : "Pick episodes to download"}
         </button>
       `;
 		}
@@ -1344,6 +1346,7 @@ X = $, X.properties = {
 	_pickerBusy: { state: !0 },
 	_confirmRemoveEp: { state: !0 },
 	_downloading: { state: !0 },
+	_followBusy: { state: !0 },
 	_library: { state: !0 },
 	_libraryError: { state: !0 }
 }, X.styles = o`
@@ -1665,6 +1668,9 @@ X = $, X.properties = {
     }
     .section.stack .hint {
       font-weight: 400;
+    }
+    .hint.busy {
+      color: var(--primary-color);
     }
     .warn {
       color: var(--warning-color, #ffa600);

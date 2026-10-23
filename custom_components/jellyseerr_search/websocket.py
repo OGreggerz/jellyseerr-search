@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+from collections.abc import Awaitable
 from typing import Any
 
 import voluptuous as vol
@@ -192,6 +194,14 @@ async def ws_remove(
     connection.send_result(msg["id"], result)
 
 
+async def _finish_regardless[T](hass: HomeAssistant, work: Awaitable[T]) -> T:
+    """Run a change to completion even if the card goes away. HA cancels a
+    command when its connection closes (the user leaves the screen or the app),
+    which could stop the naming check between switching the series type and
+    putting it back."""
+    return await asyncio.shield(hass.async_create_task(work, "jellyseerr_search picker change"))
+
+
 def _picker(hass: HomeAssistant, entry_id: str | None):
     coordinator = resolve_coordinator(hass, entry_id)
     if coordinator.sonarr is None:
@@ -232,8 +242,9 @@ async def ws_episodes_download(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     c = _picker(hass, msg.get("config_entry_id"))
-    result = await async_download_episodes(
-        c.sonarr, msg["series_id"], msg["episode_ids"], c.added_shows, c.checked
+    result = await _finish_regardless(
+        hass,
+        async_download_episodes(c.sonarr, msg["series_id"], msg["episode_ids"], c.added_shows, c.checked),
     )
     connection.send_result(msg["id"], result)
 
@@ -253,8 +264,11 @@ async def ws_episodes_options(
 ) -> None:
     """Follow new episodes on/off, and the Daily series type (dated releases)."""
     c = _picker(hass, msg.get("config_entry_id"))
-    result = await async_set_show_options(
-        c.sonarr, msg["series_id"], msg.get("follow_new"), msg.get("daily"), c.added_shows, c.followed, c.checked
+    result = await _finish_regardless(
+        hass,
+        async_set_show_options(
+            c.sonarr, msg["series_id"], msg.get("follow_new"), msg.get("daily"), c.added_shows, c.followed, c.checked
+        ),
     )
     connection.send_result(msg["id"], result)
 
@@ -294,7 +308,10 @@ async def ws_episodes_remove(
 ) -> None:
     """Deletes episode files. The card only offers it when show_remove is set."""
     c = _picker(hass, msg.get("config_entry_id"))
-    result = await async_remove_episodes(
-        c.sonarr, msg["series_id"], msg["episode_ids"], c.added_shows, c.client, msg.get("tmdb_id"), c.followed
+    result = await _finish_regardless(
+        hass,
+        async_remove_episodes(
+            c.sonarr, msg["series_id"], msg["episode_ids"], c.added_shows, c.client, msg.get("tmdb_id"), c.followed
+        ),
     )
     connection.send_result(msg["id"], result)
