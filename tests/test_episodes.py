@@ -4,8 +4,13 @@ import aiohttp
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from datetime import timedelta
+
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.util import dt as dt_util
+
+from custom_components.jellyseerr_search.episodes import async_sweep_added
 
 from custom_components.jellyseerr_search.const import DOMAIN
 
@@ -139,6 +144,10 @@ async def test_a_new_show_is_added_unmonitored(hass, picker, aioclient_mock, has
     }
     assert body["monitorNewItems"] == "none"
     assert all(not s["monitored"] for s in body["seasons"])
+    # Remembered, so the sweep can remove it if nothing gets picked.
+    later = dt_util.utcnow() + timedelta(hours=2)
+    assert picker.runtime_data.added_shows.due(later) == [5]
+    assert picker.runtime_data.added_shows.due(dt_util.utcnow()) == []
 
 
 async def _no_sleep(_seconds) -> None:
@@ -155,6 +164,39 @@ async def test_download_monitors_and_searches(hass, picker, aioclient_mock, hass
     assert msg["success"], msg
     assert calls(aioclient_mock, "put", "/episode/monitor")[0][2] == {"episodeIds": [102, 105], "monitored": True}
     assert calls(aioclient_mock, "post", "/command")[0][2] == {"name": "EpisodeSearch", "episodeIds": [102, 105]}
+
+
+async def test_download_keeps_the_show(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    picker.runtime_data.added_shows.add(5)
+    aioclient_mock.get(f"{SONARR}/series/5", json=SERIES)
+    aioclient_mock.put(f"{SONARR}/episode/monitor", json=[])
+    aioclient_mock.post(f"{SONARR}/command", json={"id": 1}, status=201)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/episodes/download", "series_id": 5, "episode_ids": [102]})
+    assert (await ws.receive_json())["success"]
+    assert picker.runtime_data.added_shows.due(dt_util.utcnow() + timedelta(days=1)) == []
+
+
+async def test_sweep_removes_untouched_shows_after_an_hour(hass, picker, aioclient_mock, freezer) -> None:
+    added = picker.runtime_data.added_shows
+    added.add(5)  # untouched
+    added.add(6)  # something picked meanwhile
+    added.add(7)  # Sonarr errors: try again next time
+    aioclient_mock.get(f"{SONARR}/series/5", json=SERIES)
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=5", json=[ep(102, 2)])
+    aioclient_mock.delete(f"{SONARR}/series/5", status=200)
+    aioclient_mock.get(f"{SONARR}/series/6", json={**SERIES, "id": 6})
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=6", json=[ep(102, 2, monitored=True)])
+    aioclient_mock.get(f"{SONARR}/series/7", status=500)
+
+    await async_sweep_added(picker.runtime_data.sonarr, added)
+    assert not calls(aioclient_mock, "delete", "/series/5")  # under an hour: left alone
+
+    freezer.tick(timedelta(hours=1, minutes=1))
+    await async_sweep_added(picker.runtime_data.sonarr, added)
+    assert calls(aioclient_mock, "delete", "/series/5")
+    assert not calls(aioclient_mock, "delete", "/series/6")
+    assert added.due(dt_util.utcnow()) == [7]
 
 
 async def test_follow_new_keeps_aired_episodes_as_they_were(hass, picker, aioclient_mock, hass_ws_client) -> None:

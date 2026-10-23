@@ -40,10 +40,12 @@ and each season in the card gets an **Episodes** link: tick single episodes and
 download them, switch **Get new episodes** on to have future episodes download
 when they air, and **Daily show** for programmes released by date (quizzes,
 soaps), which Sonarr otherwise can't match. Episode lists come from Sonarr
-(TVDB), so they can differ from Jellyseerr's (TMDB) counts; the sheet says when
-they do. Sonarr only lists episodes of shows it has, so opening the picker on a
-new show adds it to Sonarr with nothing monitored, and leaving without picking
-removes it again. These downloads aren't Jellyseerr requests: Jellyseerr shows
+(TVDB). The season list shows no episode counts: Jellyseerr's come from TMDB
+and can be badly wrong for long-running shows. Sonarr only lists episodes of
+shows it has, so opening the picker on a new show adds it to Sonarr with
+nothing monitored; leaving the show without picking removes it again, and
+anything still untouched after an hour is removed anyway (checked every 15
+minutes, in case the card was closed instead). These downloads aren't Jellyseerr requests: Jellyseerr shows
 them as available once it syncs with Sonarr.
 
 **Sensors**: pending, approved, processing, available and total request counts.

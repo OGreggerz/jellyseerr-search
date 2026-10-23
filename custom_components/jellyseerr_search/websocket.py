@@ -170,11 +170,11 @@ async def ws_remove(
     connection.send_result(msg["id"], result)
 
 
-def _sonarr(hass: HomeAssistant, entry_id: str | None):
+def _picker(hass: HomeAssistant, entry_id: str | None):
     coordinator = resolve_coordinator(hass, entry_id)
     if coordinator.sonarr is None:
         raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_sonarr")
-    return coordinator.client, coordinator.sonarr
+    return coordinator
 
 
 @websocket_api.websocket_command(
@@ -190,8 +190,10 @@ async def ws_episodes(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """A season's episodes from Sonarr. May add the show to Sonarr, unmonitored."""
-    seerr, sonarr = _sonarr(hass, msg.get("config_entry_id"))
-    result = await async_season_episodes(seerr, sonarr, msg["tmdb_id"], msg["season_number"])
+    c = _picker(hass, msg.get("config_entry_id"))
+    result = await async_season_episodes(
+        c.client, c.sonarr, msg["tmdb_id"], msg["season_number"], c.added_shows
+    )
     connection.send_result(msg["id"], result)
 
 
@@ -207,8 +209,10 @@ async def ws_episodes(
 async def ws_episodes_download(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
-    _, sonarr = _sonarr(hass, msg.get("config_entry_id"))
-    result = await async_download_episodes(sonarr, msg["series_id"], msg["episode_ids"])
+    c = _picker(hass, msg.get("config_entry_id"))
+    result = await async_download_episodes(
+        c.sonarr, msg["series_id"], msg["episode_ids"], c.added_shows
+    )
     connection.send_result(msg["id"], result)
 
 
@@ -226,9 +230,9 @@ async def ws_episodes_options(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Follow new episodes on/off, and the Daily series type (dated releases)."""
-    _, sonarr = _sonarr(hass, msg.get("config_entry_id"))
+    c = _picker(hass, msg.get("config_entry_id"))
     result = await async_set_show_options(
-        sonarr, msg["series_id"], msg.get("follow_new"), msg.get("daily")
+        c.sonarr, msg["series_id"], msg.get("follow_new"), msg.get("daily"), c.added_shows
     )
     connection.send_result(msg["id"], result)
 
@@ -246,6 +250,8 @@ async def ws_episodes_discard(
 ) -> None:
     """The card leaves a show it added without picking anything: remove it again,
     unless it has files or monitored episodes."""
-    _, sonarr = _sonarr(hass, msg.get("config_entry_id"))
-    result = await async_discard_show(sonarr, msg["series_id"])
+    c = _picker(hass, msg.get("config_entry_id"))
+    result = await async_discard_show(c.sonarr, msg["series_id"])
+    if c.added_shows is not None:
+        c.added_shows.forget(msg["series_id"])
     connection.send_result(msg["id"], result)

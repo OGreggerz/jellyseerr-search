@@ -4,21 +4,74 @@ choose whether new episodes download. Shared by the WebSocket commands."""
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
+import logging
 from typing import Any
 
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .api import JellyseerrClient, JellyseerrError
 from .const import DOMAIN, EPISODE_WAIT_SECONDS
 from .sonarr import SonarrClient, SonarrError, SonarrNotFoundError
 
+_LOGGER = logging.getLogger(__name__)
+
+# A show the picker added and nobody picked from is removed after this long, even
+# if the card never said so (app closed, dashboard switched, phone asleep).
+ADDED_GRACE = timedelta(hours=1)
+STORAGE_VERSION = 1
+
 EP_DOWNLOADED = "downloaded"
 EP_DOWNLOADING = "downloading"
 EP_WANTED = "wanted"
 EP_NOT_AIRED = "not_aired"
 EP_MISSING = "missing"
+
+
+class AddedShows:
+    """Sonarr series the picker added, with when, kept across restarts so the
+    sweep can remove untouched ones."""
+
+    def __init__(self, hass: HomeAssistant, entry_id: str) -> None:
+        self._store: Store[dict[str, str]] = Store(
+            hass, STORAGE_VERSION, f"{DOMAIN}.{entry_id}.added_shows"
+        )
+        self._added: dict[str, str] = {}
+
+    async def async_load(self) -> None:
+        self._added = await self._store.async_load() or {}
+
+    def add(self, series_id: int) -> None:
+        self._added[str(series_id)] = dt_util.utcnow().isoformat()
+        self._store.async_delay_save(lambda: self._added, 1)
+
+    def forget(self, series_id: int) -> None:
+        if self._added.pop(str(series_id), None) is not None:
+            self._store.async_delay_save(lambda: self._added, 1)
+
+    def due(self, now: datetime) -> list[int]:
+        return [
+            int(series_id)
+            for series_id, when in self._added.items()
+            if (added := dt_util.parse_datetime(when)) is None or now - added >= ADDED_GRACE
+        ]
+
+
+async def async_sweep_added(sonarr: SonarrClient, added: AddedShows) -> None:
+    """Remove shows the picker added over an hour ago that are still untouched.
+    A show with picks is kept and forgotten; a Sonarr error is retried next time."""
+    for series_id in added.due(dt_util.utcnow()):
+        try:
+            result = await async_discard_show(sonarr, series_id)
+        except HomeAssistantError as err:
+            _LOGGER.debug("Couldn't check picker-added series %s: %s", series_id, err)
+            continue
+        added.forget(series_id)
+        if result["removed"]:
+            _LOGGER.info("Removed series %s: added by the episode picker, nothing picked", series_id)
 
 
 def _error(key: str, err: Exception | None = None, **placeholders: str) -> HomeAssistantError:
@@ -91,7 +144,11 @@ async def _wait_for_episodes(sonarr: SonarrClient, series_id: int) -> None:
 
 
 async def async_season_episodes(
-    seerr: JellyseerrClient, sonarr: SonarrClient, tmdb_id: int, season_number: int
+    seerr: JellyseerrClient,
+    sonarr: SonarrClient,
+    tmdb_id: int,
+    season_number: int,
+    added_shows: AddedShows | None = None,
 ) -> dict[str, Any]:
     """A season's episodes as Sonarr has them. A show Sonarr doesn't have is added
     first, with nothing monitored (Sonarr only lists episodes of shows it has);
@@ -111,6 +168,8 @@ async def async_season_episodes(
         added = series is None
         if series is None:
             series = await _add_to_sonarr(seerr, sonarr, tvdb_id)
+            if added_shows is not None:
+                added_shows.add(series["id"])
             await _wait_for_episodes(sonarr, series["id"])
             series = await sonarr.async_get_series(series["id"])
         episodes = await sonarr.async_get_episodes(series["id"], season_number)
@@ -137,7 +196,10 @@ async def async_season_episodes(
 
 
 async def async_download_episodes(
-    sonarr: SonarrClient, series_id: int, episode_ids: list[int]
+    sonarr: SonarrClient,
+    series_id: int,
+    episode_ids: list[int],
+    added_shows: AddedShows | None = None,
 ) -> dict[str, Any]:
     """Monitor the chosen episodes and search for them now. Episodes that haven't
     aired stay monitored and download when they do."""
@@ -150,11 +212,17 @@ async def async_download_episodes(
         await sonarr.async_search_episodes(episode_ids)
     except SonarrError as err:
         raise _error("sonarr_error", err) from err
+    if added_shows is not None:
+        added_shows.forget(series_id)  # Something was picked: keep it.
     return {**_show(series), "episode_ids": episode_ids}
 
 
 async def async_set_show_options(
-    sonarr: SonarrClient, series_id: int, follow_new: bool | None, daily: bool | None
+    sonarr: SonarrClient,
+    series_id: int,
+    follow_new: bool | None,
+    daily: bool | None,
+    added_shows: AddedShows | None = None,
 ) -> dict[str, Any]:
     """Turn following new episodes on or off, and the Daily series type.
 
@@ -199,6 +267,8 @@ async def async_set_show_options(
             await sonarr.async_set_monitored([e["id"] for e in aired if not before[e["id"]]], False)
     except SonarrError as err:
         raise _error("sonarr_error", err) from err
+    if follow_new and added_shows is not None:
+        added_shows.forget(series_id)  # Following new episodes: keep it.
     return _show(series)
 
 

@@ -593,7 +593,7 @@ var Y = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, X, Ae = "0.5.0", Z = "jellyseerr_search", je = 400, Q = 2, Me = 36e5, Ne = !1, Pe = [
+}, X, Ae = "0.5.1", Z = "jellyseerr_search", je = 400, Q = 2, Me = 36e5, Ne = !1, Pe = [
 	{
 		value: "all",
 		label: "All"
@@ -699,7 +699,7 @@ var Y = class {
 	async _checkVersion() {
 		try {
 			let { version: e } = await this.hass.callWS({ type: `${Z}/version` });
-			e !== "0.5.0" && (this._staleVersion = e);
+			e !== "0.5.1" && (this._staleVersion = e);
 		} catch {}
 	}
 	async _reload() {
@@ -1089,7 +1089,6 @@ var Y = class {
               @change=${() => this._toggleSeason(e.season_number)}
             />
             <span class="grow">${e.name}</span>
-            <span class="count">${e.episode_count} ep</span>
             ${n ? M`<span class="status inline ${e.status}">${n}</span>` : P}
             ${this._picker ? M`<button class="link episodes-link" @click=${(t) => this._openEpisodes(e, t)}>
                   Episodes
@@ -1172,7 +1171,7 @@ var Y = class {
         </button>
         <div class="ep-head">
           <h2>${t.name}</h2>
-          <div class="meta">From Sonarr${n && n.episodes.length !== t.episode_count ? M` · Jellyseerr said ${t.episode_count}` : P}</div>
+          <div class="meta">Episodes from Sonarr</div>
         </div>
         ${r}
       </div>

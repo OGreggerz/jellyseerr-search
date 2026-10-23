@@ -753,7 +753,6 @@ export class JellyseerrSearchCard extends LitElement {
               @change=${() => this._toggleSeason(s.season_number)}
             />
             <span class="grow">${s.name}</span>
-            <span class="count">${s.episode_count} ep</span>
             ${label ? html`<span class="status inline ${s.status}">${label}</span>` : nothing}
             ${this._picker
               ? html`<button class="link episodes-link" @click=${(e: Event) => this._openEpisodes(s, e)}>
@@ -850,9 +849,7 @@ export class JellyseerrSearchCard extends LitElement {
         </button>
         <div class="ep-head">
           <h2>${season.name}</h2>
-          <div class="meta">From Sonarr${list && list.episodes.length !== season.episode_count
-            ? html` · Jellyseerr said ${season.episode_count}`
-            : nothing}</div>
+          <div class="meta">Episodes from Sonarr</div>
         </div>
         ${body}
       </div>
