@@ -700,3 +700,114 @@ async def test_unfollowed_when_off_or_gone(hass, picker, aioclient_mock) -> None
     aioclient_mock.get(f"{SONARR}/series/6", status=404)
     await async_search_followed(picker.runtime_data.sonarr, followed)
     assert followed.shows() == {}
+
+
+RADARR_URL = "http://radarr.local:7878"
+RADARR = f"{RADARR_URL}/api/v3"
+
+
+@pytest.fixture
+async def arrs(hass: HomeAssistant, aioclient_mock):
+    aioclient_mock.get(f"{API}/request/count", json=COUNTS)
+    options = {**OPTIONS, "radarr_url": RADARR_URL, "radarr_api_key": "radarr-secret"}
+    entry = MockConfigEntry(domain=DOMAIN, title="Jellyseerr", data=DATA, unique_id=URL, options=options)
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    return entry
+
+
+def _movie(id_, title, status, has_file=False, **dates):
+    return {"id": id_, "tmdbId": 1000 + id_, "title": title, "year": 2026, "status": status,
+            "hasFile": has_file, "monitored": True, "isAvailable": True, "images": [], **dates}
+
+
+async def test_waiting_list(hass, arrs, aioclient_mock, hass_ws_client) -> None:
+    aioclient_mock.get(f"{RADARR}/movie", json=[
+        _movie(1, "Ali G: Who Iz I?", "inCinemas", inCinemas="2026-10-22T00:00:00Z"),
+        _movie(2, "Infinity Castle 2", "announced"),
+        _movie(3, "Out Not Found", "released", digitalRelease="2026-10-01T00:00:00Z", lastSearchTime="2026-10-23T08:00:00Z"),
+        _movie(4, "Downloading", "released"),
+        _movie(5, "Got It", "released", has_file=True),
+    ])
+    aioclient_mock.get(f"{RADARR}/queue", json={"records": [{"movieId": 4}]})
+    aioclient_mock.get(f"{SONARR}/series", json=[
+        {**SERIES, "id": 16, "title": "The Apothecary Diaries", "tmdbId": 220542, "images": []},
+        {**SERIES, "id": 2, "title": "Slime", "tmdbId": 82684, "images": []},
+    ])
+    aioclient_mock.get(f"{SONARR}/wanted/missing", json={"records": []})
+    aioclient_mock.get(f"{SONARR}/calendar", json=[
+        {"seriesId": 16, "seasonNumber": 3, "episodeNumber": 4, "title": "E4", "airDateUtc": "2999-10-23T14:00:00Z", "monitored": True, "hasFile": False},
+    ])
+    aioclient_mock.get(f"{SONARR}/queue", json={"records": []})
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/version"})
+    assert (await ws.receive_json())["result"]["waiting"] is True
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/waiting"})
+    msg = await ws.receive_json()
+    assert msg["success"], msg
+    rows = [(i["title"], i["state"]) for i in msg["result"]["results"]]
+    assert rows == [
+        ("Downloading", "downloading"),
+        ("Out Not Found", "not_found"),
+        ("Ali G: Who Iz I?", "not_out"),   # cinema + 90 days: 2027-01-20
+        ("The Apothecary Diaries", "not_out"),  # next episode in 2999
+        ("Infinity Castle 2", "not_out"),  # no date: last
+    ]
+    ali = next(i for i in msg["result"]["results"] if i["title"].startswith("Ali G"))
+    assert ali["expected"] == "2027-01-20" and ali["expected_basis"] == "cinema_plus_90"
+    apothecary = next(i for i in msg["result"]["results"] if i["media_type"] == "tv")
+    assert apothecary["next_episode"]["episode"] == 4 and apothecary["tmdb_id"] == 220542
+
+
+async def test_check_a_film(hass, arrs, aioclient_mock, hass_ws_client) -> None:
+    aioclient_mock.get(f"{RADARR}/release?movieId=1", json=[
+        {"title": "Ali.G.2026.TELESYNC", "approved": False, "rejections": ["TELESYNC is not wanted in profile"]},
+        {"title": "Ali.G.2026.CAM", "approved": False, "rejections": ["CAM is not wanted in profile"]},
+        {"title": "Ali.G.2026.TS.x264", "approved": False, "rejections": ["TELESYNC is not wanted in profile"]},
+    ])
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/waiting/check", "media_type": "movie", "arr_id": 1})
+    result = (await ws.receive_json())["result"]
+    assert result["found"] == 3 and result["accepted"] == 0
+    assert result["reasons"][0] == "TELESYNC is not wanted in profile"
+
+
+async def test_check_a_show_uses_the_oldest_missing_episode(hass, arrs, aioclient_mock, hass_ws_client) -> None:
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=16", json=[
+        {**ep(301, 1, monitored=True), "seasonNumber": 3},
+        {**ep(305, 5, aired=False), "seasonNumber": 3},
+    ])
+    aioclient_mock.get(f"{SONARR}/release?episodeId=301", json=[
+        {"title": "Show.S03E01.1080p.WEB", "approved": True, "rejections": [], "mappedEpisodeInfo": [{"id": 301}]},
+        {"title": "Other.Show.S03E01", "approved": False, "rejections": ["Unknown series"], "mappedEpisodeInfo": [{"id": 9}]},
+    ])
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/waiting/check", "media_type": "tv", "arr_id": 16})
+    result = (await ws.receive_json())["result"]
+    assert result["found"] == 1 and result["accepted"] == 1 and result["best"] == "Show.S03E01.1080p.WEB"
+    assert result["episode"] == {"season": 3, "episode": 1}
+
+
+async def test_search_again(hass, arrs, aioclient_mock, hass_ws_client) -> None:
+    aioclient_mock.post(f"{RADARR}/command", json={"id": 1}, status=201)
+    aioclient_mock.post(f"{SONARR}/command", json={"id": 2}, status=201)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/waiting/search", "media_type": "movie", "arr_id": 3})
+    assert (await ws.receive_json())["success"]
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/waiting/search", "media_type": "tv", "arr_id": 16})
+    assert (await ws.receive_json())["success"]
+    assert [c[2] for c in aioclient_mock.mock_calls if c[0].lower() == "post" and "/command" in c[1].path] == [
+        {"name": "MoviesSearch", "movieIds": [3]},
+        {"name": "MissingEpisodeSearch", "seriesId": 16},
+    ]
+
+
+async def test_options_flow_radarr(hass: HomeAssistant, entry, aioclient_mock) -> None:
+    aioclient_mock.get(f"{RADARR}/system/status", json={"version": "6.4.4"})
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"radarr_url": "radarr.local:7878", "radarr_api_key": "radarr-secret"}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options == {"radarr_url": RADARR_URL, "radarr_api_key": "radarr-secret"}

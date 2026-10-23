@@ -21,7 +21,7 @@ async def test_version(hass: HomeAssistant, entry, hass_ws_client) -> None:
     ws = await hass_ws_client(hass)
     await ws.send_json_auto_id({"type": f"{DOMAIN}/version"})
     msg = await ws.receive_json()
-    assert msg["result"] == {"version": CARD_VERSION}
+    assert msg["result"] == {"version": CARD_VERSION, "waiting": False}
 
 
 async def test_search(hass: HomeAssistant, entry, aioclient_mock, hass_ws_client) -> None:
@@ -179,4 +179,31 @@ async def test_library(hass: HomeAssistant, entry, aioclient_mock, hass_ws_clien
         "sort": "mediaAdded",
         "take": "60",
         "skip": "0",
+    }
+
+
+async def test_release_info_film(hass: HomeAssistant, entry, aioclient_mock, hass_ws_client) -> None:
+    aioclient_mock.get(f"{API}/movie/1727734", json={
+        "status": "Released",
+        "releases": {"results": [
+            {"iso_3166_1": "US", "release_dates": [{"type": 2, "release_date": "2026-10-23T00:00:00.000Z"}, {"type": 4, "release_date": "2026-12-01T00:00:00.000Z"}]},
+            {"iso_3166_1": "GB", "release_dates": [{"type": 3, "release_date": "2026-10-22T00:00:00.000Z"}]},
+            {"iso_3166_1": "DE", "release_dates": [{"type": 5, "release_date": "2027-02-01T00:00:00.000Z"}]},
+        ]},
+    })
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/release", "tmdb_id": 1727734, "media_type": "movie"})
+    result = (await ws.receive_json())["result"]
+    # UK first for cinema; no UK digital, so US; physical only in Germany.
+    assert result == {"tmdb_status": "Released", "theatrical": "2026-10-22", "digital": "2026-12-01", "physical": "2027-02-01"}
+
+
+async def test_release_info_show(hass: HomeAssistant, entry, aioclient_mock, hass_ws_client) -> None:
+    aioclient_mock.get(f"{API}/tv/220542", json={
+        "status": "Returning Series", "nextEpisodeToAir": {"airDate": "2026-10-23"}, "lastEpisodeToAir": {"airDate": "2026-10-16"},
+    })
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/release", "tmdb_id": 220542, "media_type": "tv"})
+    assert (await ws.receive_json())["result"] == {
+        "tmdb_status": "Returning Series", "next_air_date": "2026-10-23", "last_air_date": "2026-10-16",
     }

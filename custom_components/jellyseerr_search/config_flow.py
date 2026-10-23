@@ -19,7 +19,8 @@ from homeassistant.helpers.selector import (
 )
 
 from .api import JellyseerrAuthError, JellyseerrClient, JellyseerrConnectionError, JellyseerrError
-from .const import CONF_SONARR_API_KEY, CONF_SONARR_URL, DOMAIN
+from .const import CONF_RADARR_API_KEY, CONF_RADARR_URL, CONF_SONARR_API_KEY, CONF_SONARR_URL, DOMAIN
+from .radarr import RadarrClient
 from .sonarr import SonarrAuthError, SonarrClient, SonarrConnectionError, SonarrError
 
 _LOGGER = logging.getLogger(__name__)
@@ -122,7 +123,17 @@ OPTIONS_SCHEMA = vol.Schema(
         vol.Optional(CONF_SONARR_API_KEY): TextSelector(
             TextSelectorConfig(type=TextSelectorType.PASSWORD)
         ),
+        vol.Optional(CONF_RADARR_URL): TextSelector(TextSelectorConfig(type=TextSelectorType.URL)),
+        vol.Optional(CONF_RADARR_API_KEY): TextSelector(
+            TextSelectorConfig(type=TextSelectorType.PASSWORD)
+        ),
     }
+)
+
+# (url key, api key key, client, error prefix) per optional *arr server.
+_ARR = (
+    (CONF_SONARR_URL, CONF_SONARR_API_KEY, SonarrClient, "sonarr"),
+    (CONF_RADARR_URL, CONF_RADARR_API_KEY, RadarrClient, "radarr"),
 )
 
 
@@ -133,28 +144,32 @@ class JellyseerrOptionsFlow(OptionsFlow):
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
-            url = (user_input.get(CONF_SONARR_URL) or "").strip()
-            key = (user_input.get(CONF_SONARR_API_KEY) or "").strip()
-            if not url and not key:
-                return self.async_create_entry(data={})
-            if not url or not key:
-                errors["base"] = "sonarr_incomplete"
-            else:
+            data: dict[str, str] = {}
+            session = async_get_clientsession(self.hass)
+            for url_key, api_key_key, client_cls, name in _ARR:
+                url = (user_input.get(url_key) or "").strip()
+                key = (user_input.get(api_key_key) or "").strip()
+                if not url and not key:
+                    continue
+                if not url or not key:
+                    errors["base"] = f"{name}_incomplete"
+                    break
                 url = _normalize_url(url)
-                session = async_get_clientsession(self.hass)
                 try:
-                    await SonarrClient(session, url, key).async_get_status()
+                    await client_cls(session, url, key).async_get_status()
                 except SonarrAuthError:
-                    errors["base"] = "sonarr_invalid_auth"
+                    errors["base"] = f"{name}_invalid_auth"
+                    break
                 except SonarrConnectionError:
-                    errors["base"] = "sonarr_cannot_connect"
+                    errors["base"] = f"{name}_cannot_connect"
+                    break
                 except SonarrError:
-                    _LOGGER.exception("Unexpected answer from Sonarr")
+                    _LOGGER.exception("Unexpected answer from %s", name)
                     errors["base"] = "unknown"
-                else:
-                    return self.async_create_entry(
-                        data={CONF_SONARR_URL: url, CONF_SONARR_API_KEY: key}
-                    )
+                    break
+                data[url_key], data[api_key_key] = url, key
+            if not errors:
+                return self.async_create_entry(data=data)
         return self.async_show_form(
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(

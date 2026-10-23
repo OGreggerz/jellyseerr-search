@@ -13,11 +13,12 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 
 from .api import JellyseerrClient
-from .const import CONF_SONARR_API_KEY, CONF_SONARR_URL, DOMAIN
+from .const import CONF_RADARR_API_KEY, CONF_RADARR_URL, CONF_SONARR_API_KEY, CONF_SONARR_URL, DOMAIN
 from .coordinator import JellyseerrConfigEntry, JellyseerrCoordinator
 from .episodes import AddedShows, CheckedTypes, FollowedShows, async_search_followed, async_sweep_added
 from .frontend import async_register_frontend
 from .services import async_register_services
+from .radarr import RadarrClient
 from .sonarr import SonarrClient
 from .websocket import async_register_websocket
 
@@ -52,7 +53,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: JellyseerrConfigEntry) -
         await followed.async_load()
         checked = CheckedTypes(hass, entry.entry_id, scope)
         await checked.async_load()
-    coordinator = JellyseerrCoordinator(hass, entry, client, sonarr, added_shows, followed, checked)
+    radarr = None
+    if entry.options.get(CONF_RADARR_URL) and entry.options.get(CONF_RADARR_API_KEY):
+        radarr = RadarrClient(
+            async_get_clientsession(hass), entry.options[CONF_RADARR_URL], entry.options[CONF_RADARR_API_KEY]
+        )
+    coordinator = JellyseerrCoordinator(hass, entry, client, sonarr, added_shows, followed, checked, radarr)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

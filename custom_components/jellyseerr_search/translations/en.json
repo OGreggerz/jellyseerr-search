@@ -35,15 +35,19 @@
   "options": {
     "step": {
       "init": {
-        "title": "Episode picker (optional)",
-        "description": "Connect Sonarr to pick single episodes in the card and choose whether new episodes download. Jellyseerr can only request whole seasons. Leave both empty to turn the picker off.",
+        "title": "Sonarr and Radarr (optional)",
+        "description": "Sonarr: pick single episodes in the card and choose whether new episodes download (Jellyseerr can only request whole seasons). Sonarr and Radarr: the Waiting list of wanted titles that aren't downloaded yet. Leave a pair empty to turn it off.",
         "data": {
           "sonarr_url": "Sonarr URL",
-          "sonarr_api_key": "Sonarr API key"
+          "sonarr_api_key": "Sonarr API key",
+          "radarr_url": "Radarr URL",
+          "radarr_api_key": "Radarr API key"
         },
         "data_description": {
           "sonarr_url": "For example http://192.168.1.20:8989.",
-          "sonarr_api_key": "In Sonarr under Settings > General."
+          "sonarr_api_key": "In Sonarr under Settings > General.",
+          "radarr_url": "Optional: films in the Waiting list. For example http://192.168.1.20:7878.",
+          "radarr_api_key": "In Radarr under Settings > General."
         }
       }
     },
@@ -51,6 +55,9 @@
       "sonarr_incomplete": "Enter both the Sonarr URL and API key, or leave both empty.",
       "sonarr_cannot_connect": "Could not reach Sonarr at that URL.",
       "sonarr_invalid_auth": "Sonarr rejected the API key.",
+      "radarr_incomplete": "Enter both the Radarr URL and API key, or leave both empty.",
+      "radarr_cannot_connect": "Could not reach Radarr at that URL.",
+      "radarr_invalid_auth": "Radarr rejected the API key.",
       "unknown": "Unexpected error. Check the Home Assistant log."
     }
   },
@@ -96,6 +103,12 @@
     },
     "no_tvdb_id": {
       "message": "Jellyseerr has no TVDB ID for TMDB ID {tmdb_id}, so Sonarr can't find the show."
+    },
+    "no_radarr": {
+      "message": "This needs Radarr: add it in the integration's options."
+    },
+    "no_arr": {
+      "message": "The Waiting list needs Sonarr or Radarr: add them in the integration's options."
     },
     "series_gone": {
       "message": "The show is no longer in Sonarr (it was tidied away or removed). Open its episodes again to add it back."

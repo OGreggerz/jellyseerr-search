@@ -38,6 +38,9 @@ POPULAR_TV_MIN_VOTES: Final = 500
 # Episode picker (optional; Sonarr directly, since Jellyseerr requests whole seasons).
 CONF_SONARR_URL: Final = "sonarr_url"
 CONF_SONARR_API_KEY: Final = "sonarr_api_key"
+# Optional Radarr, for films in the Waiting list.
+CONF_RADARR_URL: Final = "radarr_url"
+CONF_RADARR_API_KEY: Final = "radarr_api_key"
 # Sonarr fills in a newly added show's episodes in the background (about a second
 # on Sonarr 4.0.20); wait up to this long for them.
 EPISODE_WAIT_SECONDS: Final = 15
@@ -57,4 +60,4 @@ REQUEST_COUNT_KEYS: Final = ("pending", "approved", "processing", "available", "
 URL_BASE: Final = f"/{DOMAIN}"
 CARD_FILENAME: Final = "jellyseerr-search-card.js"
 CARD_URL: Final = f"{URL_BASE}/{CARD_FILENAME}"
-CARD_VERSION: Final = "0.9.1"
+CARD_VERSION: Final = "0.10.0"

@@ -153,6 +153,39 @@ class JellyseerrClient:
             if season.get("seasonNumber", 0) > 0
         ]
 
+    async def async_release_info(self, media_type: str, tmdb_id: int) -> dict[str, Any]:
+        """Whether a title is out, from TMDB via Jellyseerr. Films: TMDB status and
+        the cinema (types 2-3), digital (4) and physical (5) release dates, UK
+        first, then US, then the earliest anywhere. Shows: TMDB status and the
+        next and last episode air dates."""
+        data = await self._request("GET", f"/{media_type}/{tmdb_id}")
+        if media_type != MEDIA_MOVIE:
+            return {
+                "tmdb_status": data.get("status"),
+                "next_air_date": (data.get("nextEpisodeToAir") or {}).get("airDate"),
+                "last_air_date": (data.get("lastEpisodeToAir") or {}).get("airDate") or data.get("lastAirDate"),
+            }
+        by_country = {
+            r.get("iso_3166_1"): r.get("release_dates") or [] for r in (data.get("releases") or {}).get("results", [])
+        }
+
+        def first(types: tuple[int, ...]) -> str | None:
+            for country in ("GB", "US"):
+                dates = sorted(d["release_date"][:10] for d in by_country.get(country, []) if d.get("type") in types)
+                if dates:
+                    return dates[0]
+            anywhere = sorted(
+                d["release_date"][:10] for dates in by_country.values() for d in dates if d.get("type") in types
+            )
+            return anywhere[0] if anywhere else None
+
+        return {
+            "tmdb_status": data.get("status"),
+            "theatrical": first((2, 3)),
+            "digital": first((4,)),
+            "physical": first((5,)),
+        }
+
     async def async_get_tvdb_id(self, tmdb_id: int) -> int | None:
         """The show's TVDB id, which Sonarr matches on (Sonarr may have no TMDB id)."""
         data = await self._request("GET", f"/tv/{tmdb_id}")

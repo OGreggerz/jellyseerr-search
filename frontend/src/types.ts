@@ -1,6 +1,53 @@
 export type MediaType = "movie" | "tv";
-/** "downloaded" lists what the server already has instead of searching. */
-export type MediaFilter = MediaType | "all" | "downloaded";
+/** "downloaded" lists what the server already has; "waiting" what Sonarr/Radarr
+ *  want but haven't got. Neither searches. */
+export type MediaFilter = MediaType | "all" | "downloaded" | "waiting";
+
+export type WaitingState = "downloading" | "not_found" | "not_out";
+
+/** jellyseerr_search/waiting: a wanted title not downloaded yet. */
+export interface WaitingItem {
+  media_type: MediaType;
+  tmdb_id: number | null;
+  arr_id: number;
+  title: string;
+  year: number | null;
+  poster_url: string | null;
+  state: WaitingState;
+  last_search?: string | null;
+  // Films
+  release_status?: string | null;
+  in_cinemas?: string | null;
+  digital_release?: string | null;
+  physical_release?: string | null;
+  expected?: string | null;
+  expected_basis?: "digital" | "physical" | "cinema_plus_90" | null;
+  // Shows
+  missing?: number;
+  next_episode?: { season: number; episode: number; title: string; air_date_utc: string } | null;
+}
+
+/** jellyseerr_search/release: TMDB's dates, via Jellyseerr. */
+export interface ReleaseInfo {
+  tmdb_status: string | null;
+  // Films
+  theatrical?: string | null;
+  digital?: string | null;
+  physical?: string | null;
+  // Shows
+  next_air_date?: string | null;
+  last_air_date?: string | null;
+}
+
+/** jellyseerr_search/waiting/check: what an interactive search found. */
+export interface CheckResult {
+  found: number;
+  accepted: number;
+  best: string | null;
+  reasons: string[];
+  checked_at: string;
+  episode: { season: number; episode: number } | null;
+}
 /** What the card lists while the search box is empty. */
 export type Browse = "trending" | "popular";
 

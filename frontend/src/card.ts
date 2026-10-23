@@ -7,8 +7,12 @@ import {
   Latest,
   airDateLabel,
   canRequestMore,
+  checkSummary,
   episodeLabel,
   filterLibrary,
+  releaseLine,
+  waitingDetail,
+  waitingLabel,
   isPickable,
   isRemovable,
   isRequestable,
@@ -24,8 +28,11 @@ import type {
   SearchResult,
   Season,
   SeasonEpisodes,
+  CheckResult,
+  ReleaseInfo,
   ShowState,
   SonarrShow,
+  WaitingItem,
 } from "./types";
 
 export const CARD_VERSION = __CARD_VERSION__;
@@ -39,12 +46,15 @@ const BROWSE_TTL_MS = 60 * 60 * 1000;
 const AFTER_DOWNLOAD_REFRESH_MS = [20_000, 60_000];
 
 let versionChecked = false;
+/** The server has Sonarr or Radarr set up, so the Waiting chip has something to show. */
+let waitingAvailable = false;
 
 const FILTERS: Array<{ value: MediaFilter; label: string }> = [
   { value: "all", label: "All" },
   { value: "movie", label: "Movies" },
   { value: "tv", label: "TV" },
   { value: "downloaded", label: "Downloaded" },
+  { value: "waiting", label: "Waiting" },
 ];
 
 const BROWSE: Array<{ value: Browse; label: string; heading: string }> = [
@@ -90,6 +100,11 @@ export class JellyseerrSearchCard extends LitElement {
     _downloading: { state: true },
     _followBusy: { state: true },
     _show: { state: true },
+    _waiting: { state: true },
+    _release: { state: true },
+    _waitingError: { state: true },
+    _checks: { state: true },
+    _waitingOn: { state: true },
     _library: { state: true },
     _libraryError: { state: true },
   };
@@ -129,6 +144,14 @@ export class JellyseerrSearchCard extends LitElement {
   declare _followBusy: boolean;
   /** Sonarr's view of the open show (follow state), when Sonarr is set up. */
   declare _show?: ShowState | null;
+  /** TMDB's release dates for the open title ("Is it out?"). */
+  declare _release?: ReleaseInfo;
+  /** Wanted but not downloaded (Sonarr/Radarr), for the Waiting filter. */
+  declare _waiting?: WaitingItem[];
+  declare _waitingError?: string;
+  /** Indexer check results (or "checking"), by `${media_type}/${arr_id}`. */
+  declare _checks: Record<string, CheckResult | "checking" | string>;
+  declare _waitingOn: boolean;
   /** What the server already has, for the Downloaded filter. */
   declare _library?: SearchResult[];
   declare _libraryError?: string;
@@ -163,6 +186,8 @@ export class JellyseerrSearchCard extends LitElement {
     this._pickerBusy = false;
     this._downloading = false;
     this._followBusy = false;
+    this._checks = {};
+    this._waitingOn = waitingAvailable;
   }
 
   static getConfigForm() {
@@ -237,8 +262,12 @@ export class JellyseerrSearchCard extends LitElement {
   /** A cached old card talking to a newer backend: offer a cache-clearing reload. */
   private async _checkVersion(): Promise<void> {
     try {
-      const { version } = await this.hass.callWS<{ version: string }>({ type: `${DOMAIN}/version` });
+      const { version, waiting } = await this.hass.callWS<{ version: string; waiting?: boolean }>({
+        type: `${DOMAIN}/version`,
+      });
       if (version !== CARD_VERSION) this._staleVersion = version;
+      waitingAvailable = !!waiting;
+      this._waitingOn = waitingAvailable;
     } catch {
       // Integration not loaded; searches will report that themselves.
     }
@@ -258,11 +287,80 @@ export class JellyseerrSearchCard extends LitElement {
     return this._config.config_entry_id ? { config_entry_id: this._config.config_entry_id } : {};
   }
 
+  // --- waiting ------------------------------------------------------------
+
+  private async _loadWaiting(): Promise<void> {
+    this._waitingError = undefined;
+    try {
+      const { results } = await this.hass.callWS<{ results: WaitingItem[] }>({
+        type: `${DOMAIN}/waiting`,
+        ...this._entry(),
+      });
+      if (this._filter === "waiting") this._waiting = results;
+    } catch (err) {
+      if (this._filter === "waiting") this._waitingError = errorMessage(err);
+    }
+  }
+
+  private _key(item: WaitingItem): string {
+    return `${item.media_type}/${item.arr_id}`;
+  }
+
+  /** Is a copy out there? One indexer search; grabs nothing. */
+  private async _checkWaiting(item: WaitingItem): Promise<void> {
+    const key = this._key(item);
+    this._checks = { ...this._checks, [key]: "checking" };
+    try {
+      const result = await this.hass.callWS<CheckResult>({
+        type: `${DOMAIN}/waiting/check`,
+        media_type: item.media_type,
+        arr_id: item.arr_id,
+        ...this._entry(),
+      });
+      this._checks = { ...this._checks, [key]: result };
+    } catch (err) {
+      this._checks = { ...this._checks, [key]: `Check failed: ${errorMessage(err)}` };
+    }
+  }
+
+  private async _searchWaiting(item: WaitingItem): Promise<void> {
+    try {
+      await this.hass.callWS({
+        type: `${DOMAIN}/waiting/search`,
+        media_type: item.media_type,
+        arr_id: item.arr_id,
+        ...this._entry(),
+      });
+      toast(this, `Searching for ${item.title} now. It downloads by itself if a suitable copy turns up.`);
+      setTimeout(() => {
+        if (this._filter === "waiting" && !this._selected) void this._loadWaiting();
+      }, 30_000);
+    } catch (err) {
+      toast(this, `Search failed: ${errorMessage(err)}`);
+    }
+  }
+
+  private _openWaiting(item: WaitingItem): void {
+    if (!item.tmdb_id) return;
+    this._open({
+      tmdb_id: item.tmdb_id,
+      media_type: item.media_type,
+      title: item.title,
+      year: item.year,
+      overview: "",
+      poster_url: item.poster_url,
+      status: "processing",
+    });
+  }
+
   // --- trending / popular -------------------------------------------------
 
   private _showBrowse(): boolean {
     return (
-      this._filter !== "downloaded" && this._config.show_trending !== false && this._query.trim().length < MIN_QUERY
+      this._filter !== "downloaded" &&
+      this._filter !== "waiting" &&
+      this._config.show_trending !== false &&
+      this._query.trim().length < MIN_QUERY
     );
   }
 
@@ -320,7 +418,7 @@ export class JellyseerrSearchCard extends LitElement {
   private _onInput(ev: InputEvent): void {
     this._query = (ev.target as HTMLInputElement).value;
     clearTimeout(this._debounce);
-    if (this._filter === "downloaded") return; // Narrows the list; nothing to fetch.
+    if (this._filter === "downloaded" || this._filter === "waiting") return; // Narrows the list; nothing to fetch.
     this._debounce = setTimeout(() => void this._search(), DEBOUNCE_MS);
   }
 
@@ -346,12 +444,13 @@ export class JellyseerrSearchCard extends LitElement {
     if (filter === this._filter) return;
     this._filter = filter;
     if (filter === "downloaded") void this._loadLibrary();
+    else if (filter === "waiting") void this._loadWaiting();
     else if (this._query.trim().length >= MIN_QUERY) void this._search();
     else if (this._browseDue()) void this._loadBrowse();
   }
 
   private async _search(): Promise<void> {
-    if (this._filter === "downloaded") return;
+    if (this._filter === "downloaded" || this._filter === "waiting") return;
     const query = this._query.trim();
     if (query.length < MIN_QUERY) {
       this._latestSearch.next();
@@ -391,8 +490,24 @@ export class JellyseerrSearchCard extends LitElement {
     this._confirmRemove = false;
     this._picker = false;
     this._show = undefined;
+    this._release = undefined;
     this._closeEpisodes();
+    void this._loadRelease(result);
     if (result.media_type === "tv") void this._loadSeasons(result.tmdb_id);
+  }
+
+  private async _loadRelease(item: SearchResult): Promise<void> {
+    try {
+      const info = await this.hass.callWS<ReleaseInfo>({
+        type: `${DOMAIN}/release`,
+        tmdb_id: item.tmdb_id,
+        media_type: item.media_type,
+        ...this._entry(),
+      });
+      if (this._selected === item) this._release = info;
+    } catch {
+      // Older integration or Jellyseerr hiccup: just no line.
+    }
   }
 
   private async _loadSeasons(tmdbId: number): Promise<void> {
@@ -571,6 +686,7 @@ export class JellyseerrSearchCard extends LitElement {
     this._selected = undefined;
     // Something may have been removed or downloaded meanwhile.
     if (this._filter === "downloaded") void this._loadLibrary();
+    if (this._filter === "waiting") void this._loadWaiting();
   }
 
   private _togglePick(id: number): void {
@@ -772,7 +888,7 @@ export class JellyseerrSearchCard extends LitElement {
             : nothing}
         </div>
         <div class="chips" role="radiogroup" aria-label="Media type">
-          ${FILTERS.map(
+          ${FILTERS.filter((f) => f.value !== "waiting" || this._waitingOn).map(
             (f) => html`<button
               class="chip ${f.value === this._filter ? "on" : ""}"
               role="radio"
@@ -790,6 +906,7 @@ export class JellyseerrSearchCard extends LitElement {
 
   private _renderResults() {
     if (this._filter === "downloaded") return this._renderLibrary();
+    if (this._filter === "waiting") return this._renderWaiting();
     if (this._showBrowse()) return this._renderBrowse();
     if (this._error) return html`<div class="message error">${this._error}</div>`;
     if (this._loading && !this._results) return html`<div class="message">Searching…</div>`;
@@ -857,6 +974,56 @@ export class JellyseerrSearchCard extends LitElement {
     `;
   }
 
+  private _renderWaiting() {
+    if (this._waitingError) return html`<div class="message error">Couldn't load the Waiting list (${this._waitingError}).</div>`;
+    if (!this._waiting) return html`<div class="message">Loading…</div>`;
+    const shown = filterLibrary(this._waiting, this._query);
+    return html`
+      <div class="section stack">
+        <span>Waiting · ${shown.length}</span>
+        <span class="hint">Wanted but not downloaded yet: what's out, what isn't, and when.</span>
+      </div>
+      ${shown.length
+        ? html`<div class="waiting">${shown.map((item) => this._renderWaitingRow(item))}</div>`
+        : html`<div class="message">
+            ${this._waiting.length ? `Nothing waiting matches “${this._query.trim()}”.` : "Nothing waiting: everything wanted is downloaded."}
+          </div>`}
+    `;
+  }
+
+  private _renderWaitingRow(item: WaitingItem) {
+    const check = this._checks[this._key(item)];
+    const checking = check === "checking";
+    return html`
+      <div class="wrow">
+        <button class="wposter" ?disabled=${!item.tmdb_id} @click=${() => this._openWaiting(item)} aria-label=${item.title}>
+          ${item.poster_url
+            ? html`<img src=${item.poster_url} alt="" loading="lazy" />`
+            : html`<ha-icon icon=${item.media_type === "tv" ? "mdi:television-classic" : "mdi:movie-open"}></ha-icon>`}
+        </button>
+        <div class="wbody">
+          <div class="wtitle">
+            <span>${item.title}${item.year ? html` <span class="count">(${item.year})</span>` : nothing}</span>
+            <span class="status inline w-${item.state}">${waitingLabel(item)}</span>
+          </div>
+          <div class="hint">${waitingDetail(item)}</div>
+          ${typeof check === "object" ? html`<div class="wcheck">${checkSummary(check)}</div>` : nothing}
+          ${typeof check === "string" && !checking ? html`<div class="wcheck error">${check}</div>` : nothing}
+          ${item.state !== "downloading"
+            ? html`<div class="wactions">
+                <button class="secondary small" ?disabled=${checking} @click=${() => this._checkWaiting(item)}>
+                  ${checking ? "Checking…" : "Check now"}
+                </button>
+                ${item.state === "not_found"
+                  ? html`<button class="secondary small" @click=${() => this._searchWaiting(item)}>Search again</button>`
+                  : nothing}
+              </div>`
+            : nothing}
+        </div>
+      </div>
+    `;
+  }
+
   private _renderTile(r: SearchResult) {
     const label = statusLabel(r.status);
     return html`
@@ -893,6 +1060,9 @@ export class JellyseerrSearchCard extends LitElement {
               ${item.year ?? ""} · ${tv ? "TV show" : "Movie"}
               ${label ? html`<span class="status inline ${item.status}">${label}</span>` : nothing}
             </div>
+            ${this._release && releaseLine(this._release, item.media_type, new Date().toISOString().slice(0, 10))
+              ? html`<div class="release">${releaseLine(this._release, item.media_type, new Date().toISOString().slice(0, 10))}</div>`
+              : nothing}
             ${this._config.show_remove && isRemovable(item.status) && !this._confirmRemove
               ? html`<button class="danger small head-remove" @click=${this._remove}>
                   ${tv ? "Remove all…" : "Remove…"}
@@ -1379,6 +1549,81 @@ export class JellyseerrSearchCard extends LitElement {
     }
     .hint.busy {
       color: var(--primary-color);
+    }
+    .chips {
+      flex-wrap: wrap;
+    }
+    .waiting {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 8px var(--js-gap) var(--js-gap);
+    }
+    .wrow {
+      display: flex;
+      gap: 12px;
+      padding: 10px;
+      border: 1px solid var(--divider-color);
+      border-radius: 10px;
+    }
+    .wposter {
+      flex: none;
+      width: 56px;
+      height: 84px;
+      padding: 0;
+      border: 0;
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--secondary-background-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wposter img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .wbody {
+      min-width: 0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .wtitle {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      font-weight: 500;
+      line-height: 1.3;
+    }
+    .wtitle .status {
+      flex: none;
+    }
+    .status.w-not_out {
+      background: var(--secondary-text-color, #727272);
+    }
+    .status.w-not_found {
+      background: var(--warning-color, #ffa600);
+    }
+    .wcheck {
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .wcheck.error {
+      color: var(--error-color, #db4437);
+    }
+    .wactions {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .release {
+      margin-top: 4px;
+      font-size: 13px;
+      color: var(--secondary-text-color);
     }
     .warn {
       color: var(--warning-color, #ffa600);

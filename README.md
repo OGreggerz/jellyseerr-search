@@ -39,6 +39,17 @@ already has (available or partly available in Jellyseerr), newest first;
 typing narrows it. Tap a title for the usual screen: Remove, or Episodes to get
 more.
 
+**Waiting (needs Sonarr and/or Radarr in the options).** A chip listing what
+Sonarr and Radarr want but haven't got, each marked *Not out yet*, *Not found
+yet* or *Downloading*, with the reason: a film's digital or physical release
+date (or, for a cinema-only film, roughly when Radarr will count it as out: 90
+days after the cinema date), a show's next episode, when it was last searched.
+**Check now** runs the app's interactive search (one indexer hit, grabs nothing)
+and says whether suitable copies are out there, or why the ones found would be
+turned down (e.g. a cinema recording). **Search again** asks the app to search
+and grab. Every title's page also says whether it's out (TMDB's dates via
+Jellyseerr: UK first, then US).
+
 **Episode picker (optional, needs Sonarr).** Jellyseerr requests whole seasons
 only. Add Sonarr's URL and API key under the integration's **Configure** button
 and each season in the card gets an **Episodes** link to tick single episodes

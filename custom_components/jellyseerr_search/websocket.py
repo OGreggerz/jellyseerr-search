@@ -14,6 +14,8 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 from .const import CARD_VERSION, DOMAIN, LIBRARY_LIMIT, MEDIA_TV, MEDIA_TYPES
+from .api import JellyseerrError
+from .waiting import async_check, async_search_again, async_waiting
 from .episodes import (
     async_discard_show,
     async_download_episodes,
@@ -57,6 +59,10 @@ def async_register_websocket(hass: HomeAssistant) -> None:
         ws_episodes_discard,
         ws_episodes_remove,
         ws_episodes_follow,
+        ws_waiting,
+        ws_release,
+        ws_waiting_check,
+        ws_waiting_search,
     ):
         websocket_api.async_register_command(hass, command)
 
@@ -66,8 +72,13 @@ def async_register_websocket(hass: HomeAssistant) -> None:
 def ws_version(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
-    """Lets the card spot a stale cached copy of itself."""
-    connection.send_result(msg["id"], {"version": CARD_VERSION})
+    """Lets the card spot a stale cached copy of itself, and whether the Waiting
+    list has anything to read (Sonarr or Radarr set up)."""
+    waiting = any(
+        e.runtime_data.sonarr is not None or e.runtime_data.radarr is not None
+        for e in hass.config_entries.async_loaded_entries(DOMAIN)
+    )
+    connection.send_result(msg["id"], {"version": CARD_VERSION, "waiting": waiting})
 
 
 @websocket_api.websocket_command(
@@ -345,3 +356,68 @@ async def ws_episodes_follow(
         ),
     )
     connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/waiting", vol.Optional("config_entry_id"): str}
+)
+@websocket_api.async_response
+async def ws_waiting(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Titles Sonarr/Radarr want but haven't got, with whether each is out yet."""
+    c = resolve_coordinator(hass, msg.get("config_entry_id"))
+    if c.sonarr is None and c.radarr is None:
+        raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_arr")
+    connection.send_result(msg["id"], {"results": await async_waiting(c.sonarr, c.radarr)})
+
+
+_ARR_ITEM = {
+    vol.Required("media_type"): vol.In(MEDIA_TYPES),
+    vol.Required("arr_id"): vol.All(int, vol.Range(min=1)),
+    vol.Optional("config_entry_id"): str,
+}
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/waiting/check", **_ARR_ITEM})
+@websocket_api.async_response
+async def ws_waiting_check(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Is a copy out there? An interactive search: one indexer hit, grabs nothing."""
+    c = resolve_coordinator(hass, msg.get("config_entry_id"))
+    connection.send_result(msg["id"], await async_check(c.sonarr, c.radarr, msg["media_type"], msg["arr_id"]))
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/waiting/search", **_ARR_ITEM})
+@websocket_api.async_response
+async def ws_waiting_search(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Search now, and grab what the app's rules accept."""
+    c = resolve_coordinator(hass, msg.get("config_entry_id"))
+    await async_search_again(c.sonarr, c.radarr, msg["media_type"], msg["arr_id"])
+    connection.send_result(msg["id"], {"searching": True})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/release",
+        vol.Required("tmdb_id"): vol.All(int, vol.Range(min=1)),
+        vol.Required("media_type"): vol.In(MEDIA_TYPES),
+        vol.Optional("config_entry_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_release(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Is it out yet? TMDB's dates, for the line under a title's name."""
+    client = resolve_client(hass, msg.get("config_entry_id"))
+    try:
+        info = await client.async_release_info(msg["media_type"], msg["tmdb_id"])
+    except JellyseerrError as err:
+        raise HomeAssistantError(
+            translation_domain=DOMAIN, translation_key="api_error", translation_placeholders={"error": str(err)}
+        ) from err
+    connection.send_result(msg["id"], info)
