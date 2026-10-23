@@ -168,6 +168,17 @@ class JellyseerrClient:
             return None
         return int(server["activeProfileId"]), str(server["activeDirectory"])
 
+    async def async_forget(self, media_type: str, tmdb_id: int) -> bool:
+        """Drop Jellyseerr's record of a title whose files are already gone, so
+        it reads as not requested now rather than after Jellyseerr's nightly
+        availability sync. False if there was no record."""
+        data = await self._request("GET", f"/{media_type}/{tmdb_id}")
+        media_id = (data.get("mediaInfo") or {}).get("id")
+        if not media_id:
+            return False
+        await self._request("DELETE", f"/media/{media_id}")
+        return True
+
     async def async_remove(self, media_type: str, tmdb_id: int) -> bool:
         """Delete a movie or a whole show from Radarr/Sonarr, files included, the
         way Jellyseerr's "Remove from Radarr/Sonarr" button does. Jellyseerr then

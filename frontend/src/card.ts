@@ -437,6 +437,7 @@ export class JellyseerrSearchCard extends LitElement {
       });
       toast(this, `Removed ${item.title}`);
       this._setStatus(item, "deleted");
+      this._library = this._library?.filter((r) => !(r.tmdb_id === item.tmdb_id && r.media_type === item.media_type));
     } catch (err) {
       toast(this, `Remove failed: ${errorMessage(err)}`);
     } finally {
@@ -592,14 +593,20 @@ export class JellyseerrSearchCard extends LitElement {
       const result = await this.hass.callWS<{ show_removed: boolean }>({
         type: `${DOMAIN}/episodes/remove`,
         series_id: list.series_id,
+        tmdb_id: this._selected.tmdb_id,
         episode_ids: [ep.id],
         ...this._entry(),
       });
       this._confirmRemoveEp = undefined;
       if (result.show_removed) {
-        toast(this, `Removed episode ${ep.episode_number}. Nothing else was left, so ${list.title} is out of Sonarr too.`);
+        toast(this, `Removed episode ${ep.episode_number}. Nothing else was left, so ${list.title} is gone.`);
         this._addedSeries = undefined;
+        const item = this._selected;
         this._closeEpisodes();
+        // Jellyseerr has forgotten it too: show that now instead of after a refresh.
+        this._library = this._library?.filter((r) => !(r.tmdb_id === item.tmdb_id && r.media_type === item.media_type));
+        this._setStatus(item, "not_requested");
+        void this._loadSeasons(item.tmdb_id);
       } else {
         toast(this, `Removed episode ${ep.episode_number} of ${list.title}`);
         await this._loadEpisodes(this._selected.tmdb_id, list.season_number);

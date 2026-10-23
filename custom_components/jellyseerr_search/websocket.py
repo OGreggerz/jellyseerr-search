@@ -281,6 +281,7 @@ async def ws_episodes_discard(
     {
         vol.Required("type"): f"{DOMAIN}/episodes/remove",
         vol.Required("series_id"): vol.All(int, vol.Range(min=1)),
+        vol.Optional("tmdb_id"): vol.All(int, vol.Range(min=1)),
         vol.Required("episode_ids"): vol.All([vol.All(int, vol.Range(min=1))], vol.Length(min=1)),
         vol.Optional("config_entry_id"): str,
     }
@@ -291,5 +292,7 @@ async def ws_episodes_remove(
 ) -> None:
     """Deletes episode files. The card only offers it when show_remove is set."""
     c = _picker(hass, msg.get("config_entry_id"))
-    result = await async_remove_episodes(c.sonarr, msg["series_id"], msg["episode_ids"], c.added_shows)
+    result = await async_remove_episodes(
+        c.sonarr, msg["series_id"], msg["episode_ids"], c.added_shows, c.client, msg.get("tmdb_id")
+    )
     connection.send_result(msg["id"], result)

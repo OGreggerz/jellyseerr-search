@@ -597,7 +597,7 @@ var Y = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, X, je = "0.6.0", Z = "jellyseerr_search", Me = 400, Q = 2, Ne = 36e5, Pe = [2e4, 6e4], Fe = !1, Ie = [
+}, X, je = "0.6.1", Z = "jellyseerr_search", Me = 400, Q = 2, Ne = 36e5, Pe = [2e4, 6e4], Fe = !1, Ie = [
 	{
 		value: "all",
 		label: "All"
@@ -707,7 +707,7 @@ var Y = class {
 	async _checkVersion() {
 		try {
 			let { version: e } = await this.hass.callWS({ type: `${Z}/version` });
-			e !== "0.6.0" && (this._staleVersion = e);
+			e !== "0.6.1" && (this._staleVersion = e);
 		} catch {}
 	}
 	async _reload() {
@@ -850,7 +850,7 @@ var Y = class {
 					tmdb_id: e.tmdb_id,
 					media_type: e.media_type,
 					...this._entry()
-				}), W(this, `Removed ${e.title}`), this._setStatus(e, "deleted");
+				}), W(this, `Removed ${e.title}`), this._setStatus(e, "deleted"), this._library = this._library?.filter((t) => t.tmdb_id !== e.tmdb_id || t.media_type !== e.media_type);
 			} catch (e) {
 				W(this, `Remove failed: ${G(e)}`);
 			} finally {
@@ -954,10 +954,15 @@ var Y = class {
 				let n = await this.hass.callWS({
 					type: `${Z}/episodes/remove`,
 					series_id: t.series_id,
+					tmdb_id: this._selected.tmdb_id,
 					episode_ids: [e.id],
 					...this._entry()
 				});
-				this._confirmRemoveEp = void 0, n.show_removed ? (W(this, `Removed episode ${e.episode_number}. Nothing else was left, so ${t.title} is out of Sonarr too.`), this._addedSeries = void 0, this._closeEpisodes()) : (W(this, `Removed episode ${e.episode_number} of ${t.title}`), await this._loadEpisodes(this._selected.tmdb_id, t.season_number));
+				if (this._confirmRemoveEp = void 0, n.show_removed) {
+					W(this, `Removed episode ${e.episode_number}. Nothing else was left, so ${t.title} is gone.`), this._addedSeries = void 0;
+					let n = this._selected;
+					this._closeEpisodes(), this._library = this._library?.filter((e) => e.tmdb_id !== n.tmdb_id || e.media_type !== n.media_type), this._setStatus(n, "not_requested"), this._loadSeasons(n.tmdb_id);
+				} else W(this, `Removed episode ${e.episode_number} of ${t.title}`), await this._loadEpisodes(this._selected.tmdb_id, t.season_number);
 			} catch (e) {
 				W(this, `Remove failed: ${G(e)}`);
 			} finally {

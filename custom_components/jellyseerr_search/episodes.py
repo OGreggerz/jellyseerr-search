@@ -306,10 +306,14 @@ async def async_remove_episodes(
     series_id: int,
     episode_ids: list[int],
     added_shows: AddedShows | None = None,
+    seerr: JellyseerrClient | None = None,
+    tmdb_id: int | None = None,
 ) -> dict[str, Any]:
     """Delete the files of downloaded episodes and unmonitor them, so Sonarr
     doesn't fetch them again. If nothing is left (no files, nothing monitored,
-    not following new episodes), the show is removed from Sonarr too."""
+    not following new episodes), the show is removed from Sonarr too, and from
+    Jellyseerr's records (which would otherwise say "partly available" until its
+    nightly sync)."""
     try:
         episodes = await sonarr.async_get_episodes(series_id)
         chosen = {ep["id"] for ep in episodes if ep["id"] in set(episode_ids)}
@@ -325,4 +329,10 @@ async def async_remove_episodes(
         raise _error("sonarr_error", err) from err
     if added_shows is not None and result["removed"]:
         added_shows.forget(series_id)
+    if result["removed"] and seerr is not None and tmdb_id:
+        try:
+            await seerr.async_forget("tv", tmdb_id)
+        except JellyseerrError as err:
+            # The files are gone either way; Jellyseerr catches up overnight.
+            _LOGGER.warning("Removed from Sonarr, but Jellyseerr didn't forget TMDB %s: %s", tmdb_id, err)
     return {"series_id": series_id, "files_removed": len(file_ids), "show_removed": result["removed"]}

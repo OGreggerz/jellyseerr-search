@@ -291,11 +291,17 @@ async def test_removing_the_last_episode_removes_the_show(hass, picker, aioclien
     aioclient_mock.put(f"{SONARR}/episode/monitor", json=[])
     aioclient_mock.get(f"{SONARR}/series/5", json=SERIES)
     aioclient_mock.delete(f"{SONARR}/series/5", status=200)
+    aioclient_mock.get(f"{API}/tv/291431", json={"id": 291431, "mediaInfo": {"id": 12, "status": 4}})
+    aioclient_mock.delete(f"{API}/media/12", status=204)
     ws = await hass_ws_client(hass)
-    await ws.send_json_auto_id({"type": f"{DOMAIN}/episodes/remove", "series_id": 5, "episode_ids": [101]})
+    await ws.send_json_auto_id(
+        {"type": f"{DOMAIN}/episodes/remove", "series_id": 5, "tmdb_id": 291431, "episode_ids": [101]}
+    )
     msg = await ws.receive_json()
     assert msg["result"]["show_removed"] is True
     assert calls(aioclient_mock, "delete", "/series/5")
+    # Jellyseerr forgets it now, not at its nightly availability sync.
+    assert any(c[0].lower() == "delete" and c[1].path == "/api/v1/media/12" for c in aioclient_mock.mock_calls)
 
 
 async def test_sonarr_error_reaches_card(hass, picker, aioclient_mock, hass_ws_client) -> None:
