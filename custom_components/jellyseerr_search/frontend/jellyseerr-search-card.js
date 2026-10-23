@@ -29,11 +29,11 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 	let t = "";
 	for (let n of e.cssRules) t += n.cssText;
 	return a(t);
-})(e) : e, { is: l, defineProperty: u, getOwnPropertyDescriptor: d, getOwnPropertyNames: ee, getOwnPropertySymbols: te, getPrototypeOf: ne } = Object, f = globalThis, p = f.trustedTypes, re = p ? p.emptyScript : "", ie = f.reactiveElementPolyfillSupport, m = (e, t) => e, h = {
+})(e) : e, { is: l, defineProperty: u, getOwnPropertyDescriptor: d, getOwnPropertyNames: ee, getOwnPropertySymbols: te, getPrototypeOf: ne } = Object, f = globalThis, re = f.trustedTypes, ie = re ? re.emptyScript : "", ae = f.reactiveElementPolyfillSupport, p = (e, t) => e, m = {
 	toAttribute(e, t) {
 		switch (t) {
 			case Boolean:
-				e = e ? re : null;
+				e = e ? ie : null;
 				break;
 			case Object:
 			case Array: e = e == null ? e : JSON.stringify(e);
@@ -58,23 +58,23 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 		}
 		return n;
 	}
-}, g = (e, t) => !l(e, t), _ = {
+}, oe = (e, t) => !l(e, t), se = {
 	attribute: !0,
 	type: String,
-	converter: h,
+	converter: m,
 	reflect: !1,
 	useDefault: !1,
-	hasChanged: g
+	hasChanged: oe
 };
 Symbol.metadata ??= Symbol("metadata"), f.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
-var v = class extends HTMLElement {
+var h = class extends HTMLElement {
 	static addInitializer(e) {
 		this._$Ei(), (this.l ??= []).push(e);
 	}
 	static get observedAttributes() {
 		return this.finalize(), this._$Eh && [...this._$Eh.keys()];
 	}
-	static createProperty(e, t = _) {
+	static createProperty(e, t = se) {
 		if (t.state && (t.attribute = !1), this._$Ei(), this.prototype.hasOwnProperty(e) && ((t = Object.create(t)).wrapped = !0), this.elementProperties.set(e, t), !t.noAccessor) {
 			let n = Symbol(), r = this.getPropertyDescriptor(e, n, t);
 			r !== void 0 && u(this.prototype, e, r);
@@ -100,16 +100,16 @@ var v = class extends HTMLElement {
 		};
 	}
 	static getPropertyOptions(e) {
-		return this.elementProperties.get(e) ?? _;
+		return this.elementProperties.get(e) ?? se;
 	}
 	static _$Ei() {
-		if (this.hasOwnProperty(m("elementProperties"))) return;
+		if (this.hasOwnProperty(p("elementProperties"))) return;
 		let e = ne(this);
 		e.finalize(), e.l !== void 0 && (this.l = [...e.l]), this.elementProperties = new Map(e.elementProperties);
 	}
 	static finalize() {
-		if (this.hasOwnProperty(m("finalized"))) return;
-		if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(m("properties"))) {
+		if (this.hasOwnProperty(p("finalized"))) return;
+		if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(p("properties"))) {
 			let e = this.properties, t = [...ee(e), ...te(e)];
 			for (let n of t) this.createProperty(n, e[n]);
 		}
@@ -171,14 +171,14 @@ var v = class extends HTMLElement {
 	_$ET(e, t) {
 		let n = this.constructor.elementProperties.get(e), r = this.constructor._$Eu(e, n);
 		if (r !== void 0 && !0 === n.reflect) {
-			let i = (n.converter?.toAttribute === void 0 ? h : n.converter).toAttribute(t, n.type);
+			let i = (n.converter?.toAttribute === void 0 ? m : n.converter).toAttribute(t, n.type);
 			this._$Em = e, i == null ? this.removeAttribute(r) : this.setAttribute(r, i), this._$Em = null;
 		}
 	}
 	_$AK(e, t) {
 		let n = this.constructor, r = n._$Eh.get(e);
 		if (r !== void 0 && this._$Em !== r) {
-			let e = n.getPropertyOptions(r), i = typeof e.converter == "function" ? { fromAttribute: e.converter } : e.converter?.fromAttribute === void 0 ? h : e.converter;
+			let e = n.getPropertyOptions(r), i = typeof e.converter == "function" ? { fromAttribute: e.converter } : e.converter?.fromAttribute === void 0 ? m : e.converter;
 			this._$Em = r;
 			let a = i.fromAttribute(t, e.type);
 			this[r] = a ?? this._$Ej?.get(r) ?? a, this._$Em = null;
@@ -187,7 +187,7 @@ var v = class extends HTMLElement {
 	requestUpdate(e, t, n, r = !1, i) {
 		if (e !== void 0) {
 			let a = this.constructor;
-			if (!1 === r && (i = this[e]), n ??= a.getPropertyOptions(e), !((n.hasChanged ?? g)(i, t) || n.useDefault && n.reflect && i === this._$Ej?.get(e) && !this.hasAttribute(a._$Eu(e, n)))) return;
+			if (!1 === r && (i = this[e]), n ??= a.getPropertyOptions(e), !((n.hasChanged ?? oe)(i, t) || n.useDefault && n.reflect && i === this._$Ej?.get(e) && !this.hasAttribute(a._$Eu(e, n)))) return;
 			this.C(e, t, n);
 		}
 		!1 === this.isUpdatePending && (this._$ES = this._$EP());
@@ -251,56 +251,56 @@ var v = class extends HTMLElement {
 	updated(e) {}
 	firstUpdated(e) {}
 };
-v.elementStyles = [], v.shadowRootOptions = { mode: "open" }, v[m("elementProperties")] = /* @__PURE__ */ new Map(), v[m("finalized")] = /* @__PURE__ */ new Map(), ie?.({ ReactiveElement: v }), (f.reactiveElementVersions ??= []).push("2.1.2");
+h.elementStyles = [], h.shadowRootOptions = { mode: "open" }, h[p("elementProperties")] = /* @__PURE__ */ new Map(), h[p("finalized")] = /* @__PURE__ */ new Map(), ae?.({ ReactiveElement: h }), (f.reactiveElementVersions ??= []).push("2.1.2");
 //#endregion
 //#region node_modules/lit-html/lit-html.js
-var y = globalThis, ae = (e) => e, b = y.trustedTypes, oe = b ? b.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, se = "$lit$", x = `lit$${Math.random().toFixed(9).slice(2)}$`, S = "?" + x, ce = `<${S}>`, C = document, w = () => C.createComment(""), T = (e) => e === null || typeof e != "object" && typeof e != "function", E = Array.isArray, le = (e) => E(e) || typeof e?.[Symbol.iterator] == "function", D = "[ 	\n\f\r]", O = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, k = /-->/g, ue = />/g, A = RegExp(`>|${D}(?:([^\\s"'>=/]+)(${D}*=${D}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), de = /'/g, fe = /"/g, j = /^(?:script|style|textarea|title)$/i, M = ((e) => (t, ...n) => ({
+var g = globalThis, _ = (e) => e, v = g.trustedTypes, y = v ? v.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, b = "$lit$", x = `lit$${Math.random().toFixed(9).slice(2)}$`, S = "?" + x, ce = `<${S}>`, C = document, w = () => C.createComment(""), T = (e) => e === null || typeof e != "object" && typeof e != "function", E = Array.isArray, le = (e) => E(e) || typeof e?.[Symbol.iterator] == "function", D = "[ 	\n\f\r]", O = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ue = /-->/g, k = />/g, A = RegExp(`>|${D}(?:([^\\s"'>=/]+)(${D}*=${D}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), de = /'/g, fe = /"/g, pe = /^(?:script|style|textarea|title)$/i, j = ((e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
 	values: n
-}))(1), N = Symbol.for("lit-noChange"), P = Symbol.for("lit-nothing"), F = /* @__PURE__ */ new WeakMap(), I = C.createTreeWalker(C, 129);
-function L(e, t) {
+}))(1), M = Symbol.for("lit-noChange"), N = Symbol.for("lit-nothing"), me = /* @__PURE__ */ new WeakMap(), P = C.createTreeWalker(C, 129);
+function he(e, t) {
 	if (!E(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
-	return oe === void 0 ? t : oe.createHTML(t);
+	return y === void 0 ? t : y.createHTML(t);
 }
-var pe = (e, t) => {
+var F = (e, t) => {
 	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = O;
 	for (let t = 0; t < n; t++) {
 		let n = e[t], s, c, l = -1, u = 0;
-		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === O ? c[1] === "!--" ? o = k : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = A) : (j.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = A) : o = ue : o === A ? c[0] === ">" ? (o = i ?? O, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? A : c[3] === "\"" ? fe : de) : o === fe || o === de ? o = A : o === k || o === ue ? o = O : (o = A, i = void 0);
+		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === O ? c[1] === "!--" ? o = ue : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = A) : (pe.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = A) : o = k : o === A ? c[0] === ">" ? (o = i ?? O, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? A : c[3] === "\"" ? fe : de) : o === fe || o === de ? o = A : o === ue || o === k ? o = O : (o = A, i = void 0);
 		let d = o === A && e[t + 1].startsWith("/>") ? " " : "";
-		a += o === O ? n + ce : l >= 0 ? (r.push(s), n.slice(0, l) + se + n.slice(l) + x + d) : n + x + (l === -2 ? t : d);
+		a += o === O ? n + ce : l >= 0 ? (r.push(s), n.slice(0, l) + b + n.slice(l) + x + d) : n + x + (l === -2 ? t : d);
 	}
-	return [L(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
-}, R = class e {
+	return [he(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
+}, I = class e {
 	constructor({ strings: t, _$litType$: n }, r) {
 		let i;
 		this.parts = [];
-		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = pe(t, n);
-		if (this.el = e.createElement(l, r), I.currentNode = this.el.content, n === 2 || n === 3) {
+		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = F(t, n);
+		if (this.el = e.createElement(l, r), P.currentNode = this.el.content, n === 2 || n === 3) {
 			let e = this.el.content.firstChild;
 			e.replaceWith(...e.childNodes);
 		}
-		for (; (i = I.nextNode()) !== null && c.length < s;) {
+		for (; (i = P.nextNode()) !== null && c.length < s;) {
 			if (i.nodeType === 1) {
-				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(se)) {
+				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(b)) {
 					let t = u[o++], n = i.getAttribute(e).split(x), r = /([.?@])?(.*)/.exec(t);
 					c.push({
 						type: 1,
 						index: a,
 						name: r[2],
 						strings: n,
-						ctor: r[1] === "." ? he : r[1] === "?" ? ge : r[1] === "@" ? _e : V
+						ctor: r[1] === "." ? ge : r[1] === "?" ? _e : r[1] === "@" ? ve : B
 					}), i.removeAttribute(e);
 				} else e.startsWith(x) && (c.push({
 					type: 6,
 					index: a
 				}), i.removeAttribute(e));
-				if (j.test(i.tagName)) {
+				if (pe.test(i.tagName)) {
 					let e = i.textContent.split(x), t = e.length - 1;
 					if (t > 0) {
-						i.textContent = b ? b.emptyScript : "";
-						for (let n = 0; n < t; n++) i.append(e[n], w()), I.nextNode(), c.push({
+						i.textContent = v ? v.emptyScript : "";
+						for (let n = 0; n < t; n++) i.append(e[n], w()), P.nextNode(), c.push({
 							type: 2,
 							index: ++a
 						});
@@ -328,12 +328,12 @@ var pe = (e, t) => {
 		return n.innerHTML = e, n;
 	}
 };
-function z(e, t, n = e, r) {
-	if (t === N) return t;
+function L(e, t, n = e, r) {
+	if (t === M) return t;
 	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = T(t) ? void 0 : t._$litDirective$;
-	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = z(e, i._$AS(e, t.values), i, r)), t;
+	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = L(e, i._$AS(e, t.values), i, r)), t;
 }
-var me = class {
+var R = class {
 	constructor(e, t) {
 		this._$AV = [], this._$AN = void 0, this._$AD = e, this._$AM = t;
 	}
@@ -345,27 +345,27 @@ var me = class {
 	}
 	u(e) {
 		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? C).importNode(t, !0);
-		I.currentNode = r;
-		let i = I.nextNode(), a = 0, o = 0, s = n[0];
+		P.currentNode = r;
+		let i = P.nextNode(), a = 0, o = 0, s = n[0];
 		for (; s !== void 0;) {
 			if (a === s.index) {
 				let t;
-				s.type === 2 ? t = new B(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new ve(i, this, e)), this._$AV.push(t), s = n[++o];
+				s.type === 2 ? t = new z(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new ye(i, this, e)), this._$AV.push(t), s = n[++o];
 			}
-			a !== s?.index && (i = I.nextNode(), a++);
+			a !== s?.index && (i = P.nextNode(), a++);
 		}
-		return I.currentNode = C, r;
+		return P.currentNode = C, r;
 	}
 	p(e) {
 		let t = 0;
 		for (let n of this._$AV) n !== void 0 && (n.strings === void 0 ? n._$AI(e[t]) : (n._$AI(e, n, t), t += n.strings.length - 2)), t++;
 	}
-}, B = class e {
+}, z = class e {
 	get _$AU() {
 		return this._$AM?._$AU ?? this._$Cv;
 	}
 	constructor(e, t, n, r) {
-		this.type = 2, this._$AH = P, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
+		this.type = 2, this._$AH = N, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
 	}
 	get parentNode() {
 		let e = this._$AA.parentNode, t = this._$AM;
@@ -378,7 +378,7 @@ var me = class {
 		return this._$AB;
 	}
 	_$AI(e, t = this) {
-		e = z(this, e, t), T(e) ? e === P || e == null || e === "" ? (this._$AH !== P && this._$AR(), this._$AH = P) : e !== this._$AH && e !== N && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? le(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
+		e = L(this, e, t), T(e) ? e === N || e == null || e === "" ? (this._$AH !== N && this._$AR(), this._$AH = N) : e !== this._$AH && e !== M && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? le(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
 	}
 	O(e) {
 		return this._$AA.parentNode.insertBefore(e, this._$AB);
@@ -387,19 +387,19 @@ var me = class {
 		this._$AH !== e && (this._$AR(), this._$AH = this.O(e));
 	}
 	_(e) {
-		this._$AH !== P && T(this._$AH) ? this._$AA.nextSibling.data = e : this.T(C.createTextNode(e)), this._$AH = e;
+		this._$AH !== N && T(this._$AH) ? this._$AA.nextSibling.data = e : this.T(C.createTextNode(e)), this._$AH = e;
 	}
 	$(e) {
-		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = R.createElement(L(n.h, n.h[0]), this.options)), n);
+		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = I.createElement(he(n.h, n.h[0]), this.options)), n);
 		if (this._$AH?._$AD === r) this._$AH.p(t);
 		else {
-			let e = new me(r, this), n = e.u(this.options);
+			let e = new R(r, this), n = e.u(this.options);
 			e.p(t), this.T(n), this._$AH = e;
 		}
 	}
 	_$AC(e) {
-		let t = F.get(e.strings);
-		return t === void 0 && F.set(e.strings, t = new R(e)), t;
+		let t = me.get(e.strings);
+		return t === void 0 && me.set(e.strings, t = new I(e)), t;
 	}
 	k(t) {
 		E(this._$AH) || (this._$AH = [], this._$AR());
@@ -409,14 +409,14 @@ var me = class {
 	}
 	_$AR(e = this._$AA.nextSibling, t) {
 		for (this._$AP?.(!1, !0, t); e !== this._$AB;) {
-			let t = ae(e).nextSibling;
-			ae(e).remove(), e = t;
+			let t = _(e).nextSibling;
+			_(e).remove(), e = t;
 		}
 	}
 	setConnected(e) {
 		this._$AM === void 0 && (this._$Cv = e, this._$AP?.(e));
 	}
-}, V = class {
+}, B = class {
 	get tagName() {
 		return this.element.tagName;
 	}
@@ -424,47 +424,47 @@ var me = class {
 		return this._$AM._$AU;
 	}
 	constructor(e, t, n, r, i) {
-		this.type = 1, this._$AH = P, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = P;
+		this.type = 1, this._$AH = N, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = N;
 	}
 	_$AI(e, t = this, n, r) {
 		let i = this.strings, a = !1;
-		if (i === void 0) e = z(this, e, t, 0), a = !T(e) || e !== this._$AH && e !== N, a && (this._$AH = e);
+		if (i === void 0) e = L(this, e, t, 0), a = !T(e) || e !== this._$AH && e !== M, a && (this._$AH = e);
 		else {
 			let r = e, o, s;
-			for (e = i[0], o = 0; o < i.length - 1; o++) s = z(this, r[n + o], t, o), s === N && (s = this._$AH[o]), a ||= !T(s) || s !== this._$AH[o], s === P ? e = P : e !== P && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
+			for (e = i[0], o = 0; o < i.length - 1; o++) s = L(this, r[n + o], t, o), s === M && (s = this._$AH[o]), a ||= !T(s) || s !== this._$AH[o], s === N ? e = N : e !== N && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
 		}
 		a && !r && this.j(e);
 	}
 	j(e) {
-		e === P ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
+		e === N ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
 	}
-}, he = class extends V {
+}, ge = class extends B {
 	constructor() {
 		super(...arguments), this.type = 3;
 	}
 	j(e) {
-		this.element[this.name] = e === P ? void 0 : e;
+		this.element[this.name] = e === N ? void 0 : e;
 	}
-}, ge = class extends V {
+}, _e = class extends B {
 	constructor() {
 		super(...arguments), this.type = 4;
 	}
 	j(e) {
-		this.element.toggleAttribute(this.name, !!e && e !== P);
+		this.element.toggleAttribute(this.name, !!e && e !== N);
 	}
-}, _e = class extends V {
+}, ve = class extends B {
 	constructor(e, t, n, r, i) {
 		super(e, t, n, r, i), this.type = 5;
 	}
 	_$AI(e, t = this) {
-		if ((e = z(this, e, t, 0) ?? P) === N) return;
-		let n = this._$AH, r = e === P && n !== P || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== P && (n === P || r);
+		if ((e = L(this, e, t, 0) ?? N) === M) return;
+		let n = this._$AH, r = e === N && n !== N || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== N && (n === N || r);
 		r && this.element.removeEventListener(this.name, this, n), i && this.element.addEventListener(this.name, this, e), this._$AH = e;
 	}
 	handleEvent(e) {
 		typeof this._$AH == "function" ? this._$AH.call(this.options?.host ?? this.element, e) : this._$AH.handleEvent(e);
 	}
-}, ve = class {
+}, ye = class {
 	constructor(e, t, n) {
 		this.element = e, this.type = 6, this._$AN = void 0, this._$AM = t, this.options = n;
 	}
@@ -472,18 +472,33 @@ var me = class {
 		return this._$AM._$AU;
 	}
 	_$AI(e) {
-		z(this, e);
+		L(this, e);
 	}
-}, ye = y.litHtmlPolyfillSupport;
-ye?.(R, B), (y.litHtmlVersions ??= []).push("3.3.3");
-var be = (e, t, n) => {
+}, be = {
+	M: b,
+	P: x,
+	A: S,
+	C: 1,
+	L: F,
+	R,
+	D: le,
+	V: L,
+	I: z,
+	H: B,
+	N: _e,
+	U: ve,
+	B: ge,
+	F: ye
+}, xe = g.litHtmlPolyfillSupport;
+xe?.(I, z), (g.litHtmlVersions ??= []).push("3.3.3");
+var Se = (e, t, n) => {
 	let r = n?.renderBefore ?? t, i = r._$litPart$;
 	if (i === void 0) {
 		let e = n?.renderBefore ?? null;
-		r._$litPart$ = i = new B(t.insertBefore(w(), e), e, void 0, n ?? {});
+		r._$litPart$ = i = new z(t.insertBefore(w(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
-}, H = globalThis, U = class extends v {
+}, V = globalThis, H = class extends h {
 	constructor() {
 		super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
 	}
@@ -493,7 +508,7 @@ var be = (e, t, n) => {
 	}
 	update(e) {
 		let t = this.render();
-		this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(e), this._$Do = be(t, this.renderRoot, this.renderOptions);
+		this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(e), this._$Do = Se(t, this.renderRoot, this.renderOptions);
 	}
 	connectedCallback() {
 		super.connectedCallback(), this._$Do?.setConnected(!0);
@@ -502,15 +517,60 @@ var be = (e, t, n) => {
 		super.disconnectedCallback(), this._$Do?.setConnected(!1);
 	}
 	render() {
-		return N;
+		return M;
 	}
 };
-U._$litElement$ = !0, U.finalized = !0, H.litElementHydrateSupport?.({ LitElement: U });
-var xe = H.litElementPolyfillSupport;
-xe?.({ LitElement: U }), (H.litElementVersions ??= []).push("4.2.2");
+H._$litElement$ = !0, H.finalized = !0, V.litElementHydrateSupport?.({ LitElement: H });
+var Ce = V.litElementPolyfillSupport;
+Ce?.({ LitElement: H }), (V.litElementVersions ??= []).push("4.2.2");
+//#endregion
+//#region node_modules/lit-html/directive.js
+var U = {
+	ATTRIBUTE: 1,
+	CHILD: 2,
+	PROPERTY: 3,
+	BOOLEAN_ATTRIBUTE: 4,
+	EVENT: 5,
+	ELEMENT: 6
+}, we = (e) => (...t) => ({
+	_$litDirective$: e,
+	values: t
+}), Te = class {
+	constructor(e) {}
+	get _$AU() {
+		return this._$AM._$AU;
+	}
+	_$AT(e, t, n) {
+		this._$Ct = e, this._$AM = t, this._$Ci = n;
+	}
+	_$AS(e, t) {
+		return this.update(e, t);
+	}
+	update(e, t) {
+		return this.render(...t);
+	}
+}, { I: Ee } = be, De = (e) => e.strings === void 0, Oe = {}, ke = (e, t = Oe) => e._$AH = t, Ae = we(class extends Te {
+	constructor(e) {
+		if (super(e), e.type !== U.PROPERTY && e.type !== U.ATTRIBUTE && e.type !== U.BOOLEAN_ATTRIBUTE) throw Error("The `live` directive is not allowed on child or event bindings");
+		if (!De(e)) throw Error("`live` bindings can only contain a single expression");
+	}
+	render(e) {
+		return e;
+	}
+	update(e, [t]) {
+		if (t === M || t === N) return t;
+		let n = e.element, r = e.name;
+		if (e.type === U.PROPERTY) {
+			if (t === n[r]) return M;
+		} else if (e.type === U.BOOLEAN_ATTRIBUTE) {
+			if (!!t === n.hasAttribute(r)) return M;
+		} else if (e.type === U.ATTRIBUTE && n.getAttribute(r) === t + "") return M;
+		return ke(e), t;
+	}
+});
 //#endregion
 //#region src/ha.ts
-function Se(e, t, n) {
+function je(e, t, n) {
 	e.dispatchEvent(new CustomEvent(t, {
 		detail: n,
 		bubbles: !0,
@@ -518,20 +578,20 @@ function Se(e, t, n) {
 	}));
 }
 function W(e, t) {
-	Se(e, "hass-notification", { message: t });
+	je(e, "hass-notification", { message: t });
 }
 function G(e) {
 	return e && typeof e == "object" && "message" in e ? String(e.message) : String(e);
 }
 //#endregion
 //#region src/logic.ts
-var Ce = /* @__PURE__ */ new Set([
+var Me = /* @__PURE__ */ new Set([
 	"not_requested",
 	"unknown",
 	"deleted"
 ]);
 function K(e) {
-	return Ce.has(e);
+	return Me.has(e);
 }
 function q(e) {
 	switch (e) {
@@ -543,22 +603,22 @@ function q(e) {
 		default: return null;
 	}
 }
-function we(e) {
+function Ne(e) {
 	return e === "available" || e === "partially_available" || e === "processing";
 }
 function J(e) {
 	return e.filter((e) => K(e.status)).map((e) => e.season_number);
 }
-function Te(e) {
+function Pe(e) {
 	return K(e) || e === "partially_available";
 }
-function Ee(e) {
+function Fe(e) {
 	return e.status === "missing" || e.status === "not_aired" && !e.monitored;
 }
-function De(e) {
-	return e.filter(Ee).map((e) => e.id);
+function Ie(e) {
+	return e.filter(Fe).map((e) => e.id);
 }
-function Oe(e) {
+function Le(e) {
 	switch (e.status) {
 		case "downloaded": return "Downloaded";
 		case "downloading": return "Downloading";
@@ -567,7 +627,7 @@ function Oe(e) {
 		default: return null;
 	}
 }
-function ke(e) {
+function Re(e) {
 	if (!e) return "No air date";
 	let [t, n, r] = e.split("-").map(Number), i = [
 		"Jan",
@@ -585,7 +645,7 @@ function ke(e) {
 	][n - 1];
 	return i ? `${r} ${i} ${t}` : e;
 }
-function Ae(e, t) {
+function ze(e, t) {
 	let n = t.trim().toLowerCase();
 	return n ? e.filter((e) => e.title.toLowerCase().includes(n)) : [...e];
 }
@@ -597,7 +657,7 @@ var Y = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, X, je = "0.8.0", Z = "jellyseerr_search", Me = 400, Q = 2, Ne = 36e5, Pe = [2e4, 6e4], Fe = !1, Ie = [
+}, X, Be = "0.8.1", Z = "jellyseerr_search", Ve = 400, Q = 2, He = 36e5, Ue = [2e4, 6e4], We = !1, Ge = [
 	{
 		value: "all",
 		label: "All"
@@ -614,7 +674,7 @@ var Y = class {
 		value: "downloaded",
 		label: "Downloaded"
 	}
-], Le = [{
+], Ke = [{
 	value: "trending",
 	label: "Trending",
 	heading: "Trending today"
@@ -623,10 +683,10 @@ var Y = class {
 	label: "Popular",
 	heading: "Popular"
 }];
-function Re(e, t) {
+function qe(e, t) {
 	return t === "daily" ? `${e} is released by date, so it's now set up as a daily show.` : `${e} isn't released by date, so it's no longer set up as a daily show.`;
 }
-var $ = class extends U {
+var $ = class extends H {
 	constructor() {
 		super(), this._latestSearch = new Y(), this._latestSeasons = new Y(), this._latestBrowse = new Y(), this._latestEpisodes = new Y(), this._latestLibrary = new Y(), this._refreshTimers = [], this._browseAt = 0, this._query = "", this._filter = "all", this._browse = "trending", this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1, this._confirmRemove = !1, this._removing = !1, this._picker = !1, this._picked = /* @__PURE__ */ new Set(), this._pickerBusy = !1, this._downloading = !1;
 	}
@@ -689,7 +749,7 @@ var $ = class extends U {
 	}
 	setConfig(e) {
 		if (!e) throw Error("Invalid configuration");
-		if (e.media_type && !Ie.some((t) => t.value === e.media_type)) throw Error("media_type must be all, movie or tv");
+		if (e.media_type && !Ge.some((t) => t.value === e.media_type)) throw Error("media_type must be all, movie or tv");
 		this._config = e, this._filter = e.media_type ?? "all";
 	}
 	getCardSize() {
@@ -706,12 +766,12 @@ var $ = class extends U {
 		super.disconnectedCallback(), clearTimeout(this._debounce), this._clearRefreshTimers();
 	}
 	updated(e) {
-		e.has("hass") && this.hass && !Fe && (Fe = !0, this._checkVersion()), e.has("hass") && this.hass && this._browseDue() && this._loadBrowse();
+		e.has("hass") && this.hass && !We && (We = !0, this._checkVersion()), e.has("hass") && this.hass && this._browseDue() && this._loadBrowse();
 	}
 	async _checkVersion() {
 		try {
 			let { version: e } = await this.hass.callWS({ type: `${Z}/version` });
-			e !== "0.8.0" && (this._staleVersion = e);
+			e !== "0.8.1" && (this._staleVersion = e);
 		} catch {}
 	}
 	async _reload() {
@@ -741,7 +801,7 @@ var $ = class extends U {
 		}
 	}
 	_browseDue() {
-		return !this._showBrowse() || this._selected ? !1 : this._browseKey !== `${this._browse}/${this._filter}` || Date.now() - this._browseAt > Ne;
+		return !this._showBrowse() || this._selected ? !1 : this._browseKey !== `${this._browse}/${this._filter}` || Date.now() - this._browseAt > He;
 	}
 	async _loadBrowse() {
 		let e = this._latestBrowse.next(), t = `${this._browse}/${this._filter}`;
@@ -761,7 +821,7 @@ var $ = class extends U {
 		e !== this._browse && (this._browse = e, this._browseDue() && this._loadBrowse());
 	}
 	_onInput(e) {
-		this._query = e.target.value, clearTimeout(this._debounce), this._filter !== "downloaded" && (this._debounce = setTimeout(() => void this._search(), Me));
+		this._query = e.target.value, clearTimeout(this._debounce), this._filter !== "downloaded" && (this._debounce = setTimeout(() => void this._search(), Ve));
 	}
 	_onKeydown(e) {
 		e.key === "Enter" && (clearTimeout(this._debounce), e.target.blur(), this._search());
@@ -894,8 +954,8 @@ var $ = class extends U {
 				season_number: t,
 				...this._entry()
 			});
-			if (r.added && (this._addedSeries = r.series_id), !n()) return;
-			this._episodes = r;
+			if (!n()) return;
+			r.added && (this._addedSeries = r.series_id), this._episodes = r;
 		} catch (e) {
 			n() && (this._episodesError = G(e));
 		}
@@ -922,30 +982,35 @@ var $ = class extends U {
 		t.has(e) ? t.delete(e) : t.add(e), this._picked = t;
 	}
 	_toggleAllPicks() {
-		let e = De(this._episodes?.episodes ?? []);
+		let e = Ie(this._episodes?.episodes ?? []);
 		this._picked = this._picked.size === e.length ? /* @__PURE__ */ new Set() : new Set(e);
 	}
+	_stillOn(e, t) {
+		return this._selected === e && this._episodes?.series_id === t;
+	}
+	_recoverIfGone(e, t, n) {
+		return e?.translation_key === "series_gone" && (W(this, `${t.title} had been tidied out of Sonarr. It's back now: try again.`), this._selected === t && this._loadEpisodes(t.tmdb_id, n), !0);
+	}
 	async _download() {
-		let e = this._episodes;
-		if (!e || !this._picked.size || this._pickerBusy || !this._selected) return;
-		let t = [...this._picked];
+		let e = this._episodes, t = this._selected;
+		if (!e || !t || !this._picked.size || this._pickerBusy) return;
+		let n = [...this._picked];
 		this._pickerBusy = !0, this._downloading = !0;
 		try {
-			let n = await this.hass.callWS({
+			let r = await this.hass.callWS({
 				type: `${Z}/episodes/download`,
 				series_id: e.series_id,
-				episode_ids: t,
+				episode_ids: n,
 				...this._entry()
 			});
-			this._addedSeries = void 0;
-			let r = n.series_type_changed ? ` ${Re(e.title, n.series_type_changed)}` : "";
-			W(this, `Downloading ${t.length} episode${t.length === 1 ? "" : "s"} of ${e.title}.${r}`), this._picked = /* @__PURE__ */ new Set();
-			let i = this._selected.tmdb_id;
-			await this._loadEpisodes(i, e.season_number), this._clearRefreshTimers(), this._refreshTimers = Pe.map((t) => setTimeout(() => {
-				this._episodes?.series_id === e.series_id && this._loadEpisodes(i, e.season_number);
-			}, t));
-		} catch (e) {
-			W(this, `Download failed: ${G(e)}`);
+			this._addedSeries === e.series_id && (this._addedSeries = void 0);
+			let i = r.series_type_changed ? ` ${qe(e.title, r.series_type_changed)}` : "";
+			if (W(this, `Downloading ${n.length} episode${n.length === 1 ? "" : "s"} of ${e.title}.${i}`), !this._stillOn(t, e.series_id)) return;
+			this._picked = /* @__PURE__ */ new Set(), await this._loadEpisodes(t.tmdb_id, e.season_number), this._clearRefreshTimers(), this._refreshTimers = Ue.map((n) => setTimeout(() => {
+				this._stillOn(t, e.series_id) && this._loadEpisodes(t.tmdb_id, e.season_number);
+			}, n));
+		} catch (n) {
+			this._recoverIfGone(n, t, e.season_number) || W(this, `Download failed: ${G(n)}`);
 		} finally {
 			this._pickerBusy = !1, this._downloading = !1;
 		}
@@ -954,61 +1019,57 @@ var $ = class extends U {
 		t.preventDefault(), t.stopPropagation(), this._confirmRemoveEp = e;
 	}
 	async _removeEpisode(e) {
-		let t = this._episodes;
-		if (t && !this._pickerBusy && this._selected) {
+		let t = this._episodes, n = this._selected;
+		if (t && n && !this._pickerBusy) {
 			this._pickerBusy = !0;
 			try {
-				let n = await this.hass.callWS({
+				let r = await this.hass.callWS({
 					type: `${Z}/episodes/remove`,
 					series_id: t.series_id,
-					tmdb_id: this._selected.tmdb_id,
+					tmdb_id: n.tmdb_id,
 					episode_ids: [e.id],
 					...this._entry()
 				});
-				if (this._confirmRemoveEp = void 0, n.show_removed) {
-					W(this, `Removed episode ${e.episode_number}. Nothing else was left, so ${t.title} is gone.`), this._addedSeries = void 0;
-					let n = this._selected;
-					this._closeEpisodes(), this._library = this._library?.filter((e) => e.tmdb_id !== n.tmdb_id || e.media_type !== n.media_type), this._setStatus(n, "not_requested"), this._loadSeasons(n.tmdb_id);
-				} else W(this, `Removed episode ${e.episode_number} of ${t.title}`), await this._loadEpisodes(this._selected.tmdb_id, t.season_number);
+				this._confirmRemoveEp = void 0, r.show_removed ? (W(this, `Removed episode ${e.episode_number}. Nothing else was left, so ${t.title} is gone.`), this._addedSeries === t.series_id && (this._addedSeries = void 0), this._library = this._library?.filter((e) => e.tmdb_id !== n.tmdb_id || e.media_type !== n.media_type), this._setStatus(n, "not_requested"), this._stillOn(n, t.series_id) && (this._closeEpisodes(), this._loadSeasons(n.tmdb_id))) : (W(this, `Removed episode ${e.episode_number} of ${t.title}`), this._stillOn(n, t.series_id) && await this._loadEpisodes(n.tmdb_id, t.season_number));
 			} catch (e) {
-				W(this, `Remove failed: ${G(e)}`);
+				this._recoverIfGone(e, n, t.season_number) || W(this, `Remove failed: ${G(e)}`);
 			} finally {
 				this._pickerBusy = !1;
 			}
 		}
 	}
 	async _setFollowNew(e) {
-		let t = this._episodes;
-		if (t && !this._pickerBusy && this._selected) {
+		let t = this._episodes, n = this._selected;
+		if (t && n && !this._pickerBusy) {
 			this._pickerBusy = !0;
 			try {
-				let n = await this.hass.callWS({
+				let r = await this.hass.callWS({
 					type: `${Z}/episodes/options`,
 					series_id: t.series_id,
 					follow_new: e,
 					...this._entry()
 				});
-				n.follow_new && (this._addedSeries = void 0), n.series_type_changed && W(this, Re(t.title, n.series_type_changed)), await this._loadEpisodes(this._selected.tmdb_id, t.season_number);
+				r.follow_new && this._addedSeries === t.series_id && (this._addedSeries = void 0), r.series_type_changed && W(this, qe(t.title, r.series_type_changed)), e && !r.follow_new && W(this, `${t.title} has no regular series to follow yet.`), this._stillOn(n, t.series_id) && await this._loadEpisodes(n.tmdb_id, t.season_number);
 			} catch (e) {
-				W(this, `Couldn't change it: ${G(e)}`);
+				this._recoverIfGone(e, n, t.season_number) || W(this, `Couldn't change it: ${G(e)}`), this.requestUpdate();
 			} finally {
 				this._pickerBusy = !1;
 			}
 		}
 	}
 	render() {
-		return this._config ? M`
+		return this._config ? j`
       <ha-card .header=${this._config.title || void 0}>
-        ${this._staleVersion ? M`<div class="stale">
+        ${this._staleVersion ? j`<div class="stale">
               Card is out of date (server has ${this._staleVersion}).
               <button class="link" @click=${this._reload}>Reload</button>
-            </div>` : P}
+            </div>` : N}
         ${this._selected && this._episodeSeason ? this._renderEpisodes(this._selected, this._episodeSeason) : this._selected ? this._renderDetail(this._selected) : this._renderSearch()}
       </ha-card>
-    ` : P;
+    ` : N;
 	}
 	_renderSearch() {
-		return M`
+		return j`
       <div class="search">
         <div class="field">
           <ha-icon icon="mdi:magnify"></ha-icon>
@@ -1022,12 +1083,12 @@ var $ = class extends U {
             @input=${this._onInput}
             @keydown=${this._onKeydown}
           />
-          ${this._query ? M`<button class="icon" aria-label="Clear" @click=${this._clear}>
+          ${this._query ? j`<button class="icon" aria-label="Clear" @click=${this._clear}>
                 <ha-icon icon="mdi:close"></ha-icon>
-              </button>` : P}
+              </button>` : N}
         </div>
         <div class="chips" role="radiogroup" aria-label="Media type">
-          ${Ie.map((e) => M`<button
+          ${Ge.map((e) => j`<button
               class="chip ${e.value === this._filter ? "on" : ""}"
               role="radio"
               aria-checked=${e.value === this._filter}
@@ -1041,19 +1102,19 @@ var $ = class extends U {
     `;
 	}
 	_renderResults() {
-		return this._filter === "downloaded" ? this._renderLibrary() : this._showBrowse() ? this._renderBrowse() : this._error ? M`<div class="message error">${this._error}</div>` : this._loading && !this._results ? M`<div class="message">Searching…</div>` : this._results ? this._results.length ? M`
+		return this._filter === "downloaded" ? this._renderLibrary() : this._showBrowse() ? this._renderBrowse() : this._error ? j`<div class="message error">${this._error}</div>` : this._loading && !this._results ? j`<div class="message">Searching…</div>` : this._results ? this._results.length ? j`
       <div class="grid ${this._loading ? "busy" : ""}">
         ${this._results.map((e) => this._renderTile(e))}
       </div>
-    ` : M`<div class="message">No movies or shows found.</div>` : P;
+    ` : j`<div class="message">No movies or shows found.</div>` : N;
 	}
 	_renderBrowse() {
-		let e = Le.find((e) => e.value === this._browse).heading, t;
-		return t = this._browseError ? M`<div class="message error">Couldn't load ${e.toLowerCase()} (${this._browseError}).</div>` : this._browseResults ? this._browseResults.length ? M`<div class="grid">${this._browseResults.map((e) => this._renderTile(e))}</div>` : M`<div class="message">Nothing to show.</div>` : M`<div class="message">Loading…</div>`, M`
+		let e = Ke.find((e) => e.value === this._browse).heading, t;
+		return t = this._browseError ? j`<div class="message error">Couldn't load ${e.toLowerCase()} (${this._browseError}).</div>` : this._browseResults ? this._browseResults.length ? j`<div class="grid">${this._browseResults.map((e) => this._renderTile(e))}</div>` : j`<div class="message">Nothing to show.</div>` : j`<div class="message">Loading…</div>`, j`
       <div class="section">
         <span>${e}</span>
         <div class="chips small" role="radiogroup" aria-label="Browse">
-          ${Le.map((e) => M`<button
+          ${Ke.map((e) => j`<button
               class="chip ${e.value === this._browse ? "on" : ""}"
               role="radio"
               aria-checked=${e.value === this._browse}
@@ -1068,17 +1129,17 @@ var $ = class extends U {
 	}
 	_renderLibrary() {
 		let e;
-		if (this._libraryError) e = M`<div class="message error">Couldn't load what's downloaded (${this._libraryError}).</div>`;
-		else if (!this._library) e = M`<div class="message">Loading…</div>`;
+		if (this._libraryError) e = j`<div class="message error">Couldn't load what's downloaded (${this._libraryError}).</div>`;
+		else if (!this._library) e = j`<div class="message">Loading…</div>`;
 		else {
-			let t = Ae(this._library, this._query);
-			e = t.length ? M`<div class="grid">${t.map((e) => this._renderTile(e))}</div>` : M`<div class="message">
+			let t = ze(this._library, this._query);
+			e = t.length ? j`<div class="grid">${t.map((e) => this._renderTile(e))}</div>` : j`<div class="message">
             ${this._library.length ? `Nothing downloaded matches “${this._query.trim()}”.` : "Nothing downloaded yet."}
           </div>`;
 		}
-		return M`
+		return j`
       <div class="section stack">
-        <span>Downloaded${this._library ? M` · ${Ae(this._library, this._query).length}` : P}</span>
+        <span>Downloaded${this._library ? j` · ${ze(this._library, this._query).length}` : N}</span>
         <span class="hint">Newest first. Tap one to remove it or get more episodes.</span>
       </div>
       ${e}
@@ -1086,11 +1147,11 @@ var $ = class extends U {
 	}
 	_renderTile(e) {
 		let t = q(e.status);
-		return M`
+		return j`
       <button class="tile" @click=${() => this._open(e)} aria-label="${e.title} ${e.year ?? ""}">
         <div class="poster">
-          ${e.poster_url ? M`<img src=${e.poster_url} alt="" loading="lazy" />` : M`<ha-icon icon=${e.media_type === "tv" ? "mdi:television-classic" : "mdi:movie-open"}></ha-icon>`}
-          ${t ? M`<span class="status ${e.status}">${t}</span>` : P}
+          ${e.poster_url ? j`<img src=${e.poster_url} alt="" loading="lazy" />` : j`<ha-icon icon=${e.media_type === "tv" ? "mdi:television-classic" : "mdi:movie-open"}></ha-icon>`}
+          ${t ? j`<span class="status ${e.status}">${t}</span>` : N}
           <span class="kind">${e.media_type === "tv" ? "TV" : "Movie"}</span>
         </div>
         <div class="title">${e.title}</div>
@@ -1099,38 +1160,38 @@ var $ = class extends U {
     `;
 	}
 	_renderDetail(e) {
-		let t = q(e.status), n = e.media_type === "tv", r = n ? Te(e.status) && (!this._seasons || this._chosen.size > 0) : K(e.status);
-		return M`
+		let t = q(e.status), n = e.media_type === "tv", r = n ? Pe(e.status) && (!this._seasons || this._chosen.size > 0) : K(e.status);
+		return j`
       <div class="detail">
         <button class="back" @click=${this._back}>
           <ha-icon icon="mdi:arrow-left"></ha-icon> Back
         </button>
         <div class="head">
-          ${e.poster_url ? M`<img class="thumb" src=${e.poster_url} alt="" />` : P}
+          ${e.poster_url ? j`<img class="thumb" src=${e.poster_url} alt="" />` : N}
           <div>
             <h2>${e.title}</h2>
             <div class="meta">
               ${e.year ?? ""} · ${n ? "TV show" : "Movie"}
-              ${t ? M`<span class="status inline ${e.status}">${t}</span>` : P}
+              ${t ? j`<span class="status inline ${e.status}">${t}</span>` : N}
             </div>
           </div>
         </div>
-        ${e.overview ? M`<p class="overview">${e.overview}</p>` : P}
-        ${n ? this._renderSeasons() : P}
-        ${this._config.show_4k && r ? M`<label class="row">
+        ${e.overview ? j`<p class="overview">${e.overview}</p>` : N}
+        ${n ? this._renderSeasons() : N}
+        ${this._config.show_4k && r ? j`<label class="row">
               <input type="checkbox" .checked=${this._is4k} @change=${(e) => this._is4k = e.target.checked} />
               Request in 4K
-            </label>` : P}
+            </label>` : N}
         <button class="primary" ?disabled=${!r || this._requesting} @click=${this._request}>
           ${this._requesting ? "Requesting…" : r ? "Request" : t ?? "Unavailable"}
         </button>
-        ${this._config.show_remove && we(e.status) ? this._renderRemove(e) : P}
+        ${this._config.show_remove && Ne(e.status) ? this._renderRemove(e) : N}
       </div>
     `;
 	}
 	_renderRemove(e) {
 		let t = e.media_type === "tv" ? "the whole show" : "this movie";
-		return this._confirmRemove ? M`
+		return this._confirmRemove ? j`
       <div class="confirm" role="alert">
         Delete ${t} and its files from ${e.media_type === "tv" ? "Sonarr" : "Radarr"}? This can't be
         undone.
@@ -1143,23 +1204,23 @@ var $ = class extends U {
           ${this._removing ? "Removing…" : "Delete files"}
         </button>
       </div>
-    ` : M`<button class="danger" @click=${this._remove}>Remove…</button>`;
+    ` : j`<button class="danger" @click=${this._remove}>Remove…</button>`;
 	}
 	_renderSeasons() {
-		if (this._seasonsError) return M`<div class="message error">Couldn't load seasons (${this._seasonsError}). Request will ask for all.</div>`;
-		if (!this._seasons) return M`<div class="message">Loading seasons…</div>`;
+		if (this._seasonsError) return j`<div class="message error">Couldn't load seasons (${this._seasonsError}). Request will ask for all.</div>`;
+		if (!this._seasons) return j`<div class="message">Loading seasons…</div>`;
 		let e = J(this._seasons);
-		return M`
+		return j`
       <div class="seasons">
         <div class="seasons-head">
           <span>Seasons</span>
-          ${e.length > 1 ? M`<button class="link" @click=${this._toggleAllSeasons}>
+          ${e.length > 1 ? j`<button class="link" @click=${this._toggleAllSeasons}>
                 ${this._chosen.size === e.length ? "Select none" : "Select all"}
-              </button>` : P}
+              </button>` : N}
         </div>
         ${this._seasons.map((e) => {
 			let t = K(e.status), n = q(e.status);
-			return M`<label class="row season ${t ? "" : "done"}">
+			return j`<label class="row season ${t ? "" : "done"}">
             <input
               type="checkbox"
               .checked=${!t || this._chosen.has(e.season_number)}
@@ -1167,10 +1228,10 @@ var $ = class extends U {
               @change=${() => this._toggleSeason(e.season_number)}
             />
             <span class="grow">${e.name}</span>
-            ${n ? M`<span class="status inline ${e.status}">${n}</span>` : P}
-            ${this._picker ? M`<button class="link episodes-link" @click=${(t) => this._openEpisodes(e, t)}>
+            ${n ? j`<span class="status inline ${e.status}">${n}</span>` : N}
+            ${this._picker ? j`<button class="link episodes-link" @click=${(t) => this._openEpisodes(e, t)}>
                   Episodes
-                </button>` : P}
+                </button>` : N}
           </label>`;
 		})}
       </div>
@@ -1178,16 +1239,16 @@ var $ = class extends U {
 	}
 	_renderEpisodes(e, t) {
 		let n = this._episodes, r;
-		if (this._episodesError) r = M`<div class="message error">Couldn't load episodes (${this._episodesError}).</div>`;
-		else if (!n) r = M`<div class="message">Loading episodes from Sonarr…</div>`;
+		if (this._episodesError) r = j`<div class="message error">Couldn't load episodes (${this._episodesError}).</div>`;
+		else if (!n) r = j`<div class="message">Loading episodes from Sonarr…</div>`;
 		else {
-			let e = De(n.episodes), t = this._picked.size;
-			r = M`
+			let e = Ie(n.episodes), t = this._picked.size;
+			r = j`
         <div class="seasons options">
           <label class="row option">
             <input
               type="checkbox"
-              .checked=${n.follow_new}
+              .checked=${Ae(n.follow_new)}
               ?disabled=${this._pickerBusy}
               @change=${(e) => this._setFollowNew(e.target.checked)}
             />
@@ -1203,13 +1264,13 @@ var $ = class extends U {
         <div class="seasons">
           <div class="seasons-head">
             <span>${n.episodes.length} episodes</span>
-            ${e.length > 1 ? M`<button class="link" @click=${this._toggleAllPicks}>
+            ${e.length > 1 ? j`<button class="link" @click=${this._toggleAllPicks}>
                   ${t === e.length ? "Select none" : `Select all ${e.length}`}
-                </button>` : P}
+                </button>` : N}
           </div>
           ${n.episodes.length ? n.episodes.map((e) => {
-				let t = Ee(e), n = Oe(e);
-				return M`<label class="row season episode ${t ? "" : "done"}">
+				let t = Fe(e), n = Le(e);
+				return j`<label class="row season episode ${t ? "" : "done"}">
                   <input
                     type="checkbox"
                     .checked=${t ? this._picked.has(e.id) : e.status !== "not_aired" || e.monitored}
@@ -1218,14 +1279,14 @@ var $ = class extends U {
                   />
                   <span class="grow">
                     <span class="ep-title">${e.episode_number}. ${e.title || `Episode ${e.episode_number}`}</span>
-                    <span class="hint">${ke(e.air_date)}</span>
+                    <span class="hint">${Re(e.air_date)}</span>
                   </span>
-                  ${n ? M`<span class="status inline ep ${e.status}">${n}</span>` : P}
-                  ${this._config.show_remove && e.status === "downloaded" && this._confirmRemoveEp !== e.id ? M`<button class="link ep-remove" @click=${(t) => this._askRemoveEpisode(e.id, t)}>
+                  ${n ? j`<span class="status inline ep ${e.status}">${n}</span>` : N}
+                  ${this._config.show_remove && e.status === "downloaded" && this._confirmRemoveEp !== e.id ? j`<button class="link ep-remove" @click=${(t) => this._askRemoveEpisode(e.id, t)}>
                         Remove
-                      </button>` : P}
+                      </button>` : N}
                 </label>
-                ${this._confirmRemoveEp === e.id ? M`<div class="ep-confirm" role="alert">
+                ${this._confirmRemoveEp === e.id ? j`<div class="ep-confirm" role="alert">
                       <span class="grow">Delete episode ${e.episode_number}'s file? This can't be undone.</span>
                       <button class="secondary small" ?disabled=${this._pickerBusy} @click=${() => this._confirmRemoveEp = void 0}>
                         Cancel
@@ -1233,16 +1294,16 @@ var $ = class extends U {
                       <button class="danger solid small" ?disabled=${this._pickerBusy} @click=${() => this._removeEpisode(e)}>
                         ${this._pickerBusy ? "Deleting…" : "Delete file"}
                       </button>
-                    </div>` : P}`;
-			}) : M`<div class="message">Sonarr lists no episodes for this season yet.</div>`}
+                    </div>` : N}`;
+			}) : j`<div class="message">Sonarr lists no episodes for this season yet.</div>`}
         </div>
-        ${t > 20 ? M`<div class="warn">That's ${t} episodes. Check there's room before downloading.</div>` : P}
+        ${t > 20 ? j`<div class="warn">That's ${t} episodes. Check there's room before downloading.</div>` : N}
         <button class="primary" ?disabled=${!t || this._pickerBusy} @click=${this._download}>
           ${this._downloading ? "Searching…" : this._pickerBusy ? "Working…" : t ? `Download ${t} episode${t === 1 ? "" : "s"}` : "Pick episodes to download"}
         </button>
       `;
 		}
-		return M`
+		return j`
       <div class="detail">
         <button class="back" @click=${this._closeEpisodes}>
           <ha-icon icon="mdi:arrow-left"></ha-icon> ${e.title}
@@ -1672,4 +1733,4 @@ X = $, X.properties = {
 	preview: !1
 }));
 //#endregion
-export { je as CARD_VERSION, $ as JellyseerrSearchCard };
+export { Be as CARD_VERSION, $ as JellyseerrSearchCard };

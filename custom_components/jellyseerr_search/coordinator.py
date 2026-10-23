@@ -11,7 +11,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .api import JellyseerrAuthError, JellyseerrClient, JellyseerrError
 from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
-from .episodes import AddedShows, FollowedShows
+from .episodes import AddedShows, CheckedTypes, FollowedShows
 from .sonarr import SonarrClient
 
 _LOGGER = logging.getLogger(__name__)
@@ -33,6 +33,7 @@ class JellyseerrCoordinator(DataUpdateCoordinator[dict[str, int]]):
         sonarr: SonarrClient | None = None,
         added_shows: AddedShows | None = None,
         followed: FollowedShows | None = None,
+        checked: CheckedTypes | None = None,
     ) -> None:
         super().__init__(
             hass,
@@ -45,6 +46,7 @@ class JellyseerrCoordinator(DataUpdateCoordinator[dict[str, int]]):
         self.sonarr = sonarr
         self.added_shows = added_shows
         self.followed = followed
+        self.checked = checked
 
     async def _async_update_data(self) -> dict[str, int]:
         try:

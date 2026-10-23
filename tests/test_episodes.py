@@ -173,6 +173,10 @@ async def test_download_monitors_and_searches(hass, picker, aioclient_mock, hass
     # Only the aired episode is probed, and it matched: the type is left alone.
     assert not calls(aioclient_mock, "put", "/series/5")
     assert msg["result"]["series_type_changed"] is None
+    # Confirmed, so the next download skips the test search.
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/episodes/download", "series_id": 5, "episode_ids": [104]})
+    assert (await ws.receive_json())["success"]
+    assert len(calls(aioclient_mock, "get", "/release")) == 1
 
 
 async def test_download_keeps_the_show(hass, picker, aioclient_mock, hass_ws_client) -> None:
@@ -438,6 +442,21 @@ async def test_options_flow_turns_picker_off(hass, picker) -> None:
     assert picker.runtime_data.sonarr is None
 
 
+def _sequence_status(body, status):
+    """side_effect: first call answers `body` with 200, later calls fail with `status`."""
+    from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMockResponse
+
+    calls_made = []
+
+    async def respond(method, url, data):
+        calls_made.append(1)
+        if len(calls_made) == 1:
+            return AiohttpClientMockResponse(method, url, json=body)
+        return AiohttpClientMockResponse(method, url, status=status, json={"message": "Indexer error"})
+
+    return respond
+
+
 def _sequence(*bodies):
     """side_effect answering with each body in turn, then the last one again."""
     from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMockResponse
@@ -457,36 +476,44 @@ def _at(hours_ago: float) -> str:
 
 def test_due_followed_episodes() -> None:
     now = dt_util.utcnow()
-    since = now - timedelta(days=3)
+    since = now - timedelta(days=60)
+    iso = lambda h: (now - timedelta(hours=h)).isoformat()
     eps = [
-        {"id": 1, "airDateUtc": _at(24 * 4), "hasFile": False},   # aired before following
-        {"id": 2, "airDateUtc": _at(24), "hasFile": False},       # due
-        {"id": 3, "airDateUtc": _at(1), "hasFile": False},        # too fresh: RSS first
-        {"id": 4, "airDateUtc": _at(30), "hasFile": True},        # on disk
-        {"id": 5, "airDateUtc": _at(30), "hasFile": False},       # downloading
-        {"id": 6, "airDateUtc": _at(40), "hasFile": False},       # searched 2 h ago
-        {"id": 7, "airDateUtc": _at(50), "hasFile": False},       # searched 7 h ago: due again
-        {"id": 8, "airDateUtc": None, "hasFile": False},          # no air date
+        {"id": 1, "seasonNumber": 1, "airDateUtc": _at(24 * 70), "hasFile": False, "monitored": False},  # before following
+        {"id": 2, "seasonNumber": 1, "airDateUtc": _at(24 * 30), "hasFile": False, "monitored": False},  # listed late: due
+        {"id": 3, "seasonNumber": 1, "airDateUtc": _at(1), "hasFile": False, "monitored": False},        # too fresh
+        {"id": 4, "seasonNumber": 1, "airDateUtc": _at(30), "hasFile": True, "monitored": True},         # on disk
+        {"id": 5, "seasonNumber": 1, "airDateUtc": _at(30), "hasFile": False, "monitored": False},       # downloading
+        {"id": 6, "seasonNumber": 1, "airDateUtc": _at(40), "hasFile": False, "monitored": True},        # Sonarr's own job
+        {"id": 7, "seasonNumber": 1, "airDateUtc": _at(50), "hasFile": False, "monitored": False},       # removed by the user
+        {"id": 8, "seasonNumber": 0, "airDateUtc": _at(50), "hasFile": False, "monitored": False},       # special
+        {"id": 9, "seasonNumber": 1, "airDateUtc": None, "hasFile": False, "monitored": False},          # no air date
+        {"id": 10, "seasonNumber": 1, "airDateUtc": _at(24 * 40), "hasFile": False, "monitored": True},  # retry due
+        {"id": 11, "seasonNumber": 1, "airDateUtc": _at(24 * 40), "hasFile": False, "monitored": True},  # retried 2 h ago
+        {"id": 12, "seasonNumber": 1, "airDateUtc": _at(24 * 40), "hasFile": False, "monitored": True},  # gave up
     ]
-    searched = {"6": (now - timedelta(hours=2)).isoformat(), "7": (now - timedelta(hours=7)).isoformat()}
-    assert [e["id"] for e in due_followed_episodes(eps, since, searched, {5}, now)] == [2, 7]
-    # Gives up 14 days after airing.
-    old = [{"id": 9, "airDateUtc": _at(24 * 15), "hasFile": False}]
-    assert due_followed_episodes(old, now - timedelta(days=30), {}, set(), now) == []
+    searched = {
+        "10": {"first": iso(24 * 3), "last": iso(7)},
+        "11": {"first": iso(24 * 3), "last": iso(2)},
+        "12": {"first": iso(24 * 15), "last": iso(7)},
+    }
+    due = due_followed_episodes(eps, since, searched, {7}, {5}, now)
+    assert [e["id"] for e in due] == [2, 10]
 
 
 async def test_followed_shows_get_late_episodes_searched(hass, picker, aioclient_mock) -> None:
     followed = picker.runtime_data.followed
     followed.follow(5)
-    followed._shows["5"]["since"] = (dt_util.utcnow() - timedelta(days=2)).isoformat()
+    followed._shows["5"]["since"] = (dt_util.utcnow() - timedelta(days=40)).isoformat()
     following = {**SERIES, "monitorNewItems": "all", "seasons": [*SERIES["seasons"][:2], {"seasonNumber": 2, "monitored": True}]}
     aioclient_mock.get(f"{SONARR}/series/5", json=following)
     aioclient_mock.get(
         f"{SONARR}/episode?seriesId=5",
         json=[
-            {"id": 201, "airDateUtc": _at(20), "hasFile": False, "monitored": False},  # listed late, unmonitored by Sonarr
-            {"id": 202, "airDateUtc": _at(10), "hasFile": False, "monitored": True},
-            {"id": 203, "airDateUtc": _at(24 * 5), "hasFile": False, "monitored": False},  # before following
+            # Listed a month late, so Sonarr unmonitored it: ours.
+            {"id": 201, "seasonNumber": 2, "airDateUtc": _at(24 * 30), "hasFile": False, "monitored": False},
+            # Monitored: Sonarr's RSS and its own refresh search cover it.
+            {"id": 202, "seasonNumber": 2, "airDateUtc": _at(10), "hasFile": False, "monitored": True},
         ],
     )
     aioclient_mock.get(f"{SONARR}/queue", json={"records": []})
@@ -495,11 +522,77 @@ async def test_followed_shows_get_late_episodes_searched(hass, picker, aioclient
 
     await async_search_followed(picker.runtime_data.sonarr, followed)
     assert calls(aioclient_mock, "put", "/episode/monitor")[0][2] == {"episodeIds": [201], "monitored": True}
-    assert calls(aioclient_mock, "post", "/command")[0][2] == {"name": "EpisodeSearch", "episodeIds": [201, 202]}
+    assert calls(aioclient_mock, "post", "/command")[0][2] == {"name": "EpisodeSearch", "episodeIds": [201]}
 
     # Not again within 6 hours.
     await async_search_followed(picker.runtime_data.sonarr, followed)
     assert len(calls(aioclient_mock, "post", "/command")) == 1
+
+
+async def test_removed_episode_of_a_followed_show_stays_removed(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    followed = picker.runtime_data.followed
+    followed.follow(5)
+    before = [{**ep(101, 1, has_file=True, monitored=True), "episodeFileId": 900}, ep(103, 3, monitored=True)]
+    after = [{**before[0], "hasFile": False, "monitored": False, "episodeFileId": 0}, before[1]]
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=5", side_effect=_sequence(before, after))
+    aioclient_mock.delete(f"{SONARR}/episodefile/bulk", json={})
+    aioclient_mock.put(f"{SONARR}/episode/monitor", json=[])
+    aioclient_mock.get(f"{SONARR}/series/5", json=SERIES)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/episodes/remove", "series_id": 5, "episode_ids": [101]})
+    assert (await ws.receive_json())["success"]
+    assert followed.shows()[5]["removed"] == [101]
+
+
+async def test_type_is_put_back_if_the_second_search_fails(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    aioclient_mock.get(f"{SONARR}/series/5", json=SERIES)
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=5", json=[ep(102, 2)])
+    aioclient_mock.get(f"{SONARR}/release?episodeId=102", side_effect=_sequence_status([], 500))
+    aioclient_mock.put(f"{SONARR}/series/5", json=SERIES)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/episodes/download", "series_id": 5, "episode_ids": [102]})
+    msg = await ws.receive_json()
+    assert not msg["success"]
+    assert [p[2]["seriesType"] for p in calls(aioclient_mock, "put", "/series/5")] == ["daily", "standard"]
+
+
+async def test_download_on_a_show_gone_from_sonarr(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    aioclient_mock.get(f"{SONARR}/series/5", json={"message": "NotFound"}, status=404)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/episodes/download", "series_id": 5, "episode_ids": [102]})
+    msg = await ws.receive_json()
+    assert not msg["success"]
+    assert msg["error"]["translation_key"] == "series_gone"
+
+
+async def test_listing_keeps_a_picker_added_show_alive(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    added = picker.runtime_data.added_shows
+    added.add(5)
+    added._added["5"] = (dt_util.utcnow() - timedelta(minutes=50)).isoformat()
+    aioclient_mock.get(f"{API}/tv/21502", json={"externalIds": {"tvdbId": 252963}})
+    aioclient_mock.get(f"{SONARR}/series?tvdbId=252963", json=[SERIES])
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=5&seasonNumber=2", json=SEASON_2)
+    aioclient_mock.get(f"{SONARR}/queue", json={"records": []})
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/episodes", "tmdb_id": 21502, "season_number": 2})
+    assert (await ws.receive_json())["success"]
+    # 70 min after adding but 20 after looking: not due yet.
+    assert added.due(dt_util.utcnow() + timedelta(minutes=20)) == []
+
+
+async def test_a_requested_show_keeps_its_seerr_history(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    before = [{**ep(101, 1, has_file=True, monitored=True), "episodeFileId": 900}]
+    after = [{**before[0], "hasFile": False, "monitored": False, "episodeFileId": 0}]
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=5", side_effect=_sequence(before, after))
+    aioclient_mock.delete(f"{SONARR}/episodefile/bulk", json={})
+    aioclient_mock.put(f"{SONARR}/episode/monitor", json=[])
+    aioclient_mock.get(f"{SONARR}/series/5", json=SERIES)
+    aioclient_mock.delete(f"{SONARR}/series/5", status=200)
+    aioclient_mock.get(f"{API}/tv/82684", json={"id": 82684, "mediaInfo": {"id": 5, "status": 4, "requests": [{"id": 1}]}})
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/episodes/remove", "series_id": 5, "tmdb_id": 82684, "episode_ids": [101]})
+    assert (await ws.receive_json())["result"]["show_removed"] is True
+    assert not any(c[0].lower() == "delete" and c[1].path.startswith("/api/v1/media") for c in aioclient_mock.mock_calls)
 
 
 async def test_unfollowed_when_off_or_gone(hass, picker, aioclient_mock) -> None:

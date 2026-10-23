@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+import hashlib
 
 from homeassistant.const import CONF_API_KEY, CONF_URL, CONF_VERIFY_SSL, Platform
 from homeassistant.core import HomeAssistant
@@ -14,7 +15,7 @@ from homeassistant.helpers.typing import ConfigType
 from .api import JellyseerrClient
 from .const import CONF_SONARR_API_KEY, CONF_SONARR_URL, DOMAIN
 from .coordinator import JellyseerrConfigEntry, JellyseerrCoordinator
-from .episodes import AddedShows, FollowedShows, async_search_followed, async_sweep_added
+from .episodes import AddedShows, CheckedTypes, FollowedShows, async_search_followed, async_sweep_added
 from .frontend import async_register_frontend
 from .services import async_register_services
 from .sonarr import SonarrClient
@@ -38,16 +39,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: JellyseerrConfigEntry) -
     """Connect to one Jellyseerr server."""
     session = async_get_clientsession(hass, verify_ssl=entry.data.get(CONF_VERIFY_SSL, True))
     client = JellyseerrClient(session, entry.data[CONF_URL], entry.data[CONF_API_KEY])
-    sonarr = added_shows = followed = None
+    sonarr = added_shows = followed = checked = None
     if entry.options.get(CONF_SONARR_URL) and entry.options.get(CONF_SONARR_API_KEY):
         sonarr = SonarrClient(
             async_get_clientsession(hass), entry.options[CONF_SONARR_URL], entry.options[CONF_SONARR_API_KEY]
         )
-        added_shows = AddedShows(hass, entry.entry_id)
+        # Series ids only mean something on the Sonarr they came from.
+        scope = hashlib.sha256(entry.options[CONF_SONARR_URL].encode()).hexdigest()[:8]
+        added_shows = AddedShows(hass, entry.entry_id, scope)
         await added_shows.async_load()
-        followed = FollowedShows(hass, entry.entry_id)
+        followed = FollowedShows(hass, entry.entry_id, scope)
         await followed.async_load()
-    coordinator = JellyseerrCoordinator(hass, entry, client, sonarr, added_shows, followed)
+        checked = CheckedTypes(hass, entry.entry_id, scope)
+        await checked.async_load()
+    coordinator = JellyseerrCoordinator(hass, entry, client, sonarr, added_shows, followed, checked)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

@@ -168,13 +168,17 @@ class JellyseerrClient:
             return None
         return int(server["activeProfileId"]), str(server["activeDirectory"])
 
-    async def async_forget(self, media_type: str, tmdb_id: int) -> bool:
+    async def async_forget(self, media_type: str, tmdb_id: int, keep_requests: bool = False) -> bool:
         """Drop Jellyseerr's record of a title whose files are already gone, so
         it reads as not requested now rather than after Jellyseerr's nightly
-        availability sync. False if there was no record."""
+        availability sync. Deleting the record deletes its requests too
+        (cascade), so with `keep_requests` a requested title is left for that
+        sync, which marks it deleted and keeps the history. False if nothing
+        was dropped."""
         data = await self._request("GET", f"/{media_type}/{tmdb_id}")
-        media_id = (data.get("mediaInfo") or {}).get("id")
-        if not media_id:
+        info = data.get("mediaInfo") or {}
+        media_id = info.get("id")
+        if not media_id or (keep_requests and info.get("requests")):
             return False
         await self._request("DELETE", f"/media/{media_id}")
         return True

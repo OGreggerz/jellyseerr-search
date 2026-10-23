@@ -97,6 +97,9 @@
     "no_tvdb_id": {
       "message": "Jellyseerr has no TVDB ID for TMDB ID {tmdb_id}, so Sonarr can't find the show."
     },
+    "series_gone": {
+      "message": "The show is no longer in Sonarr (it was tidied away or removed). Open its episodes again to add it back."
+    },
     "not_on_tvdb": {
       "message": "Sonarr couldn't find TVDB ID {tvdb_id}."
     }

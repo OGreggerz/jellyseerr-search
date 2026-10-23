@@ -25,6 +25,12 @@ here follow it. The user commits changes themselves.
   `/episodes/discard`; `/seasons` returns `episode_picker` so the card knows.
   Changing a season's `monitored` makes Sonarr set every episode in it, so
   `async_set_show_options` restores aired episodes afterwards.
+- Picker state lives in HA storage, keyed by entry **and a hash of the Sonarr
+  URL** (series ids only mean something on one server): `AddedShows`
+  (swept after an hour untouched; touched on every listing), `FollowedShows`
+  (since, searched first/last, removed by the user) and `CheckedTypes`.
+- Card actions can outlive the screen they started on (the naming check waits
+  for indexers): capture the show first and use `_stillOn` before touching state.
 - Query strings are encoded like `encodeURIComponent` (`%20`, not `+`);
   Jellyseerr rejects anything else. A test pins this.
 - Services, WS commands and card serving are registered in `async_setup`

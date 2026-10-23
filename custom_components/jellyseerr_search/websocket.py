@@ -231,7 +231,7 @@ async def ws_episodes_download(
 ) -> None:
     c = _picker(hass, msg.get("config_entry_id"))
     result = await async_download_episodes(
-        c.sonarr, msg["series_id"], msg["episode_ids"], c.added_shows
+        c.sonarr, msg["series_id"], msg["episode_ids"], c.added_shows, c.checked
     )
     connection.send_result(msg["id"], result)
 
@@ -252,7 +252,7 @@ async def ws_episodes_options(
     """Follow new episodes on/off, and the Daily series type (dated releases)."""
     c = _picker(hass, msg.get("config_entry_id"))
     result = await async_set_show_options(
-        c.sonarr, msg["series_id"], msg.get("follow_new"), msg.get("daily"), c.added_shows, c.followed
+        c.sonarr, msg["series_id"], msg.get("follow_new"), msg.get("daily"), c.added_shows, c.followed, c.checked
     )
     connection.send_result(msg["id"], result)
 
@@ -293,6 +293,6 @@ async def ws_episodes_remove(
     """Deletes episode files. The card only offers it when show_remove is set."""
     c = _picker(hass, msg.get("config_entry_id"))
     result = await async_remove_episodes(
-        c.sonarr, msg["series_id"], msg["episode_ids"], c.added_shows, c.client, msg.get("tmdb_id")
+        c.sonarr, msg["series_id"], msg["episode_ids"], c.added_shows, c.client, msg.get("tmdb_id"), c.followed
     )
     connection.send_result(msg["id"], result)

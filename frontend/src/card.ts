@@ -1,6 +1,7 @@
 // <jellyseerr-search-card>: search Jellyseerr and request movies or shows.
 
 import { LitElement, css, html, nothing, type PropertyValues } from "lit";
+import { live } from "lit/directives/live.js";
 import { errorMessage, toast, type HomeAssistant } from "./ha";
 import {
   Latest,
@@ -508,8 +509,8 @@ export class JellyseerrSearchCard extends LitElement {
         season_number: seasonNumber,
         ...this._entry(),
       });
+      if (!current()) return; // A stale add is left to the server's sweep.
       if (result.added) this._addedSeries = result.series_id;
-      if (!current()) return;
       this._episodes = result;
     } catch (err) {
       if (current()) this._episodesError = errorMessage(err);
@@ -560,9 +561,25 @@ export class JellyseerrSearchCard extends LitElement {
     this._picked = this._picked.size === all.length ? new Set() : new Set(all);
   }
 
+  /** Still on the show and season an action started on? (Actions can take
+   *  minutes: the naming check waits for the indexers.) */
+  private _stillOn(item: SearchResult, seriesId: number): boolean {
+    return this._selected === item && this._episodes?.series_id === seriesId;
+  }
+
+  /** The show was removed from Sonarr while open (the sweep, another user, or by
+   *  hand): reopening its episodes adds it back. */
+  private _recoverIfGone(err: unknown, item: SearchResult, seasonNumber: number): boolean {
+    if ((err as { translation_key?: string } | null)?.translation_key !== "series_gone") return false;
+    toast(this, `${item.title} had been tidied out of Sonarr. It's back now: try again.`);
+    if (this._selected === item) void this._loadEpisodes(item.tmdb_id, seasonNumber);
+    return true;
+  }
+
   private async _download(): Promise<void> {
     const list = this._episodes;
-    if (!list || !this._picked.size || this._pickerBusy || !this._selected) return;
+    const item = this._selected;
+    if (!list || !item || !this._picked.size || this._pickerBusy) return;
     const ids = [...this._picked];
     this._pickerBusy = true;
     this._downloading = true;
@@ -573,20 +590,20 @@ export class JellyseerrSearchCard extends LitElement {
         episode_ids: ids,
         ...this._entry(),
       });
-      this._addedSeries = undefined; // Something was picked: keep the show.
+      if (this._addedSeries === list.series_id) this._addedSeries = undefined; // Picked: keep the show.
       const changed = result.series_type_changed ? ` ${typeChangedMessage(list.title, result.series_type_changed)}` : "";
       toast(this, `Downloading ${ids.length} episode${ids.length === 1 ? "" : "s"} of ${list.title}.${changed}`);
+      if (!this._stillOn(item, list.series_id)) return; // Moved on meanwhile; Sonarr has it.
       this._picked = new Set();
-      const tmdbId = this._selected.tmdb_id;
-      await this._loadEpisodes(tmdbId, list.season_number);
+      await this._loadEpisodes(item.tmdb_id, list.season_number);
       this._clearRefreshTimers();
       this._refreshTimers = AFTER_DOWNLOAD_REFRESH_MS.map((ms) =>
         setTimeout(() => {
-          if (this._episodes?.series_id === list.series_id) void this._loadEpisodes(tmdbId, list.season_number);
+          if (this._stillOn(item, list.series_id)) void this._loadEpisodes(item.tmdb_id, list.season_number);
         }, ms),
       );
     } catch (err) {
-      toast(this, `Download failed: ${errorMessage(err)}`);
+      if (!this._recoverIfGone(err, item, list.season_number)) toast(this, `Download failed: ${errorMessage(err)}`);
     } finally {
       this._pickerBusy = false;
       this._downloading = false;
@@ -601,32 +618,34 @@ export class JellyseerrSearchCard extends LitElement {
 
   private async _removeEpisode(ep: Episode): Promise<void> {
     const list = this._episodes;
-    if (!list || this._pickerBusy || !this._selected) return;
+    const item = this._selected;
+    if (!list || !item || this._pickerBusy) return;
     this._pickerBusy = true;
     try {
       const result = await this.hass.callWS<{ show_removed: boolean }>({
         type: `${DOMAIN}/episodes/remove`,
         series_id: list.series_id,
-        tmdb_id: this._selected.tmdb_id,
+        tmdb_id: item.tmdb_id,
         episode_ids: [ep.id],
         ...this._entry(),
       });
       this._confirmRemoveEp = undefined;
+      // Jellyseerr has forgotten a show with nothing left: show that now.
       if (result.show_removed) {
         toast(this, `Removed episode ${ep.episode_number}. Nothing else was left, so ${list.title} is gone.`);
-        this._addedSeries = undefined;
-        const item = this._selected;
-        this._closeEpisodes();
-        // Jellyseerr has forgotten it too: show that now instead of after a refresh.
+        if (this._addedSeries === list.series_id) this._addedSeries = undefined;
         this._library = this._library?.filter((r) => !(r.tmdb_id === item.tmdb_id && r.media_type === item.media_type));
         this._setStatus(item, "not_requested");
-        void this._loadSeasons(item.tmdb_id);
+        if (this._stillOn(item, list.series_id)) {
+          this._closeEpisodes();
+          void this._loadSeasons(item.tmdb_id);
+        }
       } else {
         toast(this, `Removed episode ${ep.episode_number} of ${list.title}`);
-        await this._loadEpisodes(this._selected.tmdb_id, list.season_number);
+        if (this._stillOn(item, list.series_id)) await this._loadEpisodes(item.tmdb_id, list.season_number);
       }
     } catch (err) {
-      toast(this, `Remove failed: ${errorMessage(err)}`);
+      if (!this._recoverIfGone(err, item, list.season_number)) toast(this, `Remove failed: ${errorMessage(err)}`);
     } finally {
       this._pickerBusy = false;
     }
@@ -634,7 +653,8 @@ export class JellyseerrSearchCard extends LitElement {
 
   private async _setFollowNew(value: boolean): Promise<void> {
     const list = this._episodes;
-    if (!list || this._pickerBusy || !this._selected) return;
+    const item = this._selected;
+    if (!list || !item || this._pickerBusy) return;
     this._pickerBusy = true;
     try {
       const show = await this.hass.callWS<SonarrShow & { series_type_changed?: string | null }>({
@@ -643,12 +663,15 @@ export class JellyseerrSearchCard extends LitElement {
         follow_new: value,
         ...this._entry(),
       });
-      if (show.follow_new) this._addedSeries = undefined;
+      if (show.follow_new && this._addedSeries === list.series_id) this._addedSeries = undefined;
       if (show.series_type_changed) toast(this, typeChangedMessage(list.title, show.series_type_changed));
+      if (value && !show.follow_new) toast(this, `${list.title} has no regular series to follow yet.`);
       // Following changes which future episodes are monitored: reload the chips.
-      await this._loadEpisodes(this._selected.tmdb_id, list.season_number);
+      if (this._stillOn(item, list.series_id)) await this._loadEpisodes(item.tmdb_id, list.season_number);
     } catch (err) {
-      toast(this, `Couldn't change it: ${errorMessage(err)}`);
+      if (!this._recoverIfGone(err, item, list.season_number)) toast(this, `Couldn't change it: ${errorMessage(err)}`);
+      // The box must show what Sonarr has, not what was tapped.
+      this.requestUpdate();
     } finally {
       this._pickerBusy = false;
     }
@@ -911,7 +934,7 @@ export class JellyseerrSearchCard extends LitElement {
           <label class="row option">
             <input
               type="checkbox"
-              .checked=${list.follow_new}
+              .checked=${live(list.follow_new)}
               ?disabled=${this._pickerBusy}
               @change=${(e: Event) => this._setFollowNew((e.target as HTMLInputElement).checked)}
             />

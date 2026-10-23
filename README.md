@@ -50,10 +50,12 @@ other series type is tried and kept if it matches. That works from a show's
 first episode, where air dates can't tell. If only future episodes are picked,
 or Get new episodes is switched on, the show's latest aired episode is tested
 instead. **Get new episodes** also covers episodes
-listed late (common for daily shows): Sonarr's RSS feed misses those and Sonarr
-never searches for them by itself, so every 15 minutes the integration searches
-for episodes of followed shows that aired since following started (from 2 hours
-after airing, every 6 hours, for 14 days). There's no switch for Daily any more; if neither type can be tested
+listed very late (common for daily shows). Sonarr searches once for episodes
+TVDB adds up to 14 days after they aired, but unmonitors ones added later; for
+followed shows the integration monitors and searches those (aired since
+following started, 2 hours after airing at the earliest, then every 6 hours for
+14 days). Episodes you remove through the card are never fetched again. A
+show's confirmed type is remembered, so the check runs once per show. There's no switch for Daily any more; if neither type can be tested
 (nothing released yet) and it's wrong later, change it in Sonarr (the show →
 Edit → Series Type). Episode lists come from Sonarr
 (TVDB). The season list shows no episode counts: Jellyseerr's come from TMDB
