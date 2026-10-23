@@ -49,7 +49,11 @@ Download, Sonarr test-searches the latest aired pick; if nothing matches, the
 other series type is tried and kept if it matches. That works from a show's
 first episode, where air dates can't tell. If only future episodes are picked,
 or Get new episodes is switched on, the show's latest aired episode is tested
-instead. There's no switch for it any more; if neither type can be tested
+instead. **Get new episodes** also covers episodes
+listed late (common for daily shows): Sonarr's RSS feed misses those and Sonarr
+never searches for them by itself, so every 15 minutes the integration searches
+for episodes of followed shows that aired since following started (from 2 hours
+after airing, every 6 hours, for 14 days). There's no switch for Daily any more; if neither type can be tested
 (nothing released yet) and it's wrong later, change it in Sonarr (the show →
 Edit → Series Type). Episode lists come from Sonarr
 (TVDB). The season list shows no episode counts: Jellyseerr's come from TMDB

@@ -24,6 +24,14 @@ _LOGGER = logging.getLogger(__name__)
 ADDED_GRACE = timedelta(hours=1)
 STORAGE_VERSION = 1
 
+# Followed shows: an episode TVDB lists late misses Sonarr's RSS feed, and Sonarr
+# never searches for it on its own. Search for episodes that aired since the
+# show was followed: from this long after airing (RSS gets the first chance),
+# again every RETRY until GIVE_UP after airing.
+FOLLOW_FIRST_SEARCH = timedelta(hours=2)
+FOLLOW_RETRY = timedelta(hours=6)
+FOLLOW_GIVE_UP = timedelta(days=14)
+
 EP_DOWNLOADED = "downloaded"
 EP_DOWNLOADING = "downloading"
 EP_WANTED = "wanted"
@@ -58,6 +66,96 @@ class AddedShows:
             for series_id, when in self._added.items()
             if (added := dt_util.parse_datetime(when)) is None or now - added >= ADDED_GRACE
         ]
+
+
+class FollowedShows:
+    """Shows followed with "Get new episodes" from the card: when, and when each
+    late episode was last searched for. Kept across restarts."""
+
+    def __init__(self, hass: HomeAssistant, entry_id: str) -> None:
+        self._store: Store[dict[str, dict[str, Any]]] = Store(
+            hass, STORAGE_VERSION, f"{DOMAIN}.{entry_id}.followed_shows"
+        )
+        self._shows: dict[str, dict[str, Any]] = {}
+
+    async def async_load(self) -> None:
+        self._shows = await self._store.async_load() or {}
+
+    def _save(self) -> None:
+        self._store.async_delay_save(lambda: self._shows, 1)
+
+    def follow(self, series_id: int) -> None:
+        if str(series_id) not in self._shows:
+            self._shows[str(series_id)] = {"since": dt_util.utcnow().isoformat(), "searched": {}}
+            self._save()
+
+    def unfollow(self, series_id: int) -> None:
+        if self._shows.pop(str(series_id), None) is not None:
+            self._save()
+
+    def shows(self) -> dict[int, dict[str, Any]]:
+        return {int(k): v for k, v in self._shows.items()}
+
+    def mark_searched(self, series_id: int, episode_ids: list[int], when: datetime) -> None:
+        show = self._shows.get(str(series_id))
+        if show is None:
+            return
+        searched = show.setdefault("searched", {})
+        for episode_id in episode_ids:
+            searched[str(episode_id)] = when.isoformat()
+        self._save()
+
+
+def due_followed_episodes(
+    episodes: list[dict[str, Any]], since: datetime, searched: dict[str, str], queued: set[int], now: datetime
+) -> list[dict[str, Any]]:
+    """Episodes of a followed show worth a search now: aired after it was followed,
+    at least FOLLOW_FIRST_SEARCH ago and no more than FOLLOW_GIVE_UP ago, not on
+    disk or on the way, and not searched in the last FOLLOW_RETRY."""
+    due = []
+    for ep in episodes:
+        aired = dt_util.parse_datetime(ep.get("airDateUtc") or "")
+        if aired is None or aired < since or ep.get("hasFile") or ep["id"] in queued:
+            continue
+        if not (now - FOLLOW_GIVE_UP <= aired <= now - FOLLOW_FIRST_SEARCH):
+            continue
+        last = dt_util.parse_datetime(searched.get(str(ep["id"]), ""))
+        if last is not None and now - last < FOLLOW_RETRY:
+            continue
+        due.append(ep)
+    return due
+
+
+async def async_search_followed(sonarr: SonarrClient, followed: FollowedShows) -> None:
+    """Search for new episodes of followed shows that Sonarr's RSS feed missed,
+    usually because TVDB listed them late. Episodes Sonarr unmonitored on the way
+    in (it unmonitors newly listed episodes over 14 days old) are monitored again:
+    they aired after the show was followed, so they're wanted."""
+    now = dt_util.utcnow()
+    for series_id, show in followed.shows().items():
+        try:
+            series = await sonarr.async_get_series(series_id)
+            if not follows_new(series):
+                followed.unfollow(series_id)  # Turned off, or changed in Sonarr.
+                continue
+            since = dt_util.parse_datetime(show.get("since", "")) or now
+            due = due_followed_episodes(
+                await sonarr.async_get_episodes(series_id),
+                since,
+                show.get("searched", {}),
+                await sonarr.async_queued_episode_ids(series_id),
+                now,
+            )
+            if not due:
+                continue
+            await sonarr.async_set_monitored([ep["id"] for ep in due if not ep.get("monitored")], True)
+            await sonarr.async_search_episodes([ep["id"] for ep in due])
+            followed.mark_searched(series_id, [ep["id"] for ep in due], now)
+            _LOGGER.info("Searched %s new episode(s) of followed series %s", len(due), series_id)
+        except SonarrNotFoundError:
+            followed.unfollow(series_id)  # Gone from Sonarr.
+        except SonarrError as err:
+            _LOGGER.debug("Couldn't check followed series %s: %s", series_id, err)
 
 
 async def async_sweep_added(sonarr: SonarrClient, added: AddedShows) -> None:
@@ -259,6 +357,7 @@ async def async_set_show_options(
     follow_new: bool | None,
     daily: bool | None,
     added_shows: AddedShows | None = None,
+    followed: FollowedShows | None = None,
 ) -> dict[str, Any]:
     """Turn following new episodes on or off, and the Daily series type.
 
@@ -321,6 +420,8 @@ async def async_set_show_options(
         raise _error("sonarr_error", err) from err
     if follow_new and added_shows is not None:
         added_shows.forget(series_id)  # Following new episodes: keep it.
+    if followed is not None and follow_new is not None:
+        followed.follow(series_id) if follow_new else followed.unfollow(series_id)
     return {**_show(series), "series_type_changed": type_changed}
 
 

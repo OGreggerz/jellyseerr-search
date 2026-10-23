@@ -252,7 +252,7 @@ async def ws_episodes_options(
     """Follow new episodes on/off, and the Daily series type (dated releases)."""
     c = _picker(hass, msg.get("config_entry_id"))
     result = await async_set_show_options(
-        c.sonarr, msg["series_id"], msg.get("follow_new"), msg.get("daily"), c.added_shows
+        c.sonarr, msg["series_id"], msg.get("follow_new"), msg.get("daily"), c.added_shows, c.followed
     )
     connection.send_result(msg["id"], result)
 

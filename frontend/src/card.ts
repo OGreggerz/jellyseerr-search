@@ -918,8 +918,8 @@ export class JellyseerrSearchCard extends LitElement {
             <span class="grow">
               Get new episodes
               <span class="hint">
-                Download future episodes of ${list.title} when they air. Turning it off also cancels
-                upcoming episodes you picked.
+                Download new episodes of ${list.title} as they come out, even ones listed late. Turning it
+                off also cancels upcoming episodes you picked.
               </span>
             </span>
           </label>

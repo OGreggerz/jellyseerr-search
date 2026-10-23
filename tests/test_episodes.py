@@ -10,7 +10,11 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.util import dt as dt_util
 
-from custom_components.jellyseerr_search.episodes import async_sweep_added
+from custom_components.jellyseerr_search.episodes import (
+    async_search_followed,
+    async_sweep_added,
+    due_followed_episodes,
+)
 
 from custom_components.jellyseerr_search.const import DOMAIN
 
@@ -285,6 +289,7 @@ async def test_follow_new_keeps_aired_episodes_as_they_were(hass, picker, aiocli
     msg = await ws.receive_json()
     assert msg["success"], msg
     assert msg["result"]["follow_new"] is True
+    assert 5 in picker.runtime_data.followed.shows()
     # Naming checked before following (it matched, so the type wasn't touched).
     assert msg["result"]["series_type_changed"] is None
     assert calls(aioclient_mock, "get", "/release")
@@ -444,3 +449,64 @@ def _sequence(*bodies):
         return AiohttpClientMockResponse(method, url, json=body)
 
     return respond
+
+
+def _at(hours_ago: float) -> str:
+    return (dt_util.utcnow() - timedelta(hours=hours_ago)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def test_due_followed_episodes() -> None:
+    now = dt_util.utcnow()
+    since = now - timedelta(days=3)
+    eps = [
+        {"id": 1, "airDateUtc": _at(24 * 4), "hasFile": False},   # aired before following
+        {"id": 2, "airDateUtc": _at(24), "hasFile": False},       # due
+        {"id": 3, "airDateUtc": _at(1), "hasFile": False},        # too fresh: RSS first
+        {"id": 4, "airDateUtc": _at(30), "hasFile": True},        # on disk
+        {"id": 5, "airDateUtc": _at(30), "hasFile": False},       # downloading
+        {"id": 6, "airDateUtc": _at(40), "hasFile": False},       # searched 2 h ago
+        {"id": 7, "airDateUtc": _at(50), "hasFile": False},       # searched 7 h ago: due again
+        {"id": 8, "airDateUtc": None, "hasFile": False},          # no air date
+    ]
+    searched = {"6": (now - timedelta(hours=2)).isoformat(), "7": (now - timedelta(hours=7)).isoformat()}
+    assert [e["id"] for e in due_followed_episodes(eps, since, searched, {5}, now)] == [2, 7]
+    # Gives up 14 days after airing.
+    old = [{"id": 9, "airDateUtc": _at(24 * 15), "hasFile": False}]
+    assert due_followed_episodes(old, now - timedelta(days=30), {}, set(), now) == []
+
+
+async def test_followed_shows_get_late_episodes_searched(hass, picker, aioclient_mock) -> None:
+    followed = picker.runtime_data.followed
+    followed.follow(5)
+    followed._shows["5"]["since"] = (dt_util.utcnow() - timedelta(days=2)).isoformat()
+    following = {**SERIES, "monitorNewItems": "all", "seasons": [*SERIES["seasons"][:2], {"seasonNumber": 2, "monitored": True}]}
+    aioclient_mock.get(f"{SONARR}/series/5", json=following)
+    aioclient_mock.get(
+        f"{SONARR}/episode?seriesId=5",
+        json=[
+            {"id": 201, "airDateUtc": _at(20), "hasFile": False, "monitored": False},  # listed late, unmonitored by Sonarr
+            {"id": 202, "airDateUtc": _at(10), "hasFile": False, "monitored": True},
+            {"id": 203, "airDateUtc": _at(24 * 5), "hasFile": False, "monitored": False},  # before following
+        ],
+    )
+    aioclient_mock.get(f"{SONARR}/queue", json={"records": []})
+    aioclient_mock.put(f"{SONARR}/episode/monitor", json=[])
+    aioclient_mock.post(f"{SONARR}/command", json={"id": 1}, status=201)
+
+    await async_search_followed(picker.runtime_data.sonarr, followed)
+    assert calls(aioclient_mock, "put", "/episode/monitor")[0][2] == {"episodeIds": [201], "monitored": True}
+    assert calls(aioclient_mock, "post", "/command")[0][2] == {"name": "EpisodeSearch", "episodeIds": [201, 202]}
+
+    # Not again within 6 hours.
+    await async_search_followed(picker.runtime_data.sonarr, followed)
+    assert len(calls(aioclient_mock, "post", "/command")) == 1
+
+
+async def test_unfollowed_when_off_or_gone(hass, picker, aioclient_mock) -> None:
+    followed = picker.runtime_data.followed
+    followed.follow(5)
+    followed.follow(6)
+    aioclient_mock.get(f"{SONARR}/series/5", json=SERIES)  # not following any more
+    aioclient_mock.get(f"{SONARR}/series/6", status=404)
+    await async_search_followed(picker.runtime_data.sonarr, followed)
+    assert followed.shows() == {}

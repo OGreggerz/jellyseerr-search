@@ -597,7 +597,7 @@ var Y = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, X, je = "0.7.1", Z = "jellyseerr_search", Me = 400, Q = 2, Ne = 36e5, Pe = [2e4, 6e4], Fe = !1, Ie = [
+}, X, je = "0.8.0", Z = "jellyseerr_search", Me = 400, Q = 2, Ne = 36e5, Pe = [2e4, 6e4], Fe = !1, Ie = [
 	{
 		value: "all",
 		label: "All"
@@ -711,7 +711,7 @@ var $ = class extends U {
 	async _checkVersion() {
 		try {
 			let { version: e } = await this.hass.callWS({ type: `${Z}/version` });
-			e !== "0.7.1" && (this._staleVersion = e);
+			e !== "0.8.0" && (this._staleVersion = e);
 		} catch {}
 	}
 	async _reload() {
@@ -1194,8 +1194,8 @@ var $ = class extends U {
             <span class="grow">
               Get new episodes
               <span class="hint">
-                Download future episodes of ${n.title} when they air. Turning it off also cancels
-                upcoming episodes you picked.
+                Download new episodes of ${n.title} as they come out, even ones listed late. Turning it
+                off also cancels upcoming episodes you picked.
               </span>
             </span>
           </label>
