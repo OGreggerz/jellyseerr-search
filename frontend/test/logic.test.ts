@@ -93,6 +93,7 @@ describe("episode picker", () => {
     expect(episodeLabel(episode(1, "not_aired", true))).toBe("When it airs");
     expect(episodeLabel(episode(1, "not_aired"))).toBe("Not aired");
     expect(episodeLabel(episode(1, "missing"))).toBeNull();
+    expect(episodeLabel(episode(1, "wanted", true))).toBe("Not found yet");
   });
 
   it("formats air dates without a time zone shift", () => {

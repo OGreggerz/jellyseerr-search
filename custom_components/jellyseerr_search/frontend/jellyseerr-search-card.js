@@ -562,7 +562,7 @@ function Oe(e) {
 	switch (e.status) {
 		case "downloaded": return "Downloaded";
 		case "downloading": return "Downloading";
-		case "wanted": return "Wanted";
+		case "wanted": return "Not found yet";
 		case "not_aired": return e.monitored ? "When it airs" : "Not aired";
 		default: return null;
 	}
@@ -593,7 +593,7 @@ var Y = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, X, Ae = "0.5.2", Z = "jellyseerr_search", je = 400, Q = 2, Me = 36e5, Ne = !1, Pe = [
+}, X, Ae = "0.5.3", Z = "jellyseerr_search", je = 400, Q = 2, Me = 36e5, Ne = [2e4, 6e4], Pe = !1, Fe = [
 	{
 		value: "all",
 		label: "All"
@@ -606,7 +606,7 @@ var Y = class {
 		value: "tv",
 		label: "TV"
 	}
-], Fe = [{
+], Ie = [{
 	value: "trending",
 	label: "Trending",
 	heading: "Trending today"
@@ -616,7 +616,7 @@ var Y = class {
 	heading: "Popular"
 }], $ = class extends U {
 	constructor() {
-		super(), this._latestSearch = new Y(), this._latestSeasons = new Y(), this._latestBrowse = new Y(), this._latestEpisodes = new Y(), this._browseAt = 0, this._query = "", this._filter = "all", this._browse = "trending", this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1, this._confirmRemove = !1, this._removing = !1, this._picker = !1, this._picked = /* @__PURE__ */ new Set(), this._pickerBusy = !1;
+		super(), this._latestSearch = new Y(), this._latestSeasons = new Y(), this._latestBrowse = new Y(), this._latestEpisodes = new Y(), this._refreshTimers = [], this._browseAt = 0, this._query = "", this._filter = "all", this._browse = "trending", this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1, this._confirmRemove = !1, this._removing = !1, this._picker = !1, this._picked = /* @__PURE__ */ new Set(), this._pickerBusy = !1;
 	}
 	static getConfigForm() {
 		return {
@@ -677,7 +677,7 @@ var Y = class {
 	}
 	setConfig(e) {
 		if (!e) throw Error("Invalid configuration");
-		if (e.media_type && !Pe.some((t) => t.value === e.media_type)) throw Error("media_type must be all, movie or tv");
+		if (e.media_type && !Fe.some((t) => t.value === e.media_type)) throw Error("media_type must be all, movie or tv");
 		this._config = e, this._filter = e.media_type ?? "all";
 	}
 	getCardSize() {
@@ -691,15 +691,15 @@ var Y = class {
 		};
 	}
 	disconnectedCallback() {
-		super.disconnectedCallback(), clearTimeout(this._debounce);
+		super.disconnectedCallback(), clearTimeout(this._debounce), this._clearRefreshTimers();
 	}
 	updated(e) {
-		e.has("hass") && this.hass && !Ne && (Ne = !0, this._checkVersion()), e.has("hass") && this.hass && this._browseDue() && this._loadBrowse();
+		e.has("hass") && this.hass && !Pe && (Pe = !0, this._checkVersion()), e.has("hass") && this.hass && this._browseDue() && this._loadBrowse();
 	}
 	async _checkVersion() {
 		try {
 			let { version: e } = await this.hass.callWS({ type: `${Z}/version` });
-			e !== "0.5.2" && (this._staleVersion = e);
+			e !== "0.5.3" && (this._staleVersion = e);
 		} catch {}
 	}
 	async _reload() {
@@ -874,8 +874,11 @@ var Y = class {
 			n() && (this._episodesError = G(e));
 		}
 	}
+	_clearRefreshTimers() {
+		this._refreshTimers.forEach(clearTimeout), this._refreshTimers = [];
+	}
 	_closeEpisodes() {
-		this._latestEpisodes.next(), this._episodeSeason = void 0, this._episodes = void 0, this._episodesError = void 0, this._picked = /* @__PURE__ */ new Set();
+		this._clearRefreshTimers(), this._latestEpisodes.next(), this._episodeSeason = void 0, this._episodes = void 0, this._episodesError = void 0, this._picked = /* @__PURE__ */ new Set();
 	}
 	_leaveShow() {
 		let e = this._addedSeries;
@@ -907,7 +910,11 @@ var Y = class {
 				series_id: e.series_id,
 				episode_ids: t,
 				...this._entry()
-			}), this._addedSeries = void 0, W(this, `Downloading ${t.length} episode${t.length === 1 ? "" : "s"} of ${e.title}`), this._picked = /* @__PURE__ */ new Set(), await this._loadEpisodes(this._selected.tmdb_id, e.season_number);
+			}), this._addedSeries = void 0, W(this, `Downloading ${t.length} episode${t.length === 1 ? "" : "s"} of ${e.title}`), this._picked = /* @__PURE__ */ new Set();
+			let n = this._selected.tmdb_id;
+			await this._loadEpisodes(n, e.season_number), this._clearRefreshTimers(), this._refreshTimers = Ne.map((t) => setTimeout(() => {
+				this._episodes?.series_id === e.series_id && this._loadEpisodes(n, e.season_number);
+			}, t));
 		} catch (e) {
 			W(this, `Download failed: ${G(e)}`);
 		} finally {
@@ -963,7 +970,7 @@ var Y = class {
               </button>` : P}
         </div>
         <div class="chips" role="radiogroup" aria-label="Media type">
-          ${Pe.map((e) => M`<button
+          ${Fe.map((e) => M`<button
               class="chip ${e.value === this._filter ? "on" : ""}"
               role="radio"
               aria-checked=${e.value === this._filter}
@@ -984,12 +991,12 @@ var Y = class {
     ` : M`<div class="message">No movies or shows found.</div>` : P;
 	}
 	_renderBrowse() {
-		let e = Fe.find((e) => e.value === this._browse).heading, t;
+		let e = Ie.find((e) => e.value === this._browse).heading, t;
 		return t = this._browseError ? M`<div class="message error">Couldn't load ${e.toLowerCase()} (${this._browseError}).</div>` : this._browseResults ? this._browseResults.length ? M`<div class="grid">${this._browseResults.map((e) => this._renderTile(e))}</div>` : M`<div class="message">Nothing to show.</div>` : M`<div class="message">Loading…</div>`, M`
       <div class="section">
         <span>${e}</span>
         <div class="chips small" role="radiogroup" aria-label="Browse">
-          ${Fe.map((e) => M`<button
+          ${Ie.map((e) => M`<button
               class="chip ${e.value === this._browse ? "on" : ""}"
               role="radio"
               aria-checked=${e.value === this._browse}

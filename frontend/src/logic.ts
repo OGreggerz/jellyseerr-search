@@ -58,7 +58,7 @@ export function episodeLabel(ep: Episode): string | null {
     case "downloading":
       return "Downloading";
     case "wanted":
-      return "Wanted";
+      return "Not found yet";
     case "not_aired":
       return ep.monitored ? "When it airs" : "Not aired";
     default:

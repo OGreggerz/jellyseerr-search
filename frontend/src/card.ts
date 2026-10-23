@@ -22,6 +22,9 @@ const DEBOUNCE_MS = 400;
 const MIN_QUERY = 2;
 // A wall-mounted tablet keeps the card open for days; refetch the browse list after this.
 const BROWSE_TTL_MS = 60 * 60 * 1000;
+// Sonarr searches in the background and grabs 15-30 s after Download is pressed;
+// refresh the episode list then so "Not found yet" turns into "Downloading".
+const AFTER_DOWNLOAD_REFRESH_MS = [20_000, 60_000];
 
 let versionChecked = false;
 
@@ -101,6 +104,7 @@ export class JellyseerrSearchCard extends LitElement {
   /** A Sonarr series the picker added for the open show; removed again on leaving
    *  the show unless something was picked (Sonarr checks that too). */
   private _addedSeries?: number;
+  private _refreshTimers: Array<ReturnType<typeof setTimeout>> = [];
   private _browseAt = 0;
   /** What _browseResults were loaded for, as `${browse}/${filter}`. */
   private _browseKey?: string;
@@ -179,6 +183,7 @@ export class JellyseerrSearchCard extends LitElement {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this._debounce);
+    this._clearRefreshTimers();
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -467,7 +472,13 @@ export class JellyseerrSearchCard extends LitElement {
     }
   }
 
+  private _clearRefreshTimers(): void {
+    this._refreshTimers.forEach(clearTimeout);
+    this._refreshTimers = [];
+  }
+
   private _closeEpisodes(): void {
+    this._clearRefreshTimers();
     this._latestEpisodes.next();
     this._episodeSeason = undefined;
     this._episodes = undefined;
@@ -517,7 +528,14 @@ export class JellyseerrSearchCard extends LitElement {
       this._addedSeries = undefined; // Something was picked: keep the show.
       toast(this, `Downloading ${ids.length} episode${ids.length === 1 ? "" : "s"} of ${list.title}`);
       this._picked = new Set();
-      await this._loadEpisodes(this._selected.tmdb_id, list.season_number);
+      const tmdbId = this._selected.tmdb_id;
+      await this._loadEpisodes(tmdbId, list.season_number);
+      this._clearRefreshTimers();
+      this._refreshTimers = AFTER_DOWNLOAD_REFRESH_MS.map((ms) =>
+        setTimeout(() => {
+          if (this._episodes?.series_id === list.series_id) void this._loadEpisodes(tmdbId, list.season_number);
+        }, ms),
+      );
     } catch (err) {
       toast(this, `Download failed: ${errorMessage(err)}`);
     } finally {
