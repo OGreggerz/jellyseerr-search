@@ -593,7 +593,7 @@ var Y = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, X, Ae = "0.5.1", Z = "jellyseerr_search", je = 400, Q = 2, Me = 36e5, Ne = !1, Pe = [
+}, X, Ae = "0.5.2", Z = "jellyseerr_search", je = 400, Q = 2, Me = 36e5, Ne = !1, Pe = [
 	{
 		value: "all",
 		label: "All"
@@ -699,7 +699,7 @@ var Y = class {
 	async _checkVersion() {
 		try {
 			let { version: e } = await this.hass.callWS({ type: `${Z}/version` });
-			e !== "0.5.1" && (this._staleVersion = e);
+			e !== "0.5.2" && (this._staleVersion = e);
 		} catch {}
 	}
 	async _reload() {
@@ -919,16 +919,12 @@ var Y = class {
 		if (n && !this._pickerBusy && this._selected) {
 			this._pickerBusy = !0;
 			try {
-				let r = await this.hass.callWS({
+				(await this.hass.callWS({
 					type: `${Z}/episodes/options`,
 					series_id: n.series_id,
 					[e]: t,
 					...this._entry()
-				});
-				r.follow_new && (this._addedSeries = void 0), e === "follow_new" ? await this._loadEpisodes(this._selected.tmdb_id, n.season_number) : this._episodes = {
-					...n,
-					...r
-				};
+				})).follow_new && (this._addedSeries = void 0), await this._loadEpisodes(this._selected.tmdb_id, n.season_number);
 			} catch (e) {
 				W(this, `Couldn't change it: ${G(e)}`);
 			} finally {
@@ -1130,7 +1126,10 @@ var Y = class {
             />
             <span class="grow">
               Daily show
-              <span class="hint">For shows released by date, like quizzes and soaps.</span>
+              <span class="hint">
+                For shows released by date, like quizzes and soaps. Turning it on searches again for
+                wanted episodes.
+              </span>
             </span>
           </label>
         </div>

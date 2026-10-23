@@ -538,8 +538,9 @@ export class JellyseerrSearchCard extends LitElement {
       });
       if (show.follow_new) this._addedSeries = undefined;
       // Following changes which future episodes are monitored, so reload them.
-      if (option === "follow_new") await this._loadEpisodes(this._selected.tmdb_id, list.season_number);
-      else this._episodes = { ...list, ...show };
+      // Following changes which future episodes are monitored, and Daily searches
+      // wanted episodes again: reload either way so the chips are current.
+      await this._loadEpisodes(this._selected.tmdb_id, list.season_number);
     } catch (err) {
       toast(this, `Couldn't change it: ${errorMessage(err)}`);
     } finally {
@@ -801,7 +802,10 @@ export class JellyseerrSearchCard extends LitElement {
             />
             <span class="grow">
               Daily show
-              <span class="hint">For shows released by date, like quizzes and soaps.</span>
+              <span class="hint">
+                For shows released by date, like quizzes and soaps. Turning it on searches again for
+                wanted episodes.
+              </span>
             </span>
           </label>
         </div>

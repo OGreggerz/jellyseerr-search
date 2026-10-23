@@ -39,7 +39,8 @@ only. Add Sonarr's URL and API key under the integration's **Configure** button
 and each season in the card gets an **Episodes** link: tick single episodes and
 download them, switch **Get new episodes** on to have future episodes download
 when they air, and **Daily show** for programmes released by date (quizzes,
-soaps), which Sonarr otherwise can't match. Episode lists come from Sonarr
+soaps), which Sonarr otherwise can't match (turning it on searches again for
+episodes already wanted). Episode lists come from Sonarr
 (TVDB). The season list shows no episode counts: Jellyseerr's come from TMDB
 and can be badly wrong for long-running shows. Sonarr only lists episodes of
 shows it has, so opening the picker on a new show adds it to Sonarr with

@@ -223,12 +223,17 @@ async def test_follow_new_keeps_aired_episodes_as_they_were(hass, picker, aiocli
 async def test_daily(hass, picker, aioclient_mock, hass_ws_client) -> None:
     aioclient_mock.get(f"{SONARR}/series/5", json=SERIES)
     aioclient_mock.put(f"{SONARR}/series/5", json={**SERIES, "seriesType": "daily"})
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=5", json=SEASON_2)
+    aioclient_mock.post(f"{SONARR}/command", json={"id": 1}, status=201)
     ws = await hass_ws_client(hass)
     await ws.send_json_auto_id({"type": f"{DOMAIN}/episodes/options", "series_id": 5, "daily": True})
     msg = await ws.receive_json()
     assert msg["result"]["daily"] is True
     put = calls(aioclient_mock, "put", "/series/5")[0][2]
     assert put["seriesType"] == "daily" and put["seasons"] == SERIES["seasons"]
+    # Wanted episodes searched again by date: aired, monitored, no file (103 only;
+    # 101 has its file, 105 hasn't aired).
+    assert calls(aioclient_mock, "post", "/command")[0][2] == {"name": "EpisodeSearch", "episodeIds": [103]}
 
 
 async def test_discard_removes_an_untouched_show(hass, picker, aioclient_mock, hass_ws_client) -> None:

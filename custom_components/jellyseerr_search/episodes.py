@@ -233,6 +233,7 @@ async def async_set_show_options(
     following, so turning following off unmonitors both (the card says so)."""
     try:
         series = await sonarr.async_get_series(series_id)
+        old_type = series.get("seriesType")
         update = {**series}
         if daily is not None:
             if daily:
@@ -256,6 +257,17 @@ async def async_set_show_options(
                 for s in series.get("seasons", [])
             ]
         series = await sonarr.async_update_series(update)
+        if daily and old_type != "daily":
+            # Sonarr doesn't search again when the type changes, so episodes
+            # already wanted (searched by S/E number, found nothing) would stay
+            # stuck. Search them by air date now.
+            now = dt_util.utcnow()
+            stuck = [
+                ep["id"]
+                for ep in await sonarr.async_get_episodes(series_id)
+                if ep.get("monitored") and not ep.get("hasFile") and _aired(ep, now)
+            ]
+            await sonarr.async_search_episodes(stuck)
         if flips:
             now = dt_util.utcnow()
             aired = [
