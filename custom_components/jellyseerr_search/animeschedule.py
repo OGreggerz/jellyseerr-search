@@ -5,8 +5,8 @@ Only AnimeSchedule publishes dub air times in a form a program can read
 requests carry an application token, results are cached only as needed, and
 the app credits AnimeSchedule.net visibly (the card does, by every dub date).
 
-The weekly dub timetable (`/timetables/dub`) is read for this week and the
-next few, and kept for a few hours: a handful of requests a day, far inside
+The weekly dub timetable (`/timetables/dub`) is read for last week (for the
+latest dubbed episode), this week and the next few, and kept for a few hours: a handful of requests a day, far inside
 its 120 a minute. A show is matched by name, since AnimeSchedule has no TVDB
 or TMDB ids: its names (title, English, romaji, native) are compared with the
 show's names in Sonarr and Seerr, ignoring case and punctuation, and a
@@ -32,7 +32,7 @@ _LOGGER = logging.getLogger(__name__)
 
 BASE_URL = "https://animeschedule.net/api/v3"
 CREDIT_URL = "https://animeschedule.net"
-WEEKS_AHEAD = 4  # this week and the next three
+WEEKS = range(-1, 4)  # last week, this week and the next three
 CACHE_FOR = timedelta(hours=6)
 RETRY_AFTER = timedelta(minutes=30)  # after a failure, don't ask again for this long
 # A shorter name could match unrelated shows ("Slime" and "Slime Taoshite...").
@@ -87,6 +87,16 @@ def names_match(entry: dict[str, Any], names: list[str]) -> bool:
     return False
 
 
+def _delayed(entry: dict[str, Any], now: datetime) -> bool:
+    """AnimeSchedule fills an undelayed entry's delayedUntil with
+    0001-01-01T00:00:00Z (seen live: 46 of 50 entries in a week), and leaves
+    past delays in place, so only a delay still running counts."""
+    if entry.get("airingStatus") == "delayed-air":
+        return True
+    until = dt_util.parse_datetime(entry.get("delayedUntil") or "")
+    return until is not None and until.year > 1 and until > now
+
+
 class DubSchedule:
     """The next few weeks of the dub timetable, cached."""
 
@@ -103,7 +113,7 @@ class DubSchedule:
             return self._entries
         entries: list[dict[str, Any]] = []
         try:
-            for offset in range(WEEKS_AHEAD):
+            for offset in WEEKS:
                 year, week, _ = (now + timedelta(weeks=offset)).isocalendar()
                 entries += await self._client.async_dub_week(year, week)
         except AnimeScheduleError as err:
@@ -134,7 +144,7 @@ class DubSchedule:
         return {
             "episode": nxt[1].get("episodeNumber") if nxt else None,
             "date_utc": nxt[0].isoformat() if nxt else None,
-            "delayed": bool(nxt and (nxt[1].get("delayedUntil") or nxt[1].get("airingStatus") == "delayed-air")),
+            "delayed": bool(nxt and _delayed(nxt[1], now)),
             "last_episode": last[1].get("episodeNumber") if last else None,
             "total": (nxt or last)[1].get("episodes") or None,
             "source": "AnimeSchedule.net",

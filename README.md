@@ -106,7 +106,7 @@ Japanese episodes.
 application token in the options, the page shows the next English dub episode
 and when ("English dub: episode 3 Fri 30 Oct, 15:00 · dubbed up to episode 2"),
 episodes show when their dub is expected (weekly from the next one), and the
-Waiting list shows the next dub. The dub timetable for this week and the next
+Waiting list shows the next dub. The dub timetable for last week, this week and the next
 three is read every six hours and matched to shows by name. Dates are credited
 to AnimeSchedule.net, as its API terms require.
 

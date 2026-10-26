@@ -362,9 +362,28 @@ async def test_next_dub_from_the_timetable() -> None:
         "episode": 3, "date_utc": "2026-10-30T15:00:00+00:00", "delayed": False, "last_episode": 2, "total": 12,
         "source": "AnimeSchedule.net", "url": "https://animeschedule.net/anime/kusuriya-3",
     }
-    assert client.weeks == [(2026, 44), (2026, 45), (2026, 46), (2026, 47)]
+    assert client.weeks == [(2026, 43), (2026, 44), (2026, 45), (2026, 46), (2026, 47)]  # last week too
     assert await schedule.async_next_dub(["Slime"], now) is None
-    assert len(client.weeks) == 4  # cached
+    assert len(client.weeks) == 5  # cached
+
+
+@pytest.mark.parametrize(
+    ("until", "status", "delayed"),
+    [
+        ("0001-01-01T00:00:00Z", "unaired", False),  # AnimeSchedule's "no delay"
+        ("2026-10-01T00:00:00Z", "unaired", False),  # a delay that's over
+        ("2026-11-23T00:00:00Z", "unaired", True),
+        ("0001-01-01T00:00:00Z", "delayed-air", True),
+    ],
+)
+async def test_delays(until, status, delayed) -> None:
+    class One(FakeClient):
+        async def async_dub_week(self, year, week):
+            self.weeks.append((year, week))
+            return [{**TIMETABLE[1], "delayedUntil": until, "airingStatus": status}] if len(self.weeks) == 1 else []
+
+    dub = await DubSchedule(One()).async_next_dub(["The Apothecary Diaries"], datetime(2026, 10, 26, 12, tzinfo=timezone.utc))
+    assert dub["delayed"] is delayed
 
 
 async def test_dub_dates_in_the_audio_state(hass, picker, aioclient_mock, hass_ws_client) -> None:
