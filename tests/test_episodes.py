@@ -913,6 +913,7 @@ async def test_request_seasons_through_sonarr(hass, picker, aioclient_mock, hass
     aioclient_mock.get(f"{SONARR}/episode?seriesId=16", json=[{**ep(201, 1), "seasonNumber": 2}])
     aioclient_mock.get(f"{SONARR}/release?episodeId=201", json=[{"mappedEpisodeInfo": [{"id": 201}]}])
     aioclient_mock.put(f"{SONARR}/series/16", json=APOTHECARY)
+    aioclient_mock.put(f"{SONARR}/episode/monitor", status=202)
     aioclient_mock.post(f"{SONARR}/command", json={"id": 1}, status=201)
     ws = await hass_ws_client(hass)
     await ws.send_json_auto_id({"type": f"{DOMAIN}/episodes/request", "tmdb_id": 220542, "seasons": [2]})
@@ -921,6 +922,29 @@ async def test_request_seasons_through_sonarr(hass, picker, aioclient_mock, hass
     put = calls(aioclient_mock, "put", "/series/16")[-1][2]
     assert [(s["seasonNumber"], s["monitored"]) for s in put["seasons"]] == [(0, False), (1, False), (2, True), (3, True)]
     assert calls(aioclient_mock, "post", "/command")[-1][2] == {"name": "SeasonSearch", "seriesId": 16, "seasonNumber": 2}
+
+
+async def test_request_monitors_episodes_of_an_already_monitored_season(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    """VisionQuest, 2026-10-26: Get new episodes had turned season 1 on and put
+    its aired episodes back to unmonitored, so the season PUT changed nothing
+    and the season search rejected every release."""
+    followed = {**APOTHECARY, "monitorNewItems": "all", "seasons": [{"seasonNumber": 1, "monitored": True}]}
+    aioclient_mock.get(f"{API}/tv/220542", json={"externalIds": {"tvdbId": 431162}})
+    aioclient_mock.get(f"{SONARR}/series?tvdbId=431162", json=[followed])
+    aioclient_mock.get(f"{SONARR}/series/16", json=followed)
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=16", json=[
+        ep(101, 1, season=1), ep(102, 2, season=1), ep(103, 3, season=1, aired=False, monitored=True),
+    ])
+    aioclient_mock.get(f"{SONARR}/release?episodeId=101", json=[{"mappedEpisodeInfo": [{"id": 101}]}])
+    aioclient_mock.put(f"{SONARR}/series/16", json=followed)
+    aioclient_mock.put(f"{SONARR}/episode/monitor", status=202)
+    aioclient_mock.post(f"{SONARR}/command", json={"id": 1}, status=201)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/episodes/request", "tmdb_id": 220542, "seasons": [1]})
+    assert (await ws.receive_json())["success"]
+    assert calls(aioclient_mock, "put", "/episode/monitor")[0][2] == {"episodeIds": [101, 102], "monitored": True}
+    order = [(c[0].lower(), c[1].path) for c in aioclient_mock.mock_calls if c[1].path in ("/api/v3/episode/monitor", "/api/v3/command")]
+    assert order == [("put", "/api/v3/episode/monitor"), ("post", "/api/v3/command")]  # monitored before the search
 
 
 async def test_downloaded_comes_from_sonarr_and_radarr(hass, arrs, aioclient_mock, hass_ws_client) -> None:

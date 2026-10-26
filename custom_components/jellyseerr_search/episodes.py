@@ -777,21 +777,25 @@ async def async_request_seasons(
         try:
             now = dt_util.utcnow()
             wanted = set(seasons)
-            in_seasons = [
-                ep for ep in await sonarr.async_get_episodes(series_id)
-                if ep.get("seasonNumber") in wanted and _aired(ep, now)
-            ]
+            whole = [ep for ep in await sonarr.async_get_episodes(series_id) if ep.get("seasonNumber") in wanted]
+            in_seasons = [ep for ep in whole if _aired(ep, now)]
             type_changed = None
             if in_seasons:
                 probe = max(in_seasons, key=lambda ep: ep.get("airDateUtc") or "")["id"]
                 _, type_changed = await _fit_series_type(sonarr, await sonarr.async_get_series(series_id), probe, checked)
             fresh = await sonarr.async_get_series(series_id)
-            # Monitoring a season monitors every episode in it (Sonarr's cascade).
             await sonarr.async_update_series({
                 **fresh,
                 "monitored": True,
                 "seasons": [{**s, "monitored": True} if s["seasonNumber"] in wanted else s for s in fresh.get("seasons", [])],
             })
+            # Sonarr monitors a season's episodes only when the season's flag
+            # changes. If it was already on (Get new episodes turns it on, then
+            # puts aired episodes back to unmonitored), they stay unmonitored and
+            # the season search rejects every release ("Episode is not
+            # monitored"): seen 2026-10-26 with VisionQuest, followed and
+            # requested in quick succession. So monitor them here as well.
+            await sonarr.async_set_monitored(sorted(ep["id"] for ep in whole if not ep.get("monitored")), True)
             for number in sorted(wanted):
                 await sonarr._request("POST", "/command", json={"name": "SeasonSearch", "seriesId": series_id, "seasonNumber": number})
         except SonarrNotFoundError as err:

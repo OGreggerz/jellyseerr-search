@@ -803,7 +803,7 @@ var q = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, J, rt = "0.12.1", Y = "jellyseerr_search", it = 400, X = 2, at = 36e5, ot = [2e4, 6e4], st = !1, Z = !1, ct = [
+}, J, rt = "0.12.2", Y = "jellyseerr_search", it = 400, X = 2, at = 36e5, ot = [2e4, 6e4], st = !1, Z = !1, ct = [
 	{
 		value: "all",
 		label: "All"
@@ -921,7 +921,7 @@ var $ = class extends L {
 	async _checkVersion() {
 		try {
 			let { version: e, waiting: t } = await this.hass.callWS({ type: `${Y}/version` });
-			e !== "0.12.1" && (this._staleVersion = e), Z = !!t, this._waitingOn = Z;
+			e !== "0.12.2" && (this._staleVersion = e), Z = !!t, this._waitingOn = Z;
 		} catch {}
 	}
 	async _reload() {
@@ -1407,7 +1407,7 @@ var $ = class extends L {
           <input
             type="checkbox"
             .checked=${Fe(this._show.follow_new)}
-            ?disabled=${this._followBusy}
+            ?disabled=${this._followBusy || this._requesting}
             @change=${(e) => this._setFollowShow(e.target.checked)}
           />
           <span class="grow">
@@ -1601,8 +1601,8 @@ var $ = class extends L {
               <input type="checkbox" .checked=${this._is4k} @change=${(e) => this._is4k = e.target.checked} />
               Request in 4K
             </label>` : A}
-        <button class="primary" ?disabled=${!r || this._requesting} @click=${this._request}>
-          ${this._requesting ? "Requesting…" : r ? "Request" : t ?? "Unavailable"}
+        <button class="primary" ?disabled=${!r || this._requesting || this._followBusy} @click=${this._request}>
+          ${this._requesting ? "Requesting…" : this._followBusy && r ? "Waiting for Get new episodes…" : r ? "Request" : t ?? "Unavailable"}
         </button>
       </div>
     `;

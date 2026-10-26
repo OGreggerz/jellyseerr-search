@@ -1012,7 +1012,7 @@ export class JellyseerrSearchCard extends LitElement {
           <input
             type="checkbox"
             .checked=${live(this._show.follow_new)}
-            ?disabled=${this._followBusy}
+            ?disabled=${this._followBusy || this._requesting}
             @change=${(e: Event) => this._setFollowShow((e.target as HTMLInputElement).checked)}
           />
           <span class="grow">
@@ -1281,8 +1281,14 @@ export class JellyseerrSearchCard extends LitElement {
               Request in 4K
             </label>`
           : nothing}
-        <button class="primary" ?disabled=${!canRequest || this._requesting} @click=${this._request}>
-          ${this._requesting ? "Requesting…" : canRequest ? "Request" : label ?? "Unavailable"}
+        <button class="primary" ?disabled=${!canRequest || this._requesting || this._followBusy} @click=${this._request}>
+          ${this._requesting
+            ? "Requesting…"
+            : this._followBusy && canRequest
+              ? "Waiting for Get new episodes…"
+              : canRequest
+                ? "Request"
+                : label ?? "Unavailable"}
         </button>
       </div>
     `;
