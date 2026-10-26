@@ -191,14 +191,25 @@ class JellyseerrClient:
         data = await self._request("GET", f"/tv/{tmdb_id}")
         return (data.get("externalIds") or {}).get("tvdbId") or None
 
-    async def async_get_sonarr_defaults(self) -> tuple[int, str] | None:
+    async def async_get_details(self, media_type: str, tmdb_id: int) -> dict[str, Any]:
+        """Seerr's details of a film or show (TMDB's, with keywords and genres)."""
+        return await self._request("GET", f"/{media_type}/{tmdb_id}") or {}
+
+    async def async_get_sonarr_defaults(self, anime: bool = False) -> tuple[int, str] | None:
         """Quality profile id and root folder of Jellyseerr's default (non-4K) Sonarr,
-        so shows added by the episode picker land where requests do."""
+        so shows added by the episode picker land where requests do. For anime,
+        Seerr's anime profile and folder, as Seerr itself uses for anime (each
+        falls back to the normal one if unset)."""
         servers = await self._request("GET", "/settings/sonarr") or []
         hd = [s for s in servers if not s.get("is4k")]
         server = next((s for s in hd if s.get("isDefault")), hd[0] if hd else None)
         if not server or not server.get("activeProfileId") or not server.get("activeDirectory"):
             return None
+        if anime:
+            return (
+                int(server.get("activeAnimeProfileId") or server["activeProfileId"]),
+                str(server.get("activeAnimeDirectory") or server["activeDirectory"]),
+            )
         return int(server["activeProfileId"]), str(server["activeDirectory"])
 
     async def async_forget(self, media_type: str, tmdb_id: int, keep_requests: bool = False) -> bool:
@@ -234,9 +245,14 @@ class JellyseerrClient:
         tmdb_id: int,
         seasons: list[int] | str | None = None,
         is_4k: bool = False,
+        profile_id: int | None = None,
     ) -> dict[str, Any]:
-        """Ask Jellyseerr to fetch a movie or show. Returns the created request."""
+        """Ask Jellyseerr to fetch a movie or show. Returns the created request.
+        `profile_id` overrides the server's quality profile (Seerr applies it
+        for admins, as its Advanced options do)."""
         body: dict[str, Any] = {"mediaType": media_type, "mediaId": tmdb_id, "is4k": is_4k}
+        if profile_id is not None:
+            body["profileId"] = profile_id
         if media_type == "tv":
             body["seasons"] = seasons if seasons else "all"
         return await self._request("POST", "/request", json=body)

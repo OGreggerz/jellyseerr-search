@@ -4,8 +4,13 @@ import { LitElement, css, html, nothing, type PropertyValues } from "lit";
 import { live } from "lit/directives/live.js";
 import { errorMessage, toast, type HomeAssistant } from "./ha";
 import {
+  AUDIO_OPTIONS,
   Latest,
   airDateLabel,
+  audioLines,
+  audioSwitchWarning,
+  episodeAudioLabel,
+  episodeDubLine,
   canRequestMore,
   checkSummary,
   episodeLabel,
@@ -22,6 +27,8 @@ import {
   statusLabel,
 } from "./logic";
 import type {
+  AudioChoice,
+  AudioState,
   Browse,
   CardConfig,
   Episode,
@@ -110,6 +117,10 @@ export class JellyseerrSearchCard extends LitElement {
     _checkingAll: { state: true },
     _library: { state: true },
     _libraryError: { state: true },
+    _audio: { state: true },
+    _audioPick: { state: true },
+    _audioConfirm: { state: true },
+    _audioBusy: { state: true },
   };
 
   declare hass: HomeAssistant;
@@ -161,6 +172,13 @@ export class JellyseerrSearchCard extends LitElement {
   /** What the server already has, for the Downloaded filter. */
   declare _library?: SearchResult[];
   declare _libraryError?: string;
+  /** The open title's audio section (anime: dub or sub), null if not available. */
+  declare _audio?: AudioState | null;
+  /** The audio chosen for a title Sonarr/Radarr hasn't got yet: goes with the request. */
+  declare _audioPick: AudioChoice;
+  /** A switch for a title Sonarr/Radarr has, waiting for "Switch". */
+  declare _audioConfirm?: AudioChoice;
+  declare _audioBusy: boolean;
 
   private _debounce?: ReturnType<typeof setTimeout>;
   private _latestSearch = new Latest();
@@ -195,6 +213,8 @@ export class JellyseerrSearchCard extends LitElement {
     this._checks = {};
     this._waitingOn = waitingAvailable;
     this._checkingAll = false;
+    this._audioPick = "dub";
+    this._audioBusy = false;
   }
 
   static getConfigForm() {
@@ -514,8 +534,12 @@ export class JellyseerrSearchCard extends LitElement {
     this._show = undefined;
     this._release = undefined;
     this._seasonSource = undefined;
+    this._audio = undefined;
+    this._audioPick = "dub";
+    this._audioConfirm = undefined;
     this._closeEpisodes();
     void this._loadRelease(result);
+    void this._loadAudio(result);
     if (result.media_type === "tv") void this._loadSeasons(result.tmdb_id);
   }
 
@@ -530,6 +554,53 @@ export class JellyseerrSearchCard extends LitElement {
       if (this._selected === item) this._release = info;
     } catch {
       // Older integration or Jellyseerr hiccup: just no line.
+    }
+  }
+
+  private async _loadAudio(item: SearchResult): Promise<void> {
+    try {
+      const state = await this.hass.callWS<AudioState | null>({
+        type: `${DOMAIN}/audio`,
+        tmdb_id: item.tmdb_id,
+        media_type: item.media_type,
+        ...this._entry(),
+      });
+      if (this._selected?.tmdb_id === item.tmdb_id && this._selected.media_type === item.media_type) this._audio = state;
+    } catch {
+      // Older integration, or Sonarr/Radarr down: no audio section.
+      if (this._selected === item) this._audio = null;
+    }
+  }
+
+  /** The audio to send with a request or an add: only for anime that isn't in
+   *  Sonarr/Radarr yet (once it is, its profile says). */
+  private _audioFor(): { audio?: AudioChoice } {
+    const a = this._audio;
+    return a && a.available && a.anime && !a.in_arr ? { audio: this._audioPick } : {};
+  }
+
+  private async _switchAudio(to: AudioChoice): Promise<void> {
+    const item = this._selected;
+    if (!item || this._audioBusy) return;
+    this._audioBusy = true;
+    try {
+      const state = await this.hass.callWS<AudioState>({
+        type: `${DOMAIN}/audio`,
+        tmdb_id: item.tmdb_id,
+        media_type: item.media_type,
+        audio: to,
+        ...this._entry(),
+      });
+      const label = AUDIO_OPTIONS.find((o) => o.value === to)?.label ?? to;
+      toast(this, `${item.title}: ${label.toLowerCase()}.${to !== "sub" && state.dub_wanted ? " Searching for dubs now." : ""}`);
+      if (this._selected !== item) return;
+      this._audio = state;
+      this._audioConfirm = undefined;
+      if (this._episodes && this._episodeSeason) void this._loadEpisodes(item.tmdb_id, this._episodeSeason.season_number);
+    } catch (err) {
+      toast(this, `Couldn't change it: ${errorMessage(err)}`);
+    } finally {
+      this._audioBusy = false;
     }
   }
 
@@ -581,6 +652,7 @@ export class JellyseerrSearchCard extends LitElement {
       tmdb_id: item.tmdb_id,
       media_type: item.media_type,
       is_4k: this._is4k,
+      ...this._audioFor(),
       ...this._entry(),
     };
     if (item.media_type === "tv") {
@@ -592,6 +664,7 @@ export class JellyseerrSearchCard extends LitElement {
       await this.hass.callWS(msg);
       toast(this, `Requested ${item.title}`);
       this._markRequested(item);
+      void this._loadAudio(item);
     } catch (err) {
       toast(this, `Request failed: ${errorMessage(err)}`);
     } finally {
@@ -609,13 +682,17 @@ export class JellyseerrSearchCard extends LitElement {
         type: `${DOMAIN}/episodes/request`,
         tmdb_id: item.tmdb_id,
         seasons,
+        ...this._audioFor(),
         ...this._entry(),
       });
       const changed = result.series_type_changed ? ` ${typeChangedMessage(item.title, result.series_type_changed)}` : "";
       const which = seasons.length === 1 ? `series ${seasons[0]}` : `series ${seasons.join(", ")}`;
       toast(this, `Getting ${which} of ${item.title}.${changed}`);
       if (this._addedSeries !== undefined) this._addedSeries = undefined;
-      if (this._selected === item) void this._loadSeasons(item.tmdb_id);
+      if (this._selected === item) {
+        void this._loadSeasons(item.tmdb_id);
+        void this._loadAudio(item);
+      }
     } catch (err) {
       toast(this, `Request failed: ${errorMessage(err)}`);
     } finally {
@@ -699,10 +776,14 @@ export class JellyseerrSearchCard extends LitElement {
         type: `${DOMAIN}/episodes`,
         tmdb_id: tmdbId,
         season_number: seasonNumber,
+        ...this._audioFor(),
         ...this._entry(),
       });
       if (!current()) return; // A stale add is left to the server's sweep.
-      if (result.added) this._addedSeries = result.series_id;
+      if (result.added) {
+        this._addedSeries = result.series_id;
+        if (this._selected) void this._loadAudio(this._selected); // Now in Sonarr, on its profile.
+      }
       this._episodes = result;
     } catch (err) {
       if (current()) this._episodesError = errorMessage(err);
@@ -855,6 +936,7 @@ export class JellyseerrSearchCard extends LitElement {
         type: `${DOMAIN}/episodes/follow`,
         tmdb_id: item.tmdb_id,
         follow_new: value,
+        ...this._audioFor(),
         ...this._entry(),
       });
       if (show.series_type_changed) toast(this, typeChangedMessage(item.title, show.series_type_changed));
@@ -862,6 +944,7 @@ export class JellyseerrSearchCard extends LitElement {
       else if (value) toast(this, `New episodes of ${item.title} will download as they come out.`);
       if (this._selected !== item) return;
       this._show = { in_sonarr: show.in_sonarr, follow_new: show.follow_new };
+      if (show.in_sonarr && !this._audio?.in_arr) void this._loadAudio(item);
       // Following changes which future episodes are monitored: refresh an open list.
       if (this._episodes && this._episodeSeason) void this._loadEpisodes(item.tmdb_id, this._episodeSeason.season_number);
     } catch (err) {
@@ -870,6 +953,54 @@ export class JellyseerrSearchCard extends LitElement {
     } finally {
       this._followBusy = false;
     }
+  }
+
+  /** Anime only: English dub or Japanese with subtitles, what's downloaded in
+   *  English, and the next dub date. Before Sonarr/Radarr has the title the
+   *  choice goes with the request; after, changing it asks first. */
+  private _renderAudio(item: SearchResult) {
+    const a = this._audio;
+    if (!a || !a.available || !a.anime) return nothing;
+    const current = a.in_arr ? a.audio : this._audioPick;
+    const lines = audioLines(a, item.media_type);
+    return html`
+      <div class="seasons options audio" role="radiogroup" aria-label="Audio">
+        <div class="seasons-head"><span>Audio</span></div>
+        ${a.in_arr && !a.audio
+          ? html`<div class="hint audio-note">
+              On a profile that doesn't prefer English dubs. Pick one to set it.
+            </div>`
+          : nothing}
+        ${AUDIO_OPTIONS.map(
+          (o) => html`<label class="row option">
+            <input
+              type="radio"
+              name="audio"
+              .checked=${live((this._audioConfirm ?? current) === o.value)}
+              ?disabled=${this._audioBusy}
+              @change=${() => {
+                if (a.in_arr) this._audioConfirm = o.value === a.audio ? undefined : o.value;
+                else this._audioPick = o.value;
+              }}
+            />
+            <span class="grow">${o.label}<span class="hint">${o.hint}</span></span>
+          </label>`,
+        )}
+        ${this._audioConfirm
+          ? html`<div class="confirm notice" role="alert">${audioSwitchWarning(this._audioConfirm, item.media_type)}</div>
+              <div class="confirm-row">
+                <button class="secondary" ?disabled=${this._audioBusy} @click=${() => (this._audioConfirm = undefined)}>
+                  Cancel
+                </button>
+                <button class="primary" ?disabled=${this._audioBusy} @click=${() => this._switchAudio(this._audioConfirm!)}>
+                  ${this._audioBusy ? "Switching…" : "Switch"}
+                </button>
+              </div>`
+          : nothing}
+        ${lines.map((l) => html`<div class="hint audio-line">${l}</div>`)}
+        ${a.dub ? html`<div class="hint credit">Dub dates from <a href=${a.dub.url} target="_blank" rel="noreferrer">AnimeSchedule.net</a></div>` : nothing}
+      </div>
+    `;
   }
 
   private _renderFollow(item: SearchResult) {
@@ -1071,6 +1202,9 @@ export class JellyseerrSearchCard extends LitElement {
             <span class="status inline w-${item.state}">${waitingLabel(item)}</span>
           </div>
           <div class="hint">${waitingDetail(item)}</div>
+          ${item.next_dub
+            ? html`<div class="hint credit">Dub dates from <a href=${item.next_dub.url} target="_blank" rel="noreferrer">AnimeSchedule.net</a></div>`
+            : nothing}
           ${typeof check === "object" ? html`<div class="wcheck">${checkSummary(check)}</div>` : nothing}
           ${typeof check === "string" && !checking ? html`<div class="wcheck error">${check}</div>` : nothing}
           ${item.state !== "downloading"
@@ -1078,7 +1212,7 @@ export class JellyseerrSearchCard extends LitElement {
                 <button class="secondary small" ?disabled=${checking || this._checkingAll} @click=${() => this._checkWaiting(item)}>
                   ${checking ? "Checking…" : "Check now"}
                 </button>
-                ${item.state === "not_found"
+                ${item.state === "not_found" || item.state === "dub_wanted"
                   ? html`<button class="secondary small" @click=${() => this._searchWaiting(item)}>Search again</button>`
                   : nothing}
               </div>`
@@ -1138,6 +1272,7 @@ export class JellyseerrSearchCard extends LitElement {
         </div>
         ${this._config.show_remove && isRemovable(item.status) && this._confirmRemove ? this._renderRemove(item) : nothing}
         ${item.overview ? html`<p class="overview">${item.overview}</p>` : nothing}
+        ${this._renderAudio(item)}
         ${tv ? this._renderFollow(item) : nothing}
         ${tv ? this._renderSeasons() : nothing}
         ${this._config.show_4k && canRequest
@@ -1219,6 +1354,9 @@ export class JellyseerrSearchCard extends LitElement {
     } else {
       const open = pickableEpisodes(list.episodes);
       const n = this._picked.size;
+      const choice = this._audio?.audio ?? null;
+      const latest = Math.max(...(this._seasons ?? []).map((s) => s.season_number), list.season_number) === list.season_number;
+      const dubWanted = choice === "dub" || choice === "dub_only";
       body = html`
         <div class="seasons">
           <div class="seasons-head">
@@ -1232,7 +1370,9 @@ export class JellyseerrSearchCard extends LitElement {
           ${list.episodes.length
             ? list.episodes.map((ep) => {
                 const free = isPickable(ep);
-                const label = episodeLabel(ep);
+                const label = episodeLabel(ep, choice);
+                const audio = episodeAudioLabel(ep);
+                const dubLine = dubWanted ? episodeDubLine(ep, this._audio?.dub ?? null, latest) : null;
                 return html`<label class="row season episode ${free ? "" : "done"}">
                   <input
                     type="checkbox"
@@ -1242,9 +1382,12 @@ export class JellyseerrSearchCard extends LitElement {
                   />
                   <span class="grow">
                     <span class="ep-title">${ep.episode_number}. ${ep.title || `Episode ${ep.episode_number}`}</span>
-                    <span class="hint">${airDateLabel(ep.air_date)}</span>
+                    <span class="hint">${airDateLabel(ep.air_date)}${dubLine ? html` · ${dubLine}` : nothing}</span>
                   </span>
-                  ${label ? html`<span class="status inline ep ${ep.status}">${label}</span>` : nothing}
+                  <span class="epchips">
+                    ${label ? html`<span class="status inline ep ${ep.status}">${label}</span>` : nothing}
+                    ${audio ? html`<span class="status inline ep audio-${ep.audio}">${audio}</span>` : nothing}
+                  </span>
                   ${this._config.show_remove && ep.status === "downloaded" && this._confirmRemoveEp !== ep.id
                     ? html`<button class="link ep-remove" @click=${(e: Event) => this._askRemoveEpisode(ep.id, e)}>
                         Remove
@@ -1287,6 +1430,9 @@ export class JellyseerrSearchCard extends LitElement {
         <div class="ep-head">
           <h2>${season.name}</h2>
           <div class="meta">Episodes from Sonarr</div>
+          ${this._audio?.dub && (this._audio.audio === "dub" || this._audio.audio === "dub_only")
+            ? html`<div class="hint credit">Dub dates from <a href=${this._audio.dub.url} target="_blank" rel="noreferrer">AnimeSchedule.net</a></div>`
+            : nothing}
         </div>
         ${body}
       </div>
@@ -1691,6 +1837,51 @@ export class JellyseerrSearchCard extends LitElement {
     }
     .status.w-not_found {
       background: var(--warning-color, #ffa600);
+    }
+    .status.w-dub_wanted {
+      background: var(--secondary-text-color, #727272);
+    }
+    /* Audio: English (dub, dual audio, all dubbed) green-blue; part dubbed amber;
+       Japanese only grey. */
+    .status.audio-dub,
+    .status.audio-dual {
+      background: var(--state-active-color, #009688);
+    }
+    .status.audio-part_dub {
+      background: var(--warning-color, #ffa600);
+    }
+    .status.audio-sub,
+    .status.audio-sub_only {
+      background: var(--secondary-text-color, #727272);
+    }
+    .epchips {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      flex: none;
+    }
+    .audio {
+      padding-bottom: 10px;
+    }
+    .audio .option {
+      border-top: 1px solid var(--divider-color);
+    }
+    .audio .confirm,
+    .audio .confirm-row,
+    .audio .audio-line,
+    .audio .credit,
+    .audio-note {
+      margin: 8px 12px 0;
+    }
+    .confirm.notice {
+      color: var(--primary-text-color);
+    }
+    .credit {
+      font-size: 12px;
+    }
+    .credit a {
+      color: var(--primary-color);
     }
     .wcheck {
       font-size: 13px;

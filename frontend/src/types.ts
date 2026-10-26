@@ -3,7 +3,42 @@ export type MediaType = "movie" | "tv";
  *  want but haven't got. Neither searches. */
 export type MediaFilter = MediaType | "all" | "downloaded" | "waiting";
 
-export type WaitingState = "downloading" | "not_found" | "not_out";
+export type WaitingState = "downloading" | "not_found" | "not_out" | "dub_wanted";
+
+/** Anime audio, chosen per title: dub preferred (Japanese now, the dub replaces
+ *  it), dub only (wait for it), or Japanese with subtitles. */
+export type AudioChoice = "dub" | "dub_only" | "sub";
+/** A show's downloaded files: all in English, some, or none. */
+export type AudioSummary = "dub" | "part_dub" | "sub_only";
+/** One file's audio tracks. */
+export type FileAudio = "dual" | "dub" | "sub";
+
+/** The next English dub episode, from AnimeSchedule.net's timetable. */
+export interface DubInfo {
+  episode: number | null;
+  date_utc: string | null;
+  delayed: boolean;
+  last_episode: number | null;
+  total: number | null;
+  source: string;
+  url: string;
+}
+
+/** jellyseerr_search/audio: the page's audio section. */
+export interface AudioState {
+  /** Sonarr/Radarr has the three anime profiles. */
+  available: boolean;
+  anime: boolean;
+  audio: AudioChoice | null;
+  in_arr: boolean;
+  files: number;
+  english_files: number;
+  summary: AudioSummary | null;
+  dub_wanted: number;
+  dub: DubInfo | null;
+  /** Dub dates are set up (an AnimeSchedule token), so a missing date means none listed. */
+  dub_dates: boolean;
+}
 
 /** jellyseerr_search/waiting: a wanted title not downloaded yet. */
 export interface WaitingItem {
@@ -25,6 +60,10 @@ export interface WaitingItem {
   // Shows
   missing?: number;
   next_episode?: { season: number; episode: number; title: string; air_date_utc: string } | null;
+  audio?: AudioChoice | null;
+  /** Episodes it has, but not in English yet. */
+  dub_wanted?: number;
+  next_dub?: DubInfo | null;
 }
 
 /** jellyseerr_search/release: TMDB's dates, via Jellyseerr. */
@@ -43,6 +82,8 @@ export interface ReleaseInfo {
 export interface CheckResult {
   found: number;
   accepted: number;
+  /** Of those accepted, how many have English audio. */
+  dubbed?: number;
   best: string | null;
   reasons: string[];
   checked_at: string;
@@ -72,7 +113,7 @@ export interface SearchResult {
   status: MediaStatus;
   /** What Sonarr/Radarr have of it, when set up: at least one file / wanted and
    *  not all here (both for a part-downloaded show waiting for more). */
-  arr?: { downloaded: boolean; waiting: boolean };
+  arr?: { downloaded: boolean; waiting: boolean; audio?: AudioSummary | null };
 }
 
 export interface Season {
@@ -92,6 +133,8 @@ export interface Episode {
   air_date: string | null;
   status: EpisodeStatus;
   monitored: boolean;
+  audio?: FileAudio | null;
+  english_subs?: boolean;
 }
 
 /** jellyseerr_search/seasons with Sonarr set up: the show page's follow state. */

@@ -54,6 +54,14 @@ class RadarrClient:
     async def async_get_movies(self) -> list[dict[str, Any]]:
         return await self._request("GET", "/movie") or []
 
+    async def async_get_movie_by_tmdb(self, tmdb_id: int) -> dict[str, Any] | None:
+        found = await self._request("GET", "/movie", params={"tmdbId": tmdb_id}) or []
+        return found[0] if found else None
+
+    async def async_set_profile(self, movie_id: int, profile_id: int) -> None:
+        """Change only the quality profile (Radarr's movie editor)."""
+        await self._request("PUT", "/movie/editor", json={"movieIds": [movie_id], "qualityProfileId": profile_id})
+
     async def async_queued_movie_ids(self) -> set[int]:
         data = await self._request("GET", "/queue", params={"pageSize": 1000})
         return {r["movieId"] for r in (data or {}).get("records", []) if r.get("movieId")}

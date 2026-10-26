@@ -14,6 +14,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .api import JellyseerrClient, JellyseerrError
+from .audio import async_audio_profiles, file_audio, has_english_subs, is_anime
 from .const import DOMAIN, EPISODE_WAIT_SECONDS
 from .sonarr import SonarrClient, SonarrError, SonarrNotFoundError
 
@@ -295,8 +296,11 @@ def _show(series: dict[str, Any]) -> dict[str, Any]:
 
 
 async def _add_to_sonarr(
-    seerr: JellyseerrClient, sonarr: SonarrClient, tvdb_id: int
+    seerr: JellyseerrClient, sonarr: SonarrClient, tvdb_id: int, anime: bool = False, audio: str | None = None
 ) -> dict[str, Any]:
+    """Add the show where Seerr's requests would put it: its anime profile and
+    folder for anime (Seerr does that only for its own requests), or the
+    profile of the audio chosen on the card."""
     lookup = await sonarr.async_lookup(tvdb_id)
     if not lookup:
         raise ServiceValidationError(
@@ -304,12 +308,15 @@ async def _add_to_sonarr(
             translation_key="not_on_tvdb",
             translation_placeholders={"tvdb_id": str(tvdb_id)},
         )
+    profiles = await async_audio_profiles(sonarr) if audio is not None else {}
+    if audio is not None and audio not in profiles:
+        raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_audio_profile")
     try:
-        defaults = await seerr.async_get_sonarr_defaults()
+        defaults = await seerr.async_get_sonarr_defaults(anime=anime or audio is not None)
     except JellyseerrError:
         defaults = None
     profile, root = defaults or await sonarr.async_first_profile_and_root()
-    return await sonarr.async_add_series(lookup, profile, root)
+    return await sonarr.async_add_series(lookup, profiles.get(audio, profile) if audio else profile, root)
 
 
 async def _wait_for_episodes(sonarr: SonarrClient, series_id: int) -> None:
@@ -330,14 +337,17 @@ async def async_season_episodes(
     tmdb_id: int,
     season_number: int,
     added_shows: AddedShows | None = None,
+    audio: str | None = None,
 ) -> dict[str, Any]:
-    """A season's episodes as Sonarr has them. A show Sonarr doesn't have is added
-    first, with nothing monitored (Sonarr only lists episodes of shows it has);
-    `added` tells the card to discard it if nothing gets picked."""
+    """A season's episodes as Sonarr has them, with what audio each file has. A
+    show Sonarr doesn't have is added first, with nothing monitored (Sonarr only
+    lists episodes of shows it has); `added` tells the card to discard it if
+    nothing gets picked."""
     try:
-        tvdb_id = await seerr.async_get_tvdb_id(tmdb_id)
+        details = await seerr.async_get_details("tv", tmdb_id)
     except JellyseerrError as err:
         raise _error("api_error", err) from err
+    tvdb_id = (details.get("externalIds") or {}).get("tvdbId") or None
     if not tvdb_id:
         raise ServiceValidationError(
             translation_domain=DOMAIN,
@@ -350,13 +360,18 @@ async def async_season_episodes(
         if series is not None and added_shows is not None:
             added_shows.touch(series["id"])
         if series is None:
-            series = await _add_to_sonarr(seerr, sonarr, tvdb_id)
+            series = await _add_to_sonarr(seerr, sonarr, tvdb_id, is_anime(details), audio)
             if added_shows is not None:
                 added_shows.add(series["id"])
             await _wait_for_episodes(sonarr, series["id"])
             series = await sonarr.async_get_series(series["id"])
         episodes = await sonarr.async_get_episodes(series["id"], season_number)
         queued = await sonarr.async_queued_episode_ids(series["id"])
+        files = (
+            {f["id"]: f for f in await sonarr.async_get_episode_files(series["id"])}
+            if any(ep.get("hasFile") for ep in episodes)
+            else {}
+        )
     except SonarrError as err:
         raise _error("sonarr_error", err) from err
     now = dt_util.utcnow()
@@ -372,6 +387,9 @@ async def async_season_episodes(
                 "air_date": ep.get("airDate"),
                 "status": episode_status(ep, queued, now),
                 "monitored": bool(ep.get("monitored")),
+                # What the file's tracks are: dual, dub, sub, or None (no file, untagged).
+                "audio": file_audio(media_info) if (media_info := (files.get(ep.get("episodeFileId")) or {}).get("mediaInfo")) else None,
+                "english_subs": has_english_subs(media_info),
             }
             for ep in sorted(episodes, key=lambda e: e.get("episodeNumber") or 0)
         ],
@@ -600,17 +618,21 @@ async def _remove_episodes(
     return {"series_id": series_id, "files_removed": len(file_ids), "show_removed": result["removed"]}
 
 
-async def _series_for(seerr: JellyseerrClient, sonarr: SonarrClient, tmdb_id: int) -> tuple[int | None, dict[str, Any] | None]:
-    """The show's TVDB id (from Jellyseerr) and its Sonarr series, if Sonarr has it."""
-    tvdb_id = await seerr.async_get_tvdb_id(tmdb_id)
-    return tvdb_id, (await sonarr.async_get_series_by_tvdb(tvdb_id) if tvdb_id else None)
+async def _series_for(
+    seerr: JellyseerrClient, sonarr: SonarrClient, tmdb_id: int
+) -> tuple[int | None, dict[str, Any] | None, bool]:
+    """The show's TVDB id (from Jellyseerr), its Sonarr series if Sonarr has it,
+    and whether it's anime."""
+    details = await seerr.async_get_details("tv", tmdb_id)
+    tvdb_id = (details.get("externalIds") or {}).get("tvdbId") or None
+    return tvdb_id, (await sonarr.async_get_series_by_tvdb(tvdb_id) if tvdb_id else None), is_anime(details)
 
 
 async def async_show_state(seerr: JellyseerrClient, sonarr: SonarrClient, tmdb_id: int) -> dict[str, Any]:
     """What the show page needs from Sonarr: whether it has the show and whether
     new episodes are followed. Never adds anything."""
     try:
-        _, series = await _series_for(seerr, sonarr, tmdb_id)
+        _, series, _ = await _series_for(seerr, sonarr, tmdb_id)
     except (JellyseerrError, SonarrError) as err:
         raise _error("sonarr_error", err) from err
     return {"in_sonarr": series is not None, "follow_new": bool(series and follows_new(series))}
@@ -624,12 +646,13 @@ async def async_follow_show(
     added_shows: AddedShows | None = None,
     followed: FollowedShows | None = None,
     checked: CheckedTypes | None = None,
+    audio: str | None = None,
 ) -> dict[str, Any]:
     """Get new episodes on or off from the show page. A show Sonarr doesn't have
     is added first (nothing monitored, nothing searched), then followed; it's
     kept, since following is a reason to keep it."""
     try:
-        tvdb_id, series = await _series_for(seerr, sonarr, tmdb_id)
+        tvdb_id, series, anime = await _series_for(seerr, sonarr, tmdb_id)
         if series is None:
             if not follow_new:
                 return {"in_sonarr": False, "follow_new": False}
@@ -639,7 +662,7 @@ async def async_follow_show(
                     translation_key="no_tvdb_id",
                     translation_placeholders={"tmdb_id": str(tmdb_id)},
                 )
-            series = await _add_to_sonarr(seerr, sonarr, tvdb_id)
+            series = await _add_to_sonarr(seerr, sonarr, tvdb_id, anime, audio)
             await _wait_for_episodes(sonarr, series["id"])
     except (JellyseerrError, SonarrError) as err:
         raise _error("sonarr_error", err) from err
@@ -706,7 +729,7 @@ async def async_sonarr_seasons(
     Jellyseerr's (TMDB: The Apothecary Diaries is one 60-episode season there,
     three on TVDB). From the series if Sonarr has it, else a lookup (adds
     nothing). None if Sonarr can't place the show."""
-    tvdb_id, series = await _series_for(seerr, sonarr, tmdb_id)
+    tvdb_id, series, _ = await _series_for(seerr, sonarr, tmdb_id)
     if series is None and tvdb_id:
         series = await sonarr.async_lookup(tvdb_id)
     if series is None:
@@ -732,11 +755,12 @@ async def async_request_seasons(
     seasons: list[int],
     added_shows: AddedShows | None = None,
     checked: CheckedTypes | None = None,
+    audio: str | None = None,
 ) -> dict[str, Any]:
     """Get whole seasons, through Sonarr (its numbering): add the show if needed,
     check how it's released, monitor the seasons and search them."""
     try:
-        tvdb_id, series = await _series_for(seerr, sonarr, tmdb_id)
+        tvdb_id, series, anime = await _series_for(seerr, sonarr, tmdb_id)
         if series is None:
             if not tvdb_id:
                 raise ServiceValidationError(
@@ -744,7 +768,7 @@ async def async_request_seasons(
                     translation_key="no_tvdb_id",
                     translation_placeholders={"tmdb_id": str(tmdb_id)},
                 )
-            series = await _add_to_sonarr(seerr, sonarr, tvdb_id)
+            series = await _add_to_sonarr(seerr, sonarr, tvdb_id, anime, audio)
             await _wait_for_episodes(sonarr, series["id"])
         series_id = series["id"]
     except (JellyseerrError, SonarrError) as err:

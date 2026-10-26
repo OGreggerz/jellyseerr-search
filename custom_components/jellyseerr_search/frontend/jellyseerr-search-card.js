@@ -350,7 +350,7 @@ var be = class {
 		for (; s !== void 0;) {
 			if (a === s.index) {
 				let t;
-				s.type === 2 ? t = new P(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new I(i, this, e)), this._$AV.push(t), s = n[++o];
+				s.type === 2 ? t = new P(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new we(i, this, e)), this._$AV.push(t), s = n[++o];
 			}
 			a !== s?.index && (i = j.nextNode(), a++);
 		}
@@ -464,7 +464,7 @@ var be = class {
 	handleEvent(e) {
 		typeof this._$AH == "function" ? this._$AH.call(this.options?.host ?? this.element, e) : this._$AH.handleEvent(e);
 	}
-}, I = class {
+}, we = class {
 	constructor(e, t, n) {
 		this.element = e, this.type = 6, this._$AN = void 0, this._$AM = t, this.options = n;
 	}
@@ -474,7 +474,7 @@ var be = class {
 	_$AI(e) {
 		N(this, e);
 	}
-}, we = {
+}, Te = {
 	M: v,
 	P: y,
 	A: b,
@@ -488,17 +488,17 @@ var be = class {
 	N: Se,
 	U: Ce,
 	B: xe,
-	F: I
-}, Te = g.litHtmlPolyfillSupport;
-Te?.(M, P), (g.litHtmlVersions ??= []).push("3.3.3");
-var Ee = (e, t, n) => {
+	F: we
+}, Ee = g.litHtmlPolyfillSupport;
+Ee?.(M, P), (g.litHtmlVersions ??= []).push("3.3.3");
+var De = (e, t, n) => {
 	let r = n?.renderBefore ?? t, i = r._$litPart$;
 	if (i === void 0) {
 		let e = n?.renderBefore ?? null;
 		r._$litPart$ = i = new P(t.insertBefore(S(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
-}, L = globalThis, R = class extends h {
+}, I = globalThis, L = class extends h {
 	constructor() {
 		super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
 	}
@@ -508,7 +508,7 @@ var Ee = (e, t, n) => {
 	}
 	update(e) {
 		let t = this.render();
-		this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(e), this._$Do = Ee(t, this.renderRoot, this.renderOptions);
+		this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(e), this._$Do = De(t, this.renderRoot, this.renderOptions);
 	}
 	connectedCallback() {
 		super.connectedCallback(), this._$Do?.setConnected(!0);
@@ -520,22 +520,22 @@ var Ee = (e, t, n) => {
 		return k;
 	}
 };
-R._$litElement$ = !0, R.finalized = !0, L.litElementHydrateSupport?.({ LitElement: R });
-var De = L.litElementPolyfillSupport;
-De?.({ LitElement: R }), (L.litElementVersions ??= []).push("4.2.2");
+L._$litElement$ = !0, L.finalized = !0, I.litElementHydrateSupport?.({ LitElement: L });
+var Oe = I.litElementPolyfillSupport;
+Oe?.({ LitElement: L }), (I.litElementVersions ??= []).push("4.2.2");
 //#endregion
 //#region node_modules/lit-html/directive.js
-var z = {
+var R = {
 	ATTRIBUTE: 1,
 	CHILD: 2,
 	PROPERTY: 3,
 	BOOLEAN_ATTRIBUTE: 4,
 	EVENT: 5,
 	ELEMENT: 6
-}, Oe = (e) => (...t) => ({
+}, ke = (e) => (...t) => ({
 	_$litDirective$: e,
 	values: t
-}), ke = class {
+}), Ae = class {
 	constructor(e) {}
 	get _$AU() {
 		return this._$AM._$AU;
@@ -549,10 +549,10 @@ var z = {
 	update(e, t) {
 		return this.render(...t);
 	}
-}, { I: Ae } = we, je = (e) => e.strings === void 0, Me = {}, Ne = (e, t = Me) => e._$AH = t, Pe = Oe(class extends ke {
+}, { I: je } = Te, Me = (e) => e.strings === void 0, Ne = {}, Pe = (e, t = Ne) => e._$AH = t, Fe = ke(class extends Ae {
 	constructor(e) {
-		if (super(e), e.type !== z.PROPERTY && e.type !== z.ATTRIBUTE && e.type !== z.BOOLEAN_ATTRIBUTE) throw Error("The `live` directive is not allowed on child or event bindings");
-		if (!je(e)) throw Error("`live` bindings can only contain a single expression");
+		if (super(e), e.type !== R.PROPERTY && e.type !== R.ATTRIBUTE && e.type !== R.BOOLEAN_ATTRIBUTE) throw Error("The `live` directive is not allowed on child or event bindings");
+		if (!Me(e)) throw Error("`live` bindings can only contain a single expression");
 	}
 	render(e) {
 		return e;
@@ -560,40 +560,40 @@ var z = {
 	update(e, [t]) {
 		if (t === k || t === A) return t;
 		let n = e.element, r = e.name;
-		if (e.type === z.PROPERTY) {
+		if (e.type === R.PROPERTY) {
 			if (t === n[r]) return k;
-		} else if (e.type === z.BOOLEAN_ATTRIBUTE) {
+		} else if (e.type === R.BOOLEAN_ATTRIBUTE) {
 			if (!!t === n.hasAttribute(r)) return k;
-		} else if (e.type === z.ATTRIBUTE && n.getAttribute(r) === t + "") return k;
-		return Ne(e), t;
+		} else if (e.type === R.ATTRIBUTE && n.getAttribute(r) === t + "") return k;
+		return Pe(e), t;
 	}
 });
 //#endregion
 //#region src/ha.ts
-function Fe(e, t, n) {
+function Ie(e, t, n) {
 	e.dispatchEvent(new CustomEvent(t, {
 		detail: n,
 		bubbles: !0,
 		composed: !0
 	}));
 }
-function B(e, t) {
-	Fe(e, "hass-notification", { message: t });
+function z(e, t) {
+	Ie(e, "hass-notification", { message: t });
 }
-function V(e) {
+function B(e) {
 	return e && typeof e == "object" && "message" in e ? String(e.message) : String(e);
 }
 //#endregion
 //#region src/logic.ts
-var Ie = /* @__PURE__ */ new Set([
+var Le = /* @__PURE__ */ new Set([
 	"not_requested",
 	"unknown",
 	"deleted"
 ]);
-function H(e) {
-	return Ie.has(e);
+function V(e) {
+	return Le.has(e);
 }
-function U(e) {
+function H(e) {
 	switch (e) {
 		case "pending": return "Requested";
 		case "processing": return "Processing";
@@ -603,7 +603,7 @@ function U(e) {
 		default: return null;
 	}
 }
-function Le(e) {
+function Re(e) {
 	if (e.arr && (e.arr.downloaded || e.arr.waiting)) {
 		let t = [];
 		return e.arr.downloaded && t.push({
@@ -612,39 +612,42 @@ function Le(e) {
 		}), e.arr.waiting && t.push({
 			label: "Waiting",
 			cls: "wanted"
+		}), e.arr.audio && t.push({
+			label: Ze[e.arr.audio],
+			cls: `audio-${e.arr.audio}`
 		}), t;
 	}
-	let t = U(e.status);
+	let t = H(e.status);
 	return t ? [{
 		label: t,
 		cls: e.status
 	}] : [];
 }
-function Re(e) {
+function ze(e) {
 	return e === "available" || e === "partially_available" || e === "processing";
 }
-function W(e) {
-	return e.filter((e) => H(e.status)).map((e) => e.season_number);
-}
-function ze(e) {
-	return H(e) || e === "partially_available";
+function U(e) {
+	return e.filter((e) => V(e.status)).map((e) => e.season_number);
 }
 function Be(e) {
-	return e.status === "missing" || e.status === "not_aired" && !e.monitored;
+	return V(e) || e === "partially_available";
 }
 function Ve(e) {
-	return e.filter(Be).map((e) => e.id);
+	return e.status === "missing" || e.status === "not_aired" && !e.monitored;
 }
 function He(e) {
+	return e.filter(Ve).map((e) => e.id);
+}
+function Ue(e, t = null) {
 	switch (e.status) {
 		case "downloaded": return "Downloaded";
 		case "downloading": return "Downloading";
-		case "wanted": return "Not found yet";
+		case "wanted": return t === "dub_only" ? "Waiting for dub" : "Not found yet";
 		case "not_aired": return e.monitored ? "When it airs" : "Not aired";
 		default: return null;
 	}
 }
-function Ue(e) {
+function We(e) {
 	if (!e) return "No air date";
 	let [t, n, r] = e.split("-").map(Number), i = [
 		"Jan",
@@ -662,7 +665,7 @@ function Ue(e) {
 	][n - 1];
 	return i ? `${r} ${i} ${t}` : e;
 }
-var We = [
+var Ge = [
 	"Jan",
 	"Feb",
 	"Mar",
@@ -676,11 +679,11 @@ var We = [
 	"Nov",
 	"Dec"
 ];
-function G(e) {
+function W(e) {
 	let [t, n, r] = e.slice(0, 10).split("-").map(Number);
-	return `${r} ${We[n - 1]} ${t}`;
+	return `${r} ${Ge[n - 1]} ${t}`;
 }
-function Ge(e, t = /* @__PURE__ */ new Date()) {
+function G(e, t = /* @__PURE__ */ new Date()) {
 	let n = new Date(e), r = n.toLocaleTimeString("en-GB", {
 		hour: "2-digit",
 		minute: "2-digit"
@@ -698,37 +701,95 @@ function Ke(e, t = /* @__PURE__ */ new Date()) {
 	return r < 48 ? `${r} hour${r === 1 ? "" : "s"} ago` : `${Math.round(r / 24)} days ago`;
 }
 function qe(e) {
-	return {
+	return e.state === "not_found" && e.audio === "dub_only" ? "Waiting for dub" : {
 		downloading: "Downloading",
 		not_found: "Not found yet",
-		not_out: "Not out yet"
+		not_out: "Not out yet",
+		dub_wanted: "Waiting for dub"
 	}[e.state];
 }
 function Je(e, t = /* @__PURE__ */ new Date()) {
 	if (e.state === "downloading") return "Downloading now.";
 	if (e.media_type === "tv") {
-		let n = [];
-		e.missing && n.push(`${e.missing} episode${e.missing === 1 ? "" : "s"} out but not found yet`);
-		let r = e.next_episode;
-		return r && n.push(`Next: S${r.season}E${r.episode} ${Ge(r.air_date_utc, t)}`), e.state === "not_found" && e.last_search && n.push(`last searched ${Ke(e.last_search, t)}`), n.length ? n.join(" · ") : "No upcoming episodes listed yet.";
+		let n = [], r = e.audio === "dub_only";
+		if (e.missing) {
+			let t = e.missing === 1 ? "" : "s";
+			n.push(r ? `${e.missing} episode${t} out, no dub found yet` : `${e.missing} episode${t} out but not found yet`);
+		}
+		e.dub_wanted && n.push(`${e.dub_wanted} episode${e.dub_wanted === 1 ? "" : "s"} in Japanese, dub wanted`), e.next_dub && e.next_dub.date_utc && n.push(`Next dub: E${e.next_dub.episode} ${G(e.next_dub.date_utc, t)}`);
+		let i = e.next_episode;
+		return i && n.push(`Next: S${i.season}E${i.episode} ${G(i.air_date_utc, t)}`), e.state === "not_found" && e.last_search && n.push(`last searched ${Ke(e.last_search, t)}`), n.length ? n.join(" · ") : "No upcoming episodes listed yet.";
 	}
 	if (e.state === "not_found") {
-		let n = e.digital_release ?? e.physical_release, r = n ? `Out since ${G(n)}` : "Out";
+		let n = e.digital_release ?? e.physical_release, r = n ? `Out since ${W(n)}` : "Out";
 		return e.last_search ? `${r} · last searched ${Ke(e.last_search, t)}` : r;
 	}
-	return e.expected_basis === "digital" ? `Digital release ${G(e.expected)}` : e.expected_basis === "physical" ? `Blu-ray/DVD release ${G(e.expected)}` : e.expected_basis === "cinema_plus_90" && e.in_cinemas ? `${`In cinemas from ${G(e.in_cinemas)}`} · no home release date yet (counted as out around ${G(e.expected)})` : e.release_status === "announced" ? "Announced · no release date yet" : "No release date yet";
+	return e.expected_basis === "digital" ? `Digital release ${W(e.expected)}` : e.expected_basis === "physical" ? `Blu-ray/DVD release ${W(e.expected)}` : e.expected_basis === "cinema_plus_90" && e.in_cinemas ? `${`In cinemas from ${W(e.in_cinemas)}`} · no home release date yet (counted as out around ${W(e.expected)})` : e.release_status === "announced" ? "Announced · no release date yet" : "No release date yet";
 }
 function Ye(e) {
 	let t = e.episode ? ` for S${e.episode.season}E${e.episode.episode}` : "";
 	if (!e.found) return `Nothing posted yet${t}.`;
-	if (e.accepted) return `${e.accepted} suitable cop${e.accepted === 1 ? "y" : "ies"} found${t}${e.best ? `: ${e.best}` : ""}.`;
+	if (e.accepted) {
+		let n = e.dubbed ? ` (${e.dubbed} with English audio)` : "";
+		return `${e.accepted} suitable cop${e.accepted === 1 ? "y" : "ies"} found${t}${n}${e.best ? `: ${e.best}` : ""}.`;
+	}
 	let n = e.reasons.length ? ` (${e.reasons[0]})` : "";
 	return `${e.found} cop${e.found === 1 ? "y" : "ies"} found${t}, none your profile accepts${n}.`;
 }
 function Xe(e, t, n) {
-	if (t === "tv") return e.next_air_date ? `Next episode ${G(e.next_air_date)}` : e.tmdb_status === "Ended" || e.tmdb_status === "Canceled" ? `Ended${e.last_air_date ? ` · last aired ${G(e.last_air_date)}` : ""}` : e.last_air_date ? `No next episode announced · last aired ${G(e.last_air_date)}` : null;
+	if (t === "tv") return e.next_air_date ? `Next episode ${W(e.next_air_date)}` : e.tmdb_status === "Ended" || e.tmdb_status === "Canceled" ? `Ended${e.last_air_date ? ` · last aired ${W(e.last_air_date)}` : ""}` : e.last_air_date ? `No next episode announced · last aired ${W(e.last_air_date)}` : null;
 	let r = [e.digital, e.physical].filter((e) => !!e).sort()[0];
-	return r && r <= n ? `Out to buy or stream since ${G(r)}` : e.digital && e.digital > n ? `Digital release ${G(e.digital)}` : e.physical && e.physical > n ? `Blu-ray/DVD release ${G(e.physical)}` : e.theatrical && e.theatrical <= n ? `In cinemas from ${G(e.theatrical)} · no digital release date yet` : e.theatrical ? `In cinemas ${G(e.theatrical)}` : e.tmdb_status && e.tmdb_status !== "Released" ? `Not released yet (${e.tmdb_status.toLowerCase()})` : null;
+	return r && r <= n ? `Out to buy or stream since ${W(r)}` : e.digital && e.digital > n ? `Digital release ${W(e.digital)}` : e.physical && e.physical > n ? `Blu-ray/DVD release ${W(e.physical)}` : e.theatrical && e.theatrical <= n ? `In cinemas from ${W(e.theatrical)} · no digital release date yet` : e.theatrical ? `In cinemas ${W(e.theatrical)}` : e.tmdb_status && e.tmdb_status !== "Released" ? `Not released yet (${e.tmdb_status.toLowerCase()})` : null;
+}
+var Ze = {
+	dub: "Dub",
+	part_dub: "Part dub",
+	sub_only: "Sub only"
+}, Qe = [
+	{
+		value: "dub",
+		label: "English dub, subtitles until it's out",
+		hint: "Japanese with subtitles now, replaced by the English dub when it's posted."
+	},
+	{
+		value: "dub_only",
+		label: "English dub only",
+		hint: "Nothing downloads until an English dub is posted."
+	},
+	{
+		value: "sub",
+		label: "Japanese with subtitles",
+		hint: "Dubs aren't downloaded."
+	}
+];
+function $e(e, t) {
+	return e === "sub" ? `Dubs stop downloading, and dubbed ${t === "tv" ? "episodes" : "the film"} may be swapped for Japanese copies as they're posted.` : t === "tv" ? "Searches now for English dubs of the episodes still in Japanese. Each replacement downloads again (about 1 GB an episode)." : "Searches now for an English dub. If one's found, the film downloads again.";
+}
+function et(e) {
+	switch (e.audio) {
+		case "dual": return "Dual audio";
+		case "dub": return "Dub";
+		case "sub": return e.english_subs ? "Sub · Eng subs" : "Sub";
+		default: return null;
+	}
+}
+function tt(e, t, n, r = /* @__PURE__ */ new Date()) {
+	if (!t?.date_utc || !t.episode || !n || e.audio === "dual" || e.audio === "dub") return null;
+	let i = e.episode_number - t.episode;
+	return i < 0 ? null : i === 0 ? `Dub ${G(t.date_utc, r)}` : `Dub expected around ${new Date(new Date(t.date_utc).getTime() + i * 7 * 864e5).toLocaleDateString("en-GB", {
+		day: "numeric",
+		month: "short"
+	})}`;
+}
+function nt(e, t, n = /* @__PURE__ */ new Date()) {
+	let r = [];
+	e.files && (t === "movie" ? r.push(e.english_files ? "Downloaded with English audio." : "Downloaded in Japanese.") : e.english_files === e.files ? r.push(`All ${e.files} downloaded episodes have English audio.`) : r.push(`${e.english_files} of ${e.files} downloaded episodes have English audio.`));
+	let i = e.dub;
+	if (i?.date_utc && i.episode) {
+		let e = i.last_episode ? ` · dubbed up to episode ${i.last_episode}` : "";
+		r.push(`English dub: episode ${i.episode} ${G(i.date_utc, n)}${i.delayed ? " (delayed)" : ""}${e}`);
+	} else i?.last_episode ? r.push(`English dub: up to episode ${i.last_episode}, no next date listed`) : e.dub_dates && t === "tv" && r.push("No English dub dates listed for the next 4 weeks.");
+	return r;
 }
 function K(e, t) {
 	let n = t.trim().toLowerCase();
@@ -742,7 +803,7 @@ var q = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, J, Ze = "0.11.3", Y = "jellyseerr_search", Qe = 400, X = 2, $e = 36e5, et = [2e4, 6e4], tt = !1, Z = !1, nt = [
+}, J, rt = "0.12.0", Y = "jellyseerr_search", it = 400, X = 2, at = 36e5, ot = [2e4, 6e4], st = !1, Z = !1, ct = [
 	{
 		value: "all",
 		label: "All"
@@ -763,7 +824,7 @@ var q = class {
 		value: "waiting",
 		label: "Waiting"
 	}
-], rt = [{
+], lt = [{
 	value: "trending",
 	label: "Trending",
 	heading: "Trending today"
@@ -775,9 +836,9 @@ var q = class {
 function Q(e, t) {
 	return t === "daily" ? `${e} is released by date, so it's now set up as a daily show.` : `${e} isn't released by date, so it's no longer set up as a daily show.`;
 }
-var $ = class extends R {
+var $ = class extends L {
 	constructor() {
-		super(), this._latestSearch = new q(), this._latestSeasons = new q(), this._latestBrowse = new q(), this._latestEpisodes = new q(), this._latestLibrary = new q(), this._refreshTimers = [], this._browseAt = 0, this._query = "", this._filter = "all", this._browse = "trending", this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1, this._confirmRemove = !1, this._removing = !1, this._picker = !1, this._picked = /* @__PURE__ */ new Set(), this._pickerBusy = !1, this._downloading = !1, this._followBusy = !1, this._checks = {}, this._waitingOn = Z, this._checkingAll = !1;
+		super(), this._latestSearch = new q(), this._latestSeasons = new q(), this._latestBrowse = new q(), this._latestEpisodes = new q(), this._latestLibrary = new q(), this._refreshTimers = [], this._browseAt = 0, this._query = "", this._filter = "all", this._browse = "trending", this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1, this._confirmRemove = !1, this._removing = !1, this._picker = !1, this._picked = /* @__PURE__ */ new Set(), this._pickerBusy = !1, this._downloading = !1, this._followBusy = !1, this._checks = {}, this._waitingOn = Z, this._checkingAll = !1, this._audioPick = "dub", this._audioBusy = !1;
 	}
 	static getConfigForm() {
 		return {
@@ -838,7 +899,7 @@ var $ = class extends R {
 	}
 	setConfig(e) {
 		if (!e) throw Error("Invalid configuration");
-		if (e.media_type && !nt.some((t) => t.value === e.media_type)) throw Error("media_type must be all, movie or tv");
+		if (e.media_type && !ct.some((t) => t.value === e.media_type)) throw Error("media_type must be all, movie or tv");
 		this._config = e, this._filter = e.media_type ?? "all";
 	}
 	getCardSize() {
@@ -855,12 +916,12 @@ var $ = class extends R {
 		super.disconnectedCallback(), clearTimeout(this._debounce), this._clearRefreshTimers();
 	}
 	updated(e) {
-		e.has("hass") && this.hass && !tt && (tt = !0, this._checkVersion()), e.has("hass") && this.hass && this._browseDue() && this._loadBrowse();
+		e.has("hass") && this.hass && !st && (st = !0, this._checkVersion()), e.has("hass") && this.hass && this._browseDue() && this._loadBrowse();
 	}
 	async _checkVersion() {
 		try {
 			let { version: e, waiting: t } = await this.hass.callWS({ type: `${Y}/version` });
-			e !== "0.11.3" && (this._staleVersion = e), Z = !!t, this._waitingOn = Z;
+			e !== "0.12.0" && (this._staleVersion = e), Z = !!t, this._waitingOn = Z;
 		} catch {}
 	}
 	async _reload() {
@@ -882,7 +943,7 @@ var $ = class extends R {
 			});
 			this._filter === "waiting" && (this._waiting = e);
 		} catch (e) {
-			this._filter === "waiting" && (this._waitingError = V(e));
+			this._filter === "waiting" && (this._waitingError = B(e));
 		}
 	}
 	_key(e) {
@@ -908,7 +969,7 @@ var $ = class extends R {
 		} catch (e) {
 			this._checks = {
 				...this._checks,
-				[t]: `Check failed: ${V(e)}`
+				[t]: `Check failed: ${B(e)}`
 			};
 		}
 	}
@@ -932,11 +993,11 @@ var $ = class extends R {
 				media_type: e.media_type,
 				arr_id: e.arr_id,
 				...this._entry()
-			}), B(this, `Searching for ${e.title} now. It downloads by itself if a suitable copy turns up.`), setTimeout(() => {
+			}), z(this, `Searching for ${e.title} now. It downloads by itself if a suitable copy turns up.`), setTimeout(() => {
 				this._filter === "waiting" && !this._selected && this._loadWaiting();
 			}, 3e4);
 		} catch (e) {
-			B(this, `Search failed: ${V(e)}`);
+			z(this, `Search failed: ${B(e)}`);
 		}
 	}
 	_openWaiting(e) {
@@ -963,11 +1024,11 @@ var $ = class extends R {
 			});
 			e() && (this._library = t);
 		} catch (t) {
-			e() && (this._libraryError = V(t));
+			e() && (this._libraryError = B(t));
 		}
 	}
 	_browseDue() {
-		return !this._showBrowse() || this._selected ? !1 : this._browseKey !== `${this._browse}/${this._filter}` || Date.now() - this._browseAt > $e;
+		return !this._showBrowse() || this._selected ? !1 : this._browseKey !== `${this._browse}/${this._filter}` || Date.now() - this._browseAt > at;
 	}
 	async _loadBrowse() {
 		let e = this._latestBrowse.next(), t = `${this._browse}/${this._filter}`;
@@ -980,14 +1041,14 @@ var $ = class extends R {
 			});
 			e() && (this._browseResults = t);
 		} catch (t) {
-			e() && (this._browseError = V(t));
+			e() && (this._browseError = B(t));
 		}
 	}
 	_setBrowse(e) {
 		e !== this._browse && (this._browse = e, this._browseDue() && this._loadBrowse());
 	}
 	_onInput(e) {
-		this._query = e.target.value, clearTimeout(this._debounce), this._filter !== "downloaded" && this._filter !== "waiting" && (this._debounce = setTimeout(() => void this._search(), Qe));
+		this._query = e.target.value, clearTimeout(this._debounce), this._filter !== "downloaded" && this._filter !== "waiting" && (this._debounce = setTimeout(() => void this._search(), it));
 	}
 	_onKeydown(e) {
 		e.key === "Enter" && (clearTimeout(this._debounce), e.target.blur(), this._search());
@@ -1017,13 +1078,13 @@ var $ = class extends R {
 			if (!t()) return;
 			this._results = n, this._selected = void 0;
 		} catch (e) {
-			t() && (this._error = V(e));
+			t() && (this._error = B(e));
 		} finally {
 			t() && (this._loading = !1);
 		}
 	}
 	_open(e) {
-		this._leaveShow(), this._selected = e, this._seasons = void 0, this._seasonsError = void 0, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._confirmRemove = !1, this._picker = !1, this._show = void 0, this._release = void 0, this._seasonSource = void 0, this._closeEpisodes(), this._loadRelease(e), e.media_type === "tv" && this._loadSeasons(e.tmdb_id);
+		this._leaveShow(), this._selected = e, this._seasons = void 0, this._seasonsError = void 0, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._confirmRemove = !1, this._picker = !1, this._show = void 0, this._release = void 0, this._seasonSource = void 0, this._audio = void 0, this._audioPick = "dub", this._audioConfirm = void 0, this._closeEpisodes(), this._loadRelease(e), this._loadAudio(e), e.media_type === "tv" && this._loadSeasons(e.tmdb_id);
 	}
 	async _loadRelease(e) {
 		try {
@@ -1036,6 +1097,44 @@ var $ = class extends R {
 			this._selected === e && (this._release = t);
 		} catch {}
 	}
+	async _loadAudio(e) {
+		try {
+			let t = await this.hass.callWS({
+				type: `${Y}/audio`,
+				tmdb_id: e.tmdb_id,
+				media_type: e.media_type,
+				...this._entry()
+			});
+			this._selected?.tmdb_id === e.tmdb_id && this._selected.media_type === e.media_type && (this._audio = t);
+		} catch {
+			this._selected === e && (this._audio = null);
+		}
+	}
+	_audioFor() {
+		let e = this._audio;
+		return e && e.available && e.anime && !e.in_arr ? { audio: this._audioPick } : {};
+	}
+	async _switchAudio(e) {
+		let t = this._selected;
+		if (t && !this._audioBusy) {
+			this._audioBusy = !0;
+			try {
+				let n = await this.hass.callWS({
+					type: `${Y}/audio`,
+					tmdb_id: t.tmdb_id,
+					media_type: t.media_type,
+					audio: e,
+					...this._entry()
+				}), r = Qe.find((t) => t.value === e)?.label ?? e;
+				if (z(this, `${t.title}: ${r.toLowerCase()}.${e !== "sub" && n.dub_wanted ? " Searching for dubs now." : ""}`), this._selected !== t) return;
+				this._audio = n, this._audioConfirm = void 0, this._episodes && this._episodeSeason && this._loadEpisodes(t.tmdb_id, this._episodeSeason.season_number);
+			} catch (e) {
+				z(this, `Couldn't change it: ${B(e)}`);
+			} finally {
+				this._audioBusy = !1;
+			}
+		}
+	}
 	async _loadSeasons(e) {
 		let t = this._latestSeasons.next();
 		try {
@@ -1045,9 +1144,9 @@ var $ = class extends R {
 				...this._entry()
 			});
 			if (!t()) return;
-			this._seasons = n, this._picker = !!r, this._show = i, this._seasonSource = a, this._chosen = a === "sonarr" ? /* @__PURE__ */ new Set() : new Set(W(n));
+			this._seasons = n, this._picker = !!r, this._show = i, this._seasonSource = a, this._chosen = a === "sonarr" ? /* @__PURE__ */ new Set() : new Set(U(n));
 		} catch (e) {
-			t() && (this._seasonsError = V(e));
+			t() && (this._seasonsError = B(e));
 		}
 	}
 	_toggleSeason(e) {
@@ -1055,7 +1154,7 @@ var $ = class extends R {
 		t.has(e) ? t.delete(e) : t.add(e), this._chosen = t;
 	}
 	_toggleAllSeasons() {
-		let e = W(this._seasons ?? []);
+		let e = U(this._seasons ?? []);
 		this._chosen = this._chosen.size === e.length ? /* @__PURE__ */ new Set() : new Set(e);
 	}
 	async _request() {
@@ -1070,13 +1169,14 @@ var $ = class extends R {
 			tmdb_id: e.tmdb_id,
 			media_type: e.media_type,
 			is_4k: this._is4k,
+			...this._audioFor(),
 			...this._entry()
 		};
 		e.media_type === "tv" && (t.seasons = this._seasons ? [...this._chosen].sort((e, t) => e - t) : "all"), this._requesting = !0;
 		try {
-			await this.hass.callWS(t), B(this, `Requested ${e.title}`), this._markRequested(e);
+			await this.hass.callWS(t), z(this, `Requested ${e.title}`), this._markRequested(e), this._loadAudio(e);
 		} catch (e) {
-			B(this, `Request failed: ${V(e)}`);
+			z(this, `Request failed: ${B(e)}`);
 		} finally {
 			this._requesting = !1;
 		}
@@ -1090,11 +1190,12 @@ var $ = class extends R {
 					type: `${Y}/episodes/request`,
 					tmdb_id: e.tmdb_id,
 					seasons: t,
+					...this._audioFor(),
 					...this._entry()
 				}), r = n.series_type_changed ? ` ${Q(e.title, n.series_type_changed)}` : "", i = t.length === 1 ? `series ${t[0]}` : `series ${t.join(", ")}`;
-				B(this, `Getting ${i} of ${e.title}.${r}`), this._addedSeries !== void 0 && (this._addedSeries = void 0), this._selected === e && this._loadSeasons(e.tmdb_id);
+				z(this, `Getting ${i} of ${e.title}.${r}`), this._addedSeries !== void 0 && (this._addedSeries = void 0), this._selected === e && (this._loadSeasons(e.tmdb_id), this._loadAudio(e));
 			} catch (e) {
-				B(this, `Request failed: ${V(e)}`);
+				z(this, `Request failed: ${B(e)}`);
 			} finally {
 				this._requesting = !1;
 			}
@@ -1114,9 +1215,9 @@ var $ = class extends R {
 					tmdb_id: e.tmdb_id,
 					media_type: e.media_type,
 					...this._entry()
-				}), B(this, `Removed ${e.title}`), this._setStatus(e, "deleted"), this._library = this._library?.filter((t) => t.tmdb_id !== e.tmdb_id || t.media_type !== e.media_type);
+				}), z(this, `Removed ${e.title}`), this._setStatus(e, "deleted"), this._library = this._library?.filter((t) => t.tmdb_id !== e.tmdb_id || t.media_type !== e.media_type);
 			} catch (e) {
-				B(this, `Remove failed: ${V(e)}`);
+				z(this, `Remove failed: ${B(e)}`);
 			} finally {
 				this._removing = !1, this._confirmRemove = !1;
 			}
@@ -1152,12 +1253,13 @@ var $ = class extends R {
 				type: `${Y}/episodes`,
 				tmdb_id: e,
 				season_number: t,
+				...this._audioFor(),
 				...this._entry()
 			});
 			if (!n()) return;
-			r.added && (this._addedSeries = r.series_id), this._episodes = r;
+			r.added && (this._addedSeries = r.series_id, this._selected && this._loadAudio(this._selected)), this._episodes = r;
 		} catch (e) {
-			n() && (this._episodesError = V(e));
+			n() && (this._episodesError = B(e));
 		}
 	}
 	_clearRefreshTimers() {
@@ -1182,14 +1284,14 @@ var $ = class extends R {
 		t.has(e) ? t.delete(e) : t.add(e), this._picked = t;
 	}
 	_toggleAllPicks() {
-		let e = Ve(this._episodes?.episodes ?? []);
+		let e = He(this._episodes?.episodes ?? []);
 		this._picked = this._picked.size === e.length ? /* @__PURE__ */ new Set() : new Set(e);
 	}
 	_stillOn(e, t) {
 		return this._selected === e && this._episodes?.series_id === t;
 	}
 	_recoverIfGone(e, t, n) {
-		return e?.translation_key === "series_gone" && (B(this, `${t.title} had been tidied out of Sonarr. It's back now: try again.`), this._selected === t && this._loadEpisodes(t.tmdb_id, n), !0);
+		return e?.translation_key === "series_gone" && (z(this, `${t.title} had been tidied out of Sonarr. It's back now: try again.`), this._selected === t && this._loadEpisodes(t.tmdb_id, n), !0);
 	}
 	async _download() {
 		let e = this._episodes, t = this._selected;
@@ -1205,12 +1307,12 @@ var $ = class extends R {
 			});
 			this._addedSeries === e.series_id && (this._addedSeries = void 0);
 			let i = r.series_type_changed ? ` ${Q(e.title, r.series_type_changed)}` : "";
-			if (B(this, `Downloading ${n.length} episode${n.length === 1 ? "" : "s"} of ${e.title}.${i}`), !this._stillOn(t, e.series_id)) return;
-			this._picked = /* @__PURE__ */ new Set(), await this._loadEpisodes(t.tmdb_id, e.season_number), this._clearRefreshTimers(), this._refreshTimers = et.map((n) => setTimeout(() => {
+			if (z(this, `Downloading ${n.length} episode${n.length === 1 ? "" : "s"} of ${e.title}.${i}`), !this._stillOn(t, e.series_id)) return;
+			this._picked = /* @__PURE__ */ new Set(), await this._loadEpisodes(t.tmdb_id, e.season_number), this._clearRefreshTimers(), this._refreshTimers = ot.map((n) => setTimeout(() => {
 				this._stillOn(t, e.series_id) && this._loadEpisodes(t.tmdb_id, e.season_number);
 			}, n));
 		} catch (n) {
-			this._recoverIfGone(n, t, e.season_number) || B(this, `Download failed: ${V(n)}`);
+			this._recoverIfGone(n, t, e.season_number) || z(this, `Download failed: ${B(n)}`);
 		} finally {
 			this._pickerBusy = !1, this._downloading = !1;
 		}
@@ -1230,9 +1332,9 @@ var $ = class extends R {
 					episode_ids: [e.id],
 					...this._entry()
 				});
-				this._confirmRemoveEp = void 0, r.show_removed ? (B(this, `Removed episode ${e.episode_number}. Nothing else was left, so ${t.title} is gone.`), this._addedSeries === t.series_id && (this._addedSeries = void 0), this._library = this._library?.filter((e) => e.tmdb_id !== n.tmdb_id || e.media_type !== n.media_type), this._setStatus(n, "not_requested"), this._stillOn(n, t.series_id) && (this._closeEpisodes(), this._loadSeasons(n.tmdb_id))) : (B(this, `Removed episode ${e.episode_number} of ${t.title}`), this._stillOn(n, t.series_id) && await this._loadEpisodes(n.tmdb_id, t.season_number));
+				this._confirmRemoveEp = void 0, r.show_removed ? (z(this, `Removed episode ${e.episode_number}. Nothing else was left, so ${t.title} is gone.`), this._addedSeries === t.series_id && (this._addedSeries = void 0), this._library = this._library?.filter((e) => e.tmdb_id !== n.tmdb_id || e.media_type !== n.media_type), this._setStatus(n, "not_requested"), this._stillOn(n, t.series_id) && (this._closeEpisodes(), this._loadSeasons(n.tmdb_id))) : (z(this, `Removed episode ${e.episode_number} of ${t.title}`), this._stillOn(n, t.series_id) && await this._loadEpisodes(n.tmdb_id, t.season_number));
 			} catch (e) {
-				this._recoverIfGone(e, n, t.season_number) || B(this, `Remove failed: ${V(e)}`);
+				this._recoverIfGone(e, n, t.season_number) || z(this, `Remove failed: ${B(e)}`);
 			} finally {
 				this._pickerBusy = !1;
 			}
@@ -1247,19 +1349,56 @@ var $ = class extends R {
 					type: `${Y}/episodes/follow`,
 					tmdb_id: t.tmdb_id,
 					follow_new: e,
+					...this._audioFor(),
 					...this._entry()
 				});
-				if (n.series_type_changed && B(this, Q(t.title, n.series_type_changed)), e && !n.follow_new ? B(this, `${t.title} has no regular series to follow yet.`) : e && B(this, `New episodes of ${t.title} will download as they come out.`), this._selected !== t) return;
+				if (n.series_type_changed && z(this, Q(t.title, n.series_type_changed)), e && !n.follow_new ? z(this, `${t.title} has no regular series to follow yet.`) : e && z(this, `New episodes of ${t.title} will download as they come out.`), this._selected !== t) return;
 				this._show = {
 					in_sonarr: n.in_sonarr,
 					follow_new: n.follow_new
-				}, this._episodes && this._episodeSeason && this._loadEpisodes(t.tmdb_id, this._episodeSeason.season_number);
+				}, n.in_sonarr && !this._audio?.in_arr && this._loadAudio(t), this._episodes && this._episodeSeason && this._loadEpisodes(t.tmdb_id, this._episodeSeason.season_number);
 			} catch (e) {
-				B(this, `Couldn't change it: ${V(e)}`), this.requestUpdate();
+				z(this, `Couldn't change it: ${B(e)}`), this.requestUpdate();
 			} finally {
 				this._followBusy = !1;
 			}
 		}
+	}
+	_renderAudio(e) {
+		let t = this._audio;
+		if (!t || !t.available || !t.anime) return A;
+		let n = t.in_arr ? t.audio : this._audioPick, r = nt(t, e.media_type);
+		return O`
+      <div class="seasons options audio" role="radiogroup" aria-label="Audio">
+        <div class="seasons-head"><span>Audio</span></div>
+        ${t.in_arr && !t.audio ? O`<div class="hint audio-note">
+              On a profile that doesn't prefer English dubs. Pick one to set it.
+            </div>` : A}
+        ${Qe.map((e) => O`<label class="row option">
+            <input
+              type="radio"
+              name="audio"
+              .checked=${Fe((this._audioConfirm ?? n) === e.value)}
+              ?disabled=${this._audioBusy}
+              @change=${() => {
+			t.in_arr ? this._audioConfirm = e.value === t.audio ? void 0 : e.value : this._audioPick = e.value;
+		}}
+            />
+            <span class="grow">${e.label}<span class="hint">${e.hint}</span></span>
+          </label>`)}
+        ${this._audioConfirm ? O`<div class="confirm notice" role="alert">${$e(this._audioConfirm, e.media_type)}</div>
+              <div class="confirm-row">
+                <button class="secondary" ?disabled=${this._audioBusy} @click=${() => this._audioConfirm = void 0}>
+                  Cancel
+                </button>
+                <button class="primary" ?disabled=${this._audioBusy} @click=${() => this._switchAudio(this._audioConfirm)}>
+                  ${this._audioBusy ? "Switching…" : "Switch"}
+                </button>
+              </div>` : A}
+        ${r.map((e) => O`<div class="hint audio-line">${e}</div>`)}
+        ${t.dub ? O`<div class="hint credit">Dub dates from <a href=${t.dub.url} target="_blank" rel="noreferrer">AnimeSchedule.net</a></div>` : A}
+      </div>
+    `;
 	}
 	_renderFollow(e) {
 		return !this._picker || this._show === void 0 ? A : this._show === null ? O`<div class="message">Couldn't reach Sonarr for this show.</div>` : O`
@@ -1267,7 +1406,7 @@ var $ = class extends R {
         <label class="row option">
           <input
             type="checkbox"
-            .checked=${Pe(this._show.follow_new)}
+            .checked=${Fe(this._show.follow_new)}
             ?disabled=${this._followBusy}
             @change=${(e) => this._setFollowShow(e.target.checked)}
           />
@@ -1314,7 +1453,7 @@ var $ = class extends R {
               </button>` : A}
         </div>
         <div class="chips" role="radiogroup" aria-label="Media type">
-          ${nt.filter((e) => e.value !== "waiting" || this._waitingOn).map((e) => O`<button
+          ${ct.filter((e) => e.value !== "waiting" || this._waitingOn).map((e) => O`<button
               class="chip ${e.value === this._filter ? "on" : ""}"
               role="radio"
               aria-checked=${e.value === this._filter}
@@ -1335,12 +1474,12 @@ var $ = class extends R {
     ` : O`<div class="message">No movies or shows found.</div>` : A;
 	}
 	_renderBrowse() {
-		let e = rt.find((e) => e.value === this._browse).heading, t;
+		let e = lt.find((e) => e.value === this._browse).heading, t;
 		return t = this._browseError ? O`<div class="message error">Couldn't load ${e.toLowerCase()} (${this._browseError}).</div>` : this._browseResults ? this._browseResults.length ? O`<div class="grid">${this._browseResults.map((e) => this._renderTile(e))}</div>` : O`<div class="message">Nothing to show.</div>` : O`<div class="message">Loading…</div>`, O`
       <div class="section">
         <span>${e}</span>
         <div class="chips small" role="radiogroup" aria-label="Browse">
-          ${rt.map((e) => O`<button
+          ${lt.map((e) => O`<button
               class="chip ${e.value === this._browse ? "on" : ""}"
               role="radio"
               aria-checked=${e.value === this._browse}
@@ -1405,20 +1544,21 @@ var $ = class extends R {
             <span class="status inline w-${e.state}">${qe(e)}</span>
           </div>
           <div class="hint">${Je(e)}</div>
+          ${e.next_dub ? O`<div class="hint credit">Dub dates from <a href=${e.next_dub.url} target="_blank" rel="noreferrer">AnimeSchedule.net</a></div>` : A}
           ${typeof t == "object" ? O`<div class="wcheck">${Ye(t)}</div>` : A}
           ${typeof t == "string" && !n ? O`<div class="wcheck error">${t}</div>` : A}
           ${e.state === "downloading" ? A : O`<div class="wactions">
                 <button class="secondary small" ?disabled=${n || this._checkingAll} @click=${() => this._checkWaiting(e)}>
                   ${n ? "Checking…" : "Check now"}
                 </button>
-                ${e.state === "not_found" ? O`<button class="secondary small" @click=${() => this._searchWaiting(e)}>Search again</button>` : A}
+                ${e.state === "not_found" || e.state === "dub_wanted" ? O`<button class="secondary small" @click=${() => this._searchWaiting(e)}>Search again</button>` : A}
               </div>`}
         </div>
       </div>
     `;
 	}
 	_renderTile(e) {
-		let t = Le(e);
+		let t = Re(e);
 		return O`
       <button class="tile" @click=${() => this._open(e)} aria-label="${e.title} ${e.year ?? ""}">
         <div class="poster">
@@ -1432,7 +1572,7 @@ var $ = class extends R {
     `;
 	}
 	_renderDetail(e) {
-		let t = U(e.status), n = e.media_type === "tv", r = n ? ze(e.status) && (!this._seasons || this._chosen.size > 0) : H(e.status);
+		let t = H(e.status), n = e.media_type === "tv", r = n ? Be(e.status) && (!this._seasons || this._chosen.size > 0) : V(e.status);
 		return O`
       <div class="detail">
         <button class="back" @click=${this._back}>
@@ -1444,16 +1584,17 @@ var $ = class extends R {
             <h2>${e.title}</h2>
             <div class="meta">
               ${e.year ?? ""} · ${n ? "TV show" : "Movie"}
-              ${Le(e).map((e) => O`<span class="status inline ${e.cls}">${e.label}</span>`)}
+              ${Re(e).map((e) => O`<span class="status inline ${e.cls}">${e.label}</span>`)}
             </div>
             ${this._release && Xe(this._release, e.media_type, (/* @__PURE__ */ new Date()).toISOString().slice(0, 10)) ? O`<div class="release">${Xe(this._release, e.media_type, (/* @__PURE__ */ new Date()).toISOString().slice(0, 10))}</div>` : A}
-            ${this._config.show_remove && Re(e.status) && !this._confirmRemove ? O`<button class="danger small head-remove" @click=${this._remove}>
+            ${this._config.show_remove && ze(e.status) && !this._confirmRemove ? O`<button class="danger small head-remove" @click=${this._remove}>
                   ${n ? "Remove all…" : "Remove…"}
                 </button>` : A}
           </div>
         </div>
-        ${this._config.show_remove && Re(e.status) && this._confirmRemove ? this._renderRemove(e) : A}
+        ${this._config.show_remove && ze(e.status) && this._confirmRemove ? this._renderRemove(e) : A}
         ${e.overview ? O`<p class="overview">${e.overview}</p>` : A}
+        ${this._renderAudio(e)}
         ${n ? this._renderFollow(e) : A}
         ${n ? this._renderSeasons() : A}
         ${this._config.show_4k && r ? O`<label class="row">
@@ -1482,7 +1623,7 @@ var $ = class extends R {
 	_renderSeasons() {
 		if (this._seasonsError) return O`<div class="message error">Couldn't load seasons (${this._seasonsError}). Request will ask for all.</div>`;
 		if (!this._seasons) return O`<div class="message">Loading seasons…</div>`;
-		let e = W(this._seasons);
+		let e = U(this._seasons);
 		return O`
       <div class="seasons">
         <div class="seasons-head">
@@ -1492,7 +1633,7 @@ var $ = class extends R {
               </button>` : A}
         </div>
         ${this._seasons.map((e) => {
-			let t = H(e.status), n = U(e.status);
+			let t = V(e.status), n = H(e.status);
 			return O`<label class="row season ${t ? "" : "done"}">
             <input
               type="checkbox"
@@ -1515,7 +1656,7 @@ var $ = class extends R {
 		if (this._episodesError) r = O`<div class="message error">Couldn't load episodes (${this._episodesError}).</div>`;
 		else if (!n) r = O`<div class="message">Loading episodes from Sonarr…</div>`;
 		else {
-			let e = Ve(n.episodes), t = this._picked.size;
+			let e = He(n.episodes), t = this._picked.size, i = this._audio?.audio ?? null, a = Math.max(...(this._seasons ?? []).map((e) => e.season_number), n.season_number) === n.season_number, o = i === "dub" || i === "dub_only";
 			r = O`
         <div class="seasons">
           <div class="seasons-head">
@@ -1525,7 +1666,7 @@ var $ = class extends R {
                 </button>` : A}
           </div>
           ${n.episodes.length ? n.episodes.map((e) => {
-				let t = Be(e), n = He(e);
+				let t = Ve(e), n = Ue(e, i), r = et(e), s = o ? tt(e, this._audio?.dub ?? null, a) : null;
 				return O`<label class="row season episode ${t ? "" : "done"}">
                   <input
                     type="checkbox"
@@ -1535,9 +1676,12 @@ var $ = class extends R {
                   />
                   <span class="grow">
                     <span class="ep-title">${e.episode_number}. ${e.title || `Episode ${e.episode_number}`}</span>
-                    <span class="hint">${Ue(e.air_date)}</span>
+                    <span class="hint">${We(e.air_date)}${s ? O` · ${s}` : A}</span>
                   </span>
-                  ${n ? O`<span class="status inline ep ${e.status}">${n}</span>` : A}
+                  <span class="epchips">
+                    ${n ? O`<span class="status inline ep ${e.status}">${n}</span>` : A}
+                    ${r ? O`<span class="status inline ep audio-${e.audio}">${r}</span>` : A}
+                  </span>
                   ${this._config.show_remove && e.status === "downloaded" && this._confirmRemoveEp !== e.id ? O`<button class="link ep-remove" @click=${(t) => this._askRemoveEpisode(e.id, t)}>
                         Remove
                       </button>` : A}
@@ -1567,6 +1711,7 @@ var $ = class extends R {
         <div class="ep-head">
           <h2>${t.name}</h2>
           <div class="meta">Episodes from Sonarr</div>
+          ${this._audio?.dub && (this._audio.audio === "dub" || this._audio.audio === "dub_only") ? O`<div class="hint credit">Dub dates from <a href=${this._audio.dub.url} target="_blank" rel="noreferrer">AnimeSchedule.net</a></div>` : A}
         </div>
         ${r}
       </div>
@@ -1611,7 +1756,11 @@ J = $, J.properties = {
 	_waitingOn: { state: !0 },
 	_checkingAll: { state: !0 },
 	_library: { state: !0 },
-	_libraryError: { state: !0 }
+	_libraryError: { state: !0 },
+	_audio: { state: !0 },
+	_audioPick: { state: !0 },
+	_audioConfirm: { state: !0 },
+	_audioBusy: { state: !0 }
 }, J.styles = o`
     :host {
       --js-gap: 12px;
@@ -2011,6 +2160,51 @@ J = $, J.properties = {
     .status.w-not_found {
       background: var(--warning-color, #ffa600);
     }
+    .status.w-dub_wanted {
+      background: var(--secondary-text-color, #727272);
+    }
+    /* Audio: English (dub, dual audio, all dubbed) green-blue; part dubbed amber;
+       Japanese only grey. */
+    .status.audio-dub,
+    .status.audio-dual {
+      background: var(--state-active-color, #009688);
+    }
+    .status.audio-part_dub {
+      background: var(--warning-color, #ffa600);
+    }
+    .status.audio-sub,
+    .status.audio-sub_only {
+      background: var(--secondary-text-color, #727272);
+    }
+    .epchips {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      flex: none;
+    }
+    .audio {
+      padding-bottom: 10px;
+    }
+    .audio .option {
+      border-top: 1px solid var(--divider-color);
+    }
+    .audio .confirm,
+    .audio .confirm-row,
+    .audio .audio-line,
+    .audio .credit,
+    .audio-note {
+      margin: 8px 12px 0;
+    }
+    .confirm.notice {
+      color: var(--primary-text-color);
+    }
+    .credit {
+      font-size: 12px;
+    }
+    .credit a {
+      color: var(--primary-color);
+    }
     .wcheck {
       font-size: 13px;
       line-height: 1.35;
@@ -2098,4 +2292,4 @@ J = $, J.properties = {
 	preview: !1
 }));
 //#endregion
-export { Ze as CARD_VERSION, $ as JellyseerrSearchCard };
+export { rt as CARD_VERSION, $ as JellyseerrSearchCard };

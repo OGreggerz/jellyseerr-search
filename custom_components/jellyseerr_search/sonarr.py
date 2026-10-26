@@ -125,6 +125,10 @@ class SonarrClient:
             params["seasonNumber"] = season_number
         return await self._request("GET", "/episode", params=params)
 
+    async def async_get_episode_files(self, series_id: int) -> list[dict[str, Any]]:
+        """The series' files, each with `mediaInfo` (audio and subtitle languages)."""
+        return await self._request("GET", "/episodefile", params={"seriesId": series_id}) or []
+
     async def async_queued_episode_ids(self, series_id: int) -> set[int]:
         data = await self._request(
             "GET", "/queue", params={"seriesIds": series_id, "pageSize": 1000}

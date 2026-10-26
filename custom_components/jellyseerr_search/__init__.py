@@ -12,8 +12,16 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 
+from .animeschedule import AnimeScheduleClient, DubSchedule
 from .api import JellyseerrClient
-from .const import CONF_RADARR_API_KEY, CONF_RADARR_URL, CONF_SONARR_API_KEY, CONF_SONARR_URL, DOMAIN
+from .const import (
+    CONF_ANIMESCHEDULE_TOKEN,
+    CONF_RADARR_API_KEY,
+    CONF_RADARR_URL,
+    CONF_SONARR_API_KEY,
+    CONF_SONARR_URL,
+    DOMAIN,
+)
 from .coordinator import JellyseerrConfigEntry, JellyseerrCoordinator
 from .episodes import AddedShows, CheckedTypes, FollowedShows, async_search_followed, async_sweep_added
 from .frontend import async_register_frontend
@@ -58,7 +66,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: JellyseerrConfigEntry) -
         radarr = RadarrClient(
             async_get_clientsession(hass), entry.options[CONF_RADARR_URL], entry.options[CONF_RADARR_API_KEY]
         )
-    coordinator = JellyseerrCoordinator(hass, entry, client, sonarr, added_shows, followed, checked, radarr)
+    schedule = None
+    if token := entry.options.get(CONF_ANIMESCHEDULE_TOKEN):
+        schedule = DubSchedule(AnimeScheduleClient(async_get_clientsession(hass), token))
+    coordinator = JellyseerrCoordinator(hass, entry, client, sonarr, added_shows, followed, checked, radarr, schedule)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

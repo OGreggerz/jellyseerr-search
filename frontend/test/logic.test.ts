@@ -16,8 +16,13 @@ import {
   pickableEpisodes,
   requestableSeasons,
   statusLabel,
+  audioLines,
+  audioSwitchWarning,
+  episodeAudioLabel,
+  episodeDubLine,
+  waitingLabel,
 } from "../src/logic";
-import type { Episode, Season, WaitingItem } from "../src/types";
+import type { AudioState, DubInfo, Episode, Season, WaitingItem } from "../src/types";
 
 const season = (n: number, status: Season["status"]): Season => ({
   season_number: n,
@@ -197,5 +202,72 @@ describe("result chips", () => {
   it("falls back to Jellyseerr's status", () => {
     expect(resultChips(r({ status: "pending" })).map((c) => c.label)).toEqual(["Requested"]);
     expect(resultChips(r({}))).toEqual([]);
+  });
+});
+
+describe("anime audio", () => {
+  const ep = (n: number, audio: Episode["audio"], english_subs = false): Episode => ({
+    id: n, episode_number: n, title: "", air_date: "2026-10-02", status: audio ? "downloaded" : "wanted",
+    monitored: true, audio, english_subs,
+  });
+  const dub: DubInfo = {
+    episode: 3, date_utc: "2026-10-30T15:00:00Z", delayed: false, last_episode: 2, total: 12,
+    source: "AnimeSchedule.net", url: "https://animeschedule.net/anime/x",
+  };
+  const now = new Date("2026-10-26T12:00:00Z");
+
+  it("labels each file's audio", () => {
+    expect(episodeAudioLabel(ep(1, "dual"))).toBe("Dual audio");
+    expect(episodeAudioLabel(ep(1, "dub"))).toBe("Dub");
+    expect(episodeAudioLabel(ep(1, "sub", true))).toBe("Sub · Eng subs");
+    expect(episodeAudioLabel(ep(1, "sub"))).toBe("Sub");
+    expect(episodeAudioLabel(ep(1, null))).toBeNull();
+  });
+
+  it("a wanted episode on dub only is waiting for its dub", () => {
+    expect(episodeLabel(ep(4, null), "dub_only")).toBe("Waiting for dub");
+    expect(episodeLabel(ep(4, null), "dub")).toBe("Not found yet");
+  });
+
+  it("dates each episode's dub from the next one, weekly", () => {
+    expect(episodeDubLine(ep(3, "sub"), dub, true, now)).toMatch(/^Dub Fri 30 Oct, \d\d:00$/);
+    expect(episodeDubLine(ep(5, null), dub, true, now)).toBe("Dub expected around 13 Nov");
+    expect(episodeDubLine(ep(2, "sub"), dub, true, now)).toBeNull(); // before the next dub
+    expect(episodeDubLine(ep(4, "dual"), dub, true, now)).toBeNull(); // already English
+    expect(episodeDubLine(ep(4, "sub"), dub, false, now)).toBeNull(); // not the airing season
+  });
+
+  it("says what's downloaded in English and when the next dub is", () => {
+    const state: AudioState = {
+      available: true, anime: true, audio: "dub_only", in_arr: true, files: 4, english_files: 2,
+      summary: "part_dub", dub_wanted: 2, dub, dub_dates: true,
+    };
+    const lines = audioLines(state, "tv", now);
+    expect(lines[0]).toBe("2 of 4 downloaded episodes have English audio.");
+    expect(lines[1]).toMatch(/^English dub: episode 3 Fri 30 Oct, \d\d:00 · dubbed up to episode 2$/);
+    expect(audioLines({ ...state, dub: null }, "tv", now)[1]).toBe("No English dub dates listed for the next 4 weeks.");
+    expect(audioLines({ ...state, dub: null, dub_dates: false, files: 0 }, "tv", now)).toEqual([]);
+  });
+
+  it("warns before switching", () => {
+    expect(audioSwitchWarning("sub", "tv")).toMatch(/swapped for Japanese/);
+    expect(audioSwitchWarning("dub_only", "tv")).toMatch(/downloads again/);
+  });
+
+  it("puts dub and sub chips on results", () => {
+    const r = { tmdb_id: 1, media_type: "tv", title: "", year: null, overview: "", poster_url: null, status: "available" } as const;
+    expect(resultChips({ ...r, arr: { downloaded: true, waiting: true, audio: "part_dub" } }).map((c) => c.label)).toEqual([
+      "Downloaded", "Waiting", "Part dub",
+    ]);
+  });
+
+  it("waiting for a dub", () => {
+    const item: WaitingItem = {
+      media_type: "tv", tmdb_id: 1, arr_id: 16, title: "The Apothecary Diaries", year: 2023, poster_url: null,
+      state: "dub_wanted", audio: "dub", dub_wanted: 2, next_dub: dub,
+    };
+    expect(waitingLabel(item)).toBe("Waiting for dub");
+    expect(waitingDetail(item, now)).toMatch(/^2 episodes in Japanese, dub wanted · Next dub: E3 Fri 30 Oct, \d\d:00$/);
+    expect(waitingLabel({ ...item, state: "not_found", audio: "dub_only", missing: 1 })).toBe("Waiting for dub");
   });
 });

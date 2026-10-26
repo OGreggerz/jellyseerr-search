@@ -12,14 +12,23 @@ from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResu
 from homeassistant.const import CONF_API_KEY, CONF_URL, CONF_VERIFY_SSL
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.util import dt as dt_util
 from homeassistant.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
 )
 
+from .animeschedule import AnimeScheduleClient, AnimeScheduleError
 from .api import JellyseerrAuthError, JellyseerrClient, JellyseerrConnectionError, JellyseerrError
-from .const import CONF_RADARR_API_KEY, CONF_RADARR_URL, CONF_SONARR_API_KEY, CONF_SONARR_URL, DOMAIN
+from .const import (
+    CONF_ANIMESCHEDULE_TOKEN,
+    CONF_RADARR_API_KEY,
+    CONF_RADARR_URL,
+    CONF_SONARR_API_KEY,
+    CONF_SONARR_URL,
+    DOMAIN,
+)
 from .radarr import RadarrClient
 from .sonarr import SonarrAuthError, SonarrClient, SonarrConnectionError, SonarrError
 
@@ -127,6 +136,9 @@ OPTIONS_SCHEMA = vol.Schema(
         vol.Optional(CONF_RADARR_API_KEY): TextSelector(
             TextSelectorConfig(type=TextSelectorType.PASSWORD)
         ),
+        vol.Optional(CONF_ANIMESCHEDULE_TOKEN): TextSelector(
+            TextSelectorConfig(type=TextSelectorType.PASSWORD)
+        ),
     }
 )
 
@@ -168,6 +180,15 @@ class JellyseerrOptionsFlow(OptionsFlow):
                     errors["base"] = "unknown"
                     break
                 data[url_key], data[api_key_key] = url, key
+            token = (user_input.get(CONF_ANIMESCHEDULE_TOKEN) or "").strip()
+            if token and not errors:
+                year, week, _ = dt_util.utcnow().isocalendar()
+                try:
+                    await AnimeScheduleClient(session, token).async_dub_week(year, week)
+                except AnimeScheduleError:
+                    errors["base"] = "animeschedule_failed"
+                else:
+                    data[CONF_ANIMESCHEDULE_TOKEN] = token
             if not errors:
                 return self.async_create_entry(data=data)
         return self.async_show_form(

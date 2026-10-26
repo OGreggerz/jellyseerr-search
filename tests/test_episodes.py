@@ -68,11 +68,20 @@ SEASON_2 = [
 @pytest.fixture
 async def picker(hass: HomeAssistant, aioclient_mock):
     aioclient_mock.get(f"{API}/request/count", json=COUNTS)
+    # No anime audio profiles unless a test says so (see first()).
+    aioclient_mock.get(f"{SONARR}/qualityprofile", json=[])
+    aioclient_mock.get(f"{SONARR}/episodefile", json=[])
     entry = MockConfigEntry(domain=DOMAIN, title="Jellyseerr", data=DATA, unique_id=URL, options=OPTIONS)
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     return entry
+
+
+def first(aioclient_mock, method: str, url: str, **kwargs) -> None:
+    """Register a mock ahead of the fixtures' defaults (the first match wins)."""
+    getattr(aioclient_mock, method)(url, **kwargs)
+    aioclient_mock._mocks.insert(0, aioclient_mock._mocks.pop())
 
 
 def calls(aioclient_mock, method: str, path: str):
@@ -710,6 +719,8 @@ RADARR = f"{RADARR_URL}/api/v3"
 @pytest.fixture
 async def arrs(hass: HomeAssistant, aioclient_mock):
     aioclient_mock.get(f"{API}/request/count", json=COUNTS)
+    aioclient_mock.get(f"{SONARR}/qualityprofile", json=[])
+    aioclient_mock.get(f"{RADARR}/qualityprofile", json=[])
     options = {**OPTIONS, "radarr_url": RADARR_URL, "radarr_api_key": "radarr-secret"}
     entry = MockConfigEntry(domain=DOMAIN, title="Jellyseerr", data=DATA, unique_id=URL, options=options)
     entry.add_to_hass(hass)

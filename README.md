@@ -81,6 +81,35 @@ again; if that leaves nothing of the show, the show leaves Sonarr too.
 These downloads aren't Jellyseerr requests: Jellyseerr shows
 them as available once it syncs with Sonarr.
 
+**Anime: English dub or Japanese with subtitles (needs Sonarr; Radarr for
+films).** Works with three quality profiles on Sonarr and Radarr, found by
+name: **Anime (English dub preferred)** (Japanese with subtitles now, replaced
+by the dub when it's posted), **Anime (English dub only)** (waits for a dub)
+and **Anime (Japanese + subtitles)**. Without all three, none of this shows.
+An anime title's page (Seerr's anime keyword, or Japanese animation) gets an
+**Audio** choice. Before Sonarr or Radarr has the title, it goes with Request,
+Episodes or Get new episodes; with no choice, anime goes to Seerr's anime
+profile, and anime films to "dub preferred" (Seerr itself has no anime routing
+for films). Afterwards, changing it asks first, then moves the title to that
+profile and, for a dub choice, searches for the episodes still in Japanese
+(Sonarr and Radarr don't search after a profile change). The page says how many
+downloaded episodes have English audio. Episodes, tiles and the Downloaded list
+are labelled **Dub**, **Dual audio**, **Sub**, **Part dub** or **Sub only**,
+from the audio tracks in the files themselves (Sonarr's and Radarr's media
+info), not from release names. On "dub only", episodes not found are *Waiting
+for dub*; shows that have every episode but some in Japanese appear in the
+Waiting list as *Waiting for dub*, after everything else. **Check now** says
+how many suitable copies have English audio; **Search again** includes the
+Japanese episodes.
+
+**Dub dates (optional).** With an [AnimeSchedule.net](https://animeschedule.net)
+application token in the options, the page shows the next English dub episode
+and when ("English dub: episode 3 Fri 30 Oct, 15:00 · dubbed up to episode 2"),
+episodes show when their dub is expected (weekly from the next one), and the
+Waiting list shows the next dub. The dub timetable for this week and the next
+three is read every six hours and matched to shows by name. Dates are credited
+to AnimeSchedule.net, as its API terms require.
+
 **Sensors**: pending, approved, processing, available and total request counts.
 
 **Actions**

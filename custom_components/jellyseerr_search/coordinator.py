@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from .animeschedule import DubSchedule
 from .api import JellyseerrAuthError, JellyseerrClient, JellyseerrError
 from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
 from .episodes import AddedShows, CheckedTypes, FollowedShows
@@ -37,6 +38,7 @@ class JellyseerrCoordinator(DataUpdateCoordinator[dict[str, int]]):
         followed: FollowedShows | None = None,
         checked: CheckedTypes | None = None,
         radarr: RadarrClient | None = None,
+        schedule: DubSchedule | None = None,
     ) -> None:
         super().__init__(
             hass,
@@ -51,6 +53,7 @@ class JellyseerrCoordinator(DataUpdateCoordinator[dict[str, int]]):
         self.followed = followed
         self.checked = checked
         self.radarr = radarr
+        self.schedule = schedule  # English dub dates, when a token is set
         self.arr_index = ArrIndex()
 
     async def _async_update_data(self) -> dict[str, int]:

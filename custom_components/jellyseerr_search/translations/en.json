@@ -35,19 +35,21 @@
   "options": {
     "step": {
       "init": {
-        "title": "Sonarr and Radarr (optional)",
-        "description": "Sonarr: pick single episodes in the card and choose whether new episodes download (Jellyseerr can only request whole seasons). Sonarr and Radarr: the Waiting list of wanted titles that aren't downloaded yet. Leave a pair empty to turn it off.",
+        "title": "Sonarr, Radarr and dub dates (optional)",
+        "description": "Sonarr: pick single episodes in the card and choose whether new episodes download (Jellyseerr can only request whole seasons). Sonarr and Radarr: the Waiting list of wanted titles that aren't downloaded yet. Leave a pair empty to turn it off. AnimeSchedule.net: English dub dates for anime.",
         "data": {
           "sonarr_url": "Sonarr URL",
           "sonarr_api_key": "Sonarr API key",
           "radarr_url": "Radarr URL",
-          "radarr_api_key": "Radarr API key"
+          "radarr_api_key": "Radarr API key",
+          "animeschedule_token": "AnimeSchedule.net token"
         },
         "data_description": {
           "sonarr_url": "For example http://192.168.1.20:8989.",
           "sonarr_api_key": "In Sonarr under Settings > General.",
           "radarr_url": "Optional: films in the Waiting list. For example http://192.168.1.20:7878.",
-          "radarr_api_key": "In Radarr under Settings > General."
+          "radarr_api_key": "In Radarr under Settings > General.",
+          "animeschedule_token": "Optional: an application token from your AnimeSchedule.net account (Settings > API). Shows when English dubs come out."
         }
       }
     },
@@ -58,6 +60,7 @@
       "radarr_incomplete": "Enter both the Radarr URL and API key, or leave both empty.",
       "radarr_cannot_connect": "Could not reach Radarr at that URL.",
       "radarr_invalid_auth": "Radarr rejected the API key.",
+      "animeschedule_failed": "AnimeSchedule.net didn't accept the token, or couldn't be reached.",
       "unknown": "Unexpected error. Check the Home Assistant log."
     }
   },
@@ -115,6 +118,12 @@
     },
     "not_on_tvdb": {
       "message": "Sonarr couldn't find TVDB ID {tvdb_id}."
+    },
+    "no_audio_profile": {
+      "message": "Sonarr or Radarr has no anime audio profiles: Anime (English dub preferred), Anime (English dub only) and Anime (Japanese + subtitles)."
+    },
+    "not_in_arr": {
+      "message": "Sonarr or Radarr hasn't got this title yet. Choose the audio when you request it."
     }
   },
   "selector": {

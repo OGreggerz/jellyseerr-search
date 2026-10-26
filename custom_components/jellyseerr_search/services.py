@@ -208,9 +208,10 @@ async def async_request_media(
     tmdb_id: int,
     seasons: list[int] | str,
     is_4k: bool,
+    profile_id: int | None = None,
 ) -> dict[str, Any]:
     try:
-        created = await client.async_request(media_type, tmdb_id, seasons, is_4k)
+        created = await client.async_request(media_type, tmdb_id, seasons, is_4k, profile_id)
     except JellyseerrError as err:
         raise HomeAssistantError(
             translation_domain=DOMAIN,

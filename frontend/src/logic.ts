@@ -1,6 +1,18 @@
 // Pure helpers, kept out of the card so vitest can cover them without a DOM.
 
-import type { CheckResult, Episode, MediaStatus, ReleaseInfo, SearchResult, Season, WaitingItem } from "./types";
+import type {
+  AudioChoice,
+  AudioState,
+  AudioSummary,
+  CheckResult,
+  DubInfo,
+  Episode,
+  MediaStatus,
+  ReleaseInfo,
+  SearchResult,
+  Season,
+  WaitingItem,
+} from "./types";
 
 const REQUESTABLE: ReadonlySet<MediaStatus> = new Set(["not_requested", "unknown", "deleted"]);
 
@@ -33,6 +45,7 @@ export function resultChips(r: SearchResult): Array<{ label: string; cls: string
     const chips: Array<{ label: string; cls: string }> = [];
     if (r.arr.downloaded) chips.push({ label: "Downloaded", cls: "available" });
     if (r.arr.waiting) chips.push({ label: "Waiting", cls: "wanted" });
+    if (r.arr.audio) chips.push({ label: AUDIO_SUMMARY[r.arr.audio], cls: `audio-${r.arr.audio}` });
     return chips;
   }
   const label = statusLabel(r.status);
@@ -63,15 +76,16 @@ export function pickableEpisodes(episodes: readonly Episode[]): number[] {
   return episodes.filter(isPickable).map((e) => e.id);
 }
 
-/** Chip text for an episode, or null for one that can still be picked. */
-export function episodeLabel(ep: Episode): string | null {
+/** Chip text for an episode, or null for one that can still be picked. On
+ *  "dub only", a wanted episode is waiting for its dub. */
+export function episodeLabel(ep: Episode, audio: AudioChoice | null = null): string | null {
   switch (ep.status) {
     case "downloaded":
       return "Downloaded";
     case "downloading":
       return "Downloading";
     case "wanted":
-      return "Not found yet";
+      return audio === "dub_only" ? "Waiting for dub" : "Not found yet";
     case "not_aired":
       return ep.monitored ? "When it airs" : "Not aired";
     default:
@@ -117,7 +131,10 @@ export function ago(iso: string, now: Date = new Date()): string {
 }
 
 export function waitingLabel(item: WaitingItem): string {
-  return { downloading: "Downloading", not_found: "Not found yet", not_out: "Not out yet" }[item.state];
+  if (item.state === "not_found" && item.audio === "dub_only") return "Waiting for dub";
+  return { downloading: "Downloading", not_found: "Not found yet", not_out: "Not out yet", dub_wanted: "Waiting for dub" }[
+    item.state
+  ];
 }
 
 /** The line under a Waiting title: when it's out, or what it's waiting for. */
@@ -125,7 +142,13 @@ export function waitingDetail(item: WaitingItem, now: Date = new Date()): string
   if (item.state === "downloading") return "Downloading now.";
   if (item.media_type === "tv") {
     const parts: string[] = [];
-    if (item.missing) parts.push(`${item.missing} episode${item.missing === 1 ? "" : "s"} out but not found yet`);
+    const dubOnly = item.audio === "dub_only";
+    if (item.missing) {
+      const s = item.missing === 1 ? "" : "s";
+      parts.push(dubOnly ? `${item.missing} episode${s} out, no dub found yet` : `${item.missing} episode${s} out but not found yet`);
+    }
+    if (item.dub_wanted) parts.push(`${item.dub_wanted} episode${item.dub_wanted === 1 ? "" : "s"} in Japanese, dub wanted`);
+    if (item.next_dub && item.next_dub.date_utc) parts.push(`Next dub: E${item.next_dub.episode} ${airTime(item.next_dub.date_utc, now)}`);
     const n = item.next_episode;
     if (n) parts.push(`Next: S${n.season}E${n.episode} ${airTime(n.air_date_utc, now)}`);
     if (item.state === "not_found" && item.last_search) parts.push(`last searched ${ago(item.last_search, now)}`);
@@ -151,7 +174,8 @@ export function checkSummary(result: CheckResult): string {
   const what = result.episode ? ` for S${result.episode.season}E${result.episode.episode}` : "";
   if (!result.found) return `Nothing posted yet${what}.`;
   if (result.accepted) {
-    return `${result.accepted} suitable cop${result.accepted === 1 ? "y" : "ies"} found${what}${result.best ? `: ${result.best}` : ""}.`;
+    const english = result.dubbed ? ` (${result.dubbed} with English audio)` : "";
+    return `${result.accepted} suitable cop${result.accepted === 1 ? "y" : "ies"} found${what}${english}${result.best ? `: ${result.best}` : ""}.`;
   }
   const why = result.reasons.length ? ` (${result.reasons[0]})` : "";
   return `${result.found} cop${result.found === 1 ? "y" : "ies"} found${what}, none your profile accepts${why}.`;
@@ -172,6 +196,75 @@ export function releaseLine(info: ReleaseInfo, mediaType: "movie" | "tv", today:
   if (info.theatrical) return `In cinemas ${day(info.theatrical)}`;
   if (info.tmdb_status && info.tmdb_status !== "Released") return `Not released yet (${info.tmdb_status.toLowerCase()})`;
   return null;
+}
+
+export const AUDIO_SUMMARY: Record<AudioSummary, string> = { dub: "Dub", part_dub: "Part dub", sub_only: "Sub only" };
+
+/** The page's audio options, in order, with what each does. */
+export const AUDIO_OPTIONS: ReadonlyArray<{ value: AudioChoice; label: string; hint: string }> = [
+  {
+    value: "dub",
+    label: "English dub, subtitles until it's out",
+    hint: "Japanese with subtitles now, replaced by the English dub when it's posted.",
+  },
+  { value: "dub_only", label: "English dub only", hint: "Nothing downloads until an English dub is posted." },
+  { value: "sub", label: "Japanese with subtitles", hint: "Dubs aren't downloaded." },
+];
+
+/** What switching an existing title to `to` will do, for the confirmation. */
+export function audioSwitchWarning(to: AudioChoice, mediaType: "movie" | "tv"): string {
+  const what = mediaType === "tv" ? "episodes" : "the film";
+  if (to === "sub") return `Dubs stop downloading, and dubbed ${what} may be swapped for Japanese copies as they're posted.`;
+  return mediaType === "tv"
+    ? "Searches now for English dubs of the episodes still in Japanese. Each replacement downloads again (about 1 GB an episode)."
+    : "Searches now for an English dub. If one's found, the film downloads again.";
+}
+
+/** Chip text for a downloaded episode's audio, or null when there's no file or
+ *  its tracks aren't tagged. */
+export function episodeAudioLabel(ep: Episode): string | null {
+  switch (ep.audio) {
+    case "dual":
+      return "Dual audio";
+    case "dub":
+      return "Dub";
+    case "sub":
+      return ep.english_subs ? "Sub · Eng subs" : "Sub";
+    default:
+      return null;
+  }
+}
+
+/** When this episode's dub is expected, from the next dub in the timetable and
+ *  its weekly rhythm; null for episodes already in English or before it. The
+ *  timetable counts episodes within the season, so only the latest season. */
+export function episodeDubLine(ep: Episode, dub: DubInfo | null, latestSeason: boolean, now: Date = new Date()): string | null {
+  if (!dub?.date_utc || !dub.episode || !latestSeason || ep.audio === "dual" || ep.audio === "dub") return null;
+  const ahead = ep.episode_number - dub.episode;
+  if (ahead < 0) return null;
+  if (ahead === 0) return `Dub ${airTime(dub.date_utc, now)}`;
+  const when = new Date(new Date(dub.date_utc).getTime() + ahead * 7 * 86_400_000);
+  return `Dub expected around ${when.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`;
+}
+
+/** The page's dub lines: what's downloaded in English, and the next dub. */
+export function audioLines(state: AudioState, mediaType: "movie" | "tv", now: Date = new Date()): string[] {
+  const lines: string[] = [];
+  if (state.files) {
+    if (mediaType === "movie") lines.push(state.english_files ? "Downloaded with English audio." : "Downloaded in Japanese.");
+    else if (state.english_files === state.files) lines.push(`All ${state.files} downloaded episodes have English audio.`);
+    else lines.push(`${state.english_files} of ${state.files} downloaded episodes have English audio.`);
+  }
+  const dub = state.dub;
+  if (dub?.date_utc && dub.episode) {
+    const upTo = dub.last_episode ? ` · dubbed up to episode ${dub.last_episode}` : "";
+    lines.push(`English dub: episode ${dub.episode} ${airTime(dub.date_utc, now)}${dub.delayed ? " (delayed)" : ""}${upTo}`);
+  } else if (dub?.last_episode) {
+    lines.push(`English dub: up to episode ${dub.last_episode}, no next date listed`);
+  } else if (state.dub_dates && mediaType === "tv") {
+    lines.push("No English dub dates listed for the next 4 weeks.");
+  }
+  return lines;
 }
 
 /** The Downloaded list narrowed by what's typed in the search box. */

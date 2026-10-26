@@ -13,8 +13,10 @@ from homeassistant.core import HomeAssistant, callback
 
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
-from .const import CARD_VERSION, DOMAIN, LIBRARY_LIMIT, MEDIA_TV, MEDIA_TYPES
+from .const import CARD_VERSION, DOMAIN, LIBRARY_LIMIT, MEDIA_MOVIE, MEDIA_TV, MEDIA_TYPES
 from .api import JellyseerrError
+from .audio import AUDIO_CHOICES
+from .dubs import async_anime_film_profile, async_audio_state, async_set_audio
 from .sonarr import SonarrError
 from .waiting import async_annotate, async_check, async_downloaded, async_search_again, async_waiting
 from .episodes import (
@@ -67,6 +69,7 @@ def async_register_websocket(hass: HomeAssistant) -> None:
         ws_release,
         ws_waiting_check,
         ws_waiting_search,
+        ws_audio,
     ):
         websocket_api.async_register_command(hass, command)
 
@@ -203,6 +206,7 @@ async def ws_seasons(
         vol.Required("media_type"): vol.In(MEDIA_TYPES),
         vol.Optional("seasons", default=MEDIA_ALL): parse_seasons,
         vol.Optional("is_4k", default=False): bool,
+        vol.Optional("audio"): vol.In(AUDIO_CHOICES),
         vol.Optional("config_entry_id"): str,
     }
 )
@@ -210,10 +214,21 @@ async def ws_seasons(
 async def ws_request(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
-    client = resolve_client(hass, msg.get("config_entry_id"))
+    c = resolve_coordinator(hass, msg.get("config_entry_id"))
+    client = c.client
     seasons = msg["seasons"] if msg["media_type"] == MEDIA_TV else MEDIA_ALL
+    # Films: Seerr has no anime routing for Radarr, so the profile goes with the
+    # request (the audio chosen, or "dub preferred" for anime).
+    profile_id = None
+    if msg["media_type"] == MEDIA_MOVIE and c.radarr is not None and not msg["is_4k"]:
+        try:
+            profile_id = await async_anime_film_profile(client, c.radarr, msg["tmdb_id"], msg.get("audio"))
+        except (JellyseerrError, SonarrError) as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN, translation_key="sonarr_error", translation_placeholders={"error": str(err)}
+            ) from err
     result = await async_request_media(
-        client, msg["media_type"], msg["tmdb_id"], seasons, msg["is_4k"]
+        client, msg["media_type"], msg["tmdb_id"], seasons, msg["is_4k"], profile_id
     )
     # Downloaded / Waiting chips must show the change at once.
     resolve_coordinator(hass, msg.get("config_entry_id")).arr_index.invalidate()
@@ -262,6 +277,7 @@ def _picker(hass: HomeAssistant, entry_id: str | None):
         vol.Required("type"): f"{DOMAIN}/episodes",
         vol.Required("tmdb_id"): vol.All(int, vol.Range(min=1)),
         vol.Required("season_number"): vol.All(int, vol.Range(min=0)),
+        vol.Optional("audio"): vol.In(AUDIO_CHOICES),
         vol.Optional("config_entry_id"): str,
     }
 )
@@ -269,10 +285,11 @@ def _picker(hass: HomeAssistant, entry_id: str | None):
 async def ws_episodes(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
-    """A season's episodes from Sonarr. May add the show to Sonarr, unmonitored."""
+    """A season's episodes from Sonarr. May add the show to Sonarr, unmonitored
+    (on the audio's profile, if one was chosen)."""
     c = _picker(hass, msg.get("config_entry_id"))
     result = await async_season_episodes(
-        c.client, c.sonarr, msg["tmdb_id"], msg["season_number"], c.added_shows
+        c.client, c.sonarr, msg["tmdb_id"], msg["season_number"], c.added_shows, msg.get("audio")
     )
     connection.send_result(msg["id"], result)
 
@@ -378,6 +395,7 @@ async def ws_episodes_remove(
         vol.Required("type"): f"{DOMAIN}/episodes/follow",
         vol.Required("tmdb_id"): vol.All(int, vol.Range(min=1)),
         vol.Required("follow_new"): bool,
+        vol.Optional("audio"): vol.In(AUDIO_CHOICES),
         vol.Optional("config_entry_id"): str,
     }
 )
@@ -390,7 +408,8 @@ async def ws_episodes_follow(
     result = await _finish_regardless(
         hass,
         async_follow_show(
-            c.client, c.sonarr, msg["tmdb_id"], msg["follow_new"], c.added_shows, c.followed, c.checked
+            c.client, c.sonarr, msg["tmdb_id"], msg["follow_new"], c.added_shows, c.followed, c.checked,
+            msg.get("audio"),
         ),
     )
     # Downloaded / Waiting chips must show the change at once.
@@ -409,7 +428,7 @@ async def ws_waiting(
     c = resolve_coordinator(hass, msg.get("config_entry_id"))
     if c.sonarr is None and c.radarr is None:
         raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_arr")
-    connection.send_result(msg["id"], {"results": await async_waiting(c.sonarr, c.radarr)})
+    connection.send_result(msg["id"], {"results": await async_waiting(c.sonarr, c.radarr, c.schedule)})
 
 
 _ARR_ITEM = {
@@ -470,6 +489,7 @@ async def ws_release(
         vol.Required("type"): f"{DOMAIN}/episodes/request",
         vol.Required("tmdb_id"): vol.All(int, vol.Range(min=1)),
         vol.Required("seasons"): vol.All([vol.All(int, vol.Range(min=1))], vol.Length(min=1)),
+        vol.Optional("audio"): vol.In(AUDIO_CHOICES),
         vol.Optional("config_entry_id"): str,
     }
 )
@@ -480,7 +500,37 @@ async def ws_episodes_request(
     """Request whole seasons through Sonarr (its numbering)."""
     c = _picker(hass, msg.get("config_entry_id"))
     result = await _finish_regardless(
-        hass, async_request_seasons(c.client, c.sonarr, msg["tmdb_id"], msg["seasons"], c.added_shows, c.checked)
+        hass,
+        async_request_seasons(
+            c.client, c.sonarr, msg["tmdb_id"], msg["seasons"], c.added_shows, c.checked, msg.get("audio")
+        ),
     )
     c.arr_index.invalidate()
     connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/audio",
+        vol.Required("tmdb_id"): vol.All(int, vol.Range(min=1)),
+        vol.Required("media_type"): vol.In(MEDIA_TYPES),
+        vol.Optional("audio"): vol.In(AUDIO_CHOICES),
+        vol.Optional("config_entry_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_audio(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """The page's audio section: anime or not, dub or sub chosen, what the files
+    have, the next dub date. With `audio`, changes it first (and searches for
+    dubs). `null` when Sonarr (shows) or Radarr (films) isn't set up."""
+    c = resolve_coordinator(hass, msg.get("config_entry_id"))
+    if "audio" in msg:
+        state = await _finish_regardless(
+            hass, async_set_audio(c.client, c.sonarr, c.radarr, msg["media_type"], msg["tmdb_id"], msg["audio"], c.schedule)
+        )
+        c.arr_index.invalidate()
+    else:
+        state = await async_audio_state(c.client, c.sonarr, c.radarr, msg["media_type"], msg["tmdb_id"], c.schedule)
+    connection.send_result(msg["id"], state)
