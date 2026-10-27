@@ -1021,8 +1021,9 @@ export class JellyseerrSearchCard extends LitElement {
               ? html`<span class="hint busy">Checking how it's released and setting it up… This can take a
                   minute; it carries on if you leave.</span>`
               : html`<span class="hint">
-                  Download new episodes of ${item.title} as they come out, including new series. Turning it off
-                  also cancels upcoming episodes you picked.
+                  Download new episodes of ${item.title} as they come out, including new series. Episodes already
+                  out aren't fetched: tick their series below and Request. Turning it off also cancels upcoming
+                  episodes you picked.
                 </span>`}
           </span>
         </label>

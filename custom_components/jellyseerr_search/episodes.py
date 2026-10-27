@@ -713,12 +713,19 @@ def show_files_status(episodes: list[dict[str, Any]], now: datetime) -> str | No
 
 
 def sonarr_season_status(season: dict[str, Any], episodes: list[dict[str, Any]], now: datetime) -> str:
-    """A season's status in the card's terms, from its episodes in Sonarr."""
-    status = files_status([ep for ep in episodes if ep.get("seasonNumber") == season["seasonNumber"]], now)
+    """A season's status in the card's terms, from its episodes in Sonarr.
+
+    "processing" (wanted, nothing here yet) only when an episode is monitored,
+    not when just the season's flag is on: Get new episodes turns the flag on
+    and leaves aired episodes off, so a finished season it follows wants
+    nothing, and must stay requestable (SPY x FAMILY series 3, seen
+    2026-10-27: shown as Processing, so it couldn't be ticked)."""
+    in_season = [ep for ep in episodes if ep.get("seasonNumber") == season["seasonNumber"]]
+    status = files_status(in_season, now)
     if status:
         return status
-    if season.get("monitored"):
-        return "processing"  # wanted, nothing yet
+    if any(ep.get("monitored") for ep in in_season):
+        return "processing"
     return "not_requested"
 
 

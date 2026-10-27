@@ -803,7 +803,7 @@ var q = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, J, rt = "0.12.2", Y = "jellyseerr_search", it = 400, X = 2, at = 36e5, ot = [2e4, 6e4], st = !1, Z = !1, ct = [
+}, J, rt = "0.12.3", Y = "jellyseerr_search", it = 400, X = 2, at = 36e5, ot = [2e4, 6e4], st = !1, Z = !1, ct = [
 	{
 		value: "all",
 		label: "All"
@@ -921,7 +921,7 @@ var $ = class extends L {
 	async _checkVersion() {
 		try {
 			let { version: e, waiting: t } = await this.hass.callWS({ type: `${Y}/version` });
-			e !== "0.12.2" && (this._staleVersion = e), Z = !!t, this._waitingOn = Z;
+			e !== "0.12.3" && (this._staleVersion = e), Z = !!t, this._waitingOn = Z;
 		} catch {}
 	}
 	async _reload() {
@@ -1414,8 +1414,9 @@ var $ = class extends L {
             Get new episodes
             ${this._followBusy ? O`<span class="hint busy">Checking how it's released and setting it up… This can take a
                   minute; it carries on if you leave.</span>` : O`<span class="hint">
-                  Download new episodes of ${e.title} as they come out, including new series. Turning it off
-                  also cancels upcoming episodes you picked.
+                  Download new episodes of ${e.title} as they come out, including new series. Episodes already
+                  out aren't fetched: tick their series below and Request. Turning it off also cancels upcoming
+                  episodes you picked.
                 </span>`}
           </span>
         </label>

@@ -893,6 +893,19 @@ async def test_seasons_come_from_sonarr(hass, picker, aioclient_mock, hass_ws_cl
     ]
 
 
+async def test_a_followed_finished_season_can_still_be_requested(hass, picker, aioclient_mock, hass_ws_client) -> None:
+    """SPY x FAMILY, 2026-10-27: Get new episodes turned series 3 on, but all 13
+    episodes had aired, so none were monitored. It's not wanted: requestable."""
+    followed = {**APOTHECARY, "seasons": [{"seasonNumber": 3, "monitored": True, "statistics": {"totalEpisodeCount": 2}}]}
+    aioclient_mock.get(f"{API}/tv/220542", json={"id": 220542, "externalIds": {"tvdbId": 431162}, "seasons": []})
+    aioclient_mock.get(f"{SONARR}/series?tvdbId=431162", json=[followed])
+    aioclient_mock.get(f"{SONARR}/episode?seriesId=16", json=[ep(301, 1, season=3), ep(302, 2, season=3)])
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/seasons", "tmdb_id": 220542})
+    result = (await ws.receive_json())["result"]
+    assert [(s["season_number"], s["status"]) for s in result["seasons"]] == [(3, "not_requested")]
+
+
 async def test_seasons_of_a_show_sonarr_lacks_come_from_its_lookup(hass, picker, aioclient_mock, hass_ws_client) -> None:
     aioclient_mock.get(f"{API}/tv/220542", json={"id": 220542, "externalIds": {"tvdbId": 431162}, "seasons": []})
     aioclient_mock.get(f"{SONARR}/series?tvdbId=431162", json=[])
