@@ -13,6 +13,13 @@ REQUEST_TIMEOUT: Final = 15
 SEARCH_TIMEOUT: Final = 90
 
 TMDB_POSTER_URL: Final = "https://image.tmdb.org/t/p/w342"
+# Cast photos on the title screen: small circles, so TMDB's 185-wide profiles.
+TMDB_PROFILE_URL: Final = "https://image.tmdb.org/t/p/w185"
+# The title screen's cast row and director / creator line.
+CAST_LIMIT: Final = 12
+CAST_CREDIT_NAMES: Final = 2
+# TMDB's rating is shown only once this many people have voted.
+RATING_MIN_VOTES: Final = 20
 
 MEDIA_MOVIE: Final = "movie"
 MEDIA_TV: Final = "tv"
@@ -124,4 +131,4 @@ REQUEST_COUNT_KEYS: Final = ("pending", "approved", "processing", "available", "
 URL_BASE: Final = f"/{DOMAIN}"
 CARD_FILENAME: Final = "jellyseerr-search-card.js"
 CARD_URL: Final = f"{URL_BASE}/{CARD_FILENAME}"
-CARD_VERSION: Final = "0.15.0"
+CARD_VERSION: Final = "0.16.0"

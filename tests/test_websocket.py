@@ -398,7 +398,8 @@ async def test_release_info_film(hass: HomeAssistant, entry, aioclient_mock, has
     await ws.send_json_auto_id({"type": f"{DOMAIN}/release", "tmdb_id": 1727734, "media_type": "movie"})
     result = (await ws.receive_json())["result"]
     # UK first for cinema; no UK digital, so US; physical only in Germany.
-    assert result == {"tmdb_status": "Released", "theatrical": "2026-10-22", "digital": "2026-12-01", "physical": "2027-02-01"}
+    release = {k: result[k] for k in ("tmdb_status", "theatrical", "digital", "physical")}
+    assert release == {"tmdb_status": "Released", "theatrical": "2026-10-22", "digital": "2026-12-01", "physical": "2027-02-01"}
 
 
 async def test_release_info_show(hass: HomeAssistant, entry, aioclient_mock, hass_ws_client) -> None:
@@ -407,6 +408,63 @@ async def test_release_info_show(hass: HomeAssistant, entry, aioclient_mock, has
     })
     ws = await hass_ws_client(hass)
     await ws.send_json_auto_id({"type": f"{DOMAIN}/release", "tmdb_id": 220542, "media_type": "tv"})
-    assert (await ws.receive_json())["result"] == {
+    result = (await ws.receive_json())["result"]
+    assert {k: result[k] for k in ("tmdb_status", "next_air_date", "last_air_date")} == {
         "tmdb_status": "Returning Series", "next_air_date": "2026-10-23", "last_air_date": "2026-10-16",
     }
+    # A record with none of the extras gives empty ones, not errors.
+    assert (result["cast"], result["trailer"], result["credit"], result["rating"]) == ([], None, None, None)
+
+
+async def test_title_details_film(hass: HomeAssistant, entry, aioclient_mock, hass_ws_client) -> None:
+    """Cast, director, facts and the trailer, from the same record as the dates.
+    Videos as Seerr lists Coco's (2026-10-30): featurettes and clips first."""
+    aioclient_mock.get(f"{API}/movie/354912", json={
+        "status": "Released", "runtime": 105, "voteAverage": 8.213, "voteCount": 21000,
+        "tagline": "The celebration of a lifetime.",
+        "genres": [{"id": 10751, "name": "Family"}, {"id": 16, "name": "Animation"}],
+        "credits": {
+            "cast": [
+                {"name": "Gael García Bernal", "character": "Héctor (voice)", "order": 1, "profilePath": "/g.jpg"},
+                {"name": "Anthony Gonzalez", "character": "Miguel Rivera (voice)", "order": 0, "profilePath": None},
+            ],
+            "crew": [
+                {"name": "Lee Unkrich", "job": "Director"},
+                {"name": "Lee Unkrich", "job": "Director"},
+                {"name": "Seong-Young Kim", "job": "Layout"},
+            ],
+        },
+        "relatedVideos": [
+            {"site": "YouTube", "key": "kmFZc7mdEec", "type": "Featurette", "name": "Making Tamales"},
+            {"site": "YouTube", "key": "yg8116aeD7E", "type": "Clip", "name": "Un Poco Loco"},
+            {"site": "YouTube", "key": "teaser1", "type": "Teaser", "name": "Teaser"},
+            {"site": "Vimeo", "key": "vimeo1", "type": "Trailer", "name": "Official Trailer"},
+            {"site": "YouTube", "key": "trailer1", "type": "Trailer", "name": "Trailer"},
+            {"site": "YouTube", "key": "Rvr68u6k5sI", "type": "Trailer", "name": "Official Final Trailer"},
+        ],
+    })
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/release", "tmdb_id": 354912, "media_type": "movie"})
+    result = (await ws.receive_json())["result"]
+    assert (result["runtime"], result["genres"], result["rating"]) == (105, ["Family", "Animation"], 8.2)
+    assert result["credit"] == {"label": "Directed by", "names": ["Lee Unkrich"]}
+    assert [c["name"] for c in result["cast"]] == ["Anthony Gonzalez", "Gael García Bernal"]
+    assert result["cast"][0]["photo_url"] is None
+    assert result["cast"][1]["photo_url"] == "https://image.tmdb.org/t/p/w185/g.jpg"
+    # YouTube only, a Trailer before a Teaser, an official one first.
+    assert result["trailer"] == {"key": "Rvr68u6k5sI", "name": "Official Final Trailer"}
+
+
+async def test_title_details_show(hass: HomeAssistant, entry, aioclient_mock, hass_ws_client) -> None:
+    """Shows: creator, seasons, episode length; few votes means no rating; a teaser if no trailer."""
+    aioclient_mock.get(f"{API}/tv/83867", json={
+        "status": "Ended", "numberOfSeasons": 2, "episodeRunTime": [45], "voteAverage": 9.9, "voteCount": 3,
+        "createdBy": [{"name": "Tony Gilroy"}],
+        "relatedVideos": [{"site": "YouTube", "key": "t1", "type": "Teaser", "name": "Teaser"}],
+    })
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/release", "tmdb_id": 83867, "media_type": "tv"})
+    result = (await ws.receive_json())["result"]
+    assert (result["seasons_count"], result["runtime"], result["rating"]) == (2, 45, None)
+    assert result["credit"] == {"label": "Created by", "names": ["Tony Gilroy"]}
+    assert result["trailer"] == {"key": "t1", "name": "Teaser"}

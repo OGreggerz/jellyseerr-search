@@ -76,6 +76,18 @@ export interface ReleaseInfo {
   // Shows
   next_air_date?: string | null;
   last_air_date?: string | null;
+  // The title screen's extras (integration 0.16.0+; absent from older ones).
+  /** Minutes: a film's length, a show's usual episode. */
+  runtime?: number | null;
+  seasons_count?: number | null;
+  genres?: string[];
+  /** TMDB's score out of 10, once enough people have voted. */
+  rating?: number | null;
+  tagline?: string | null;
+  credit?: { label: string; names: string[] } | null;
+  cast?: Array<{ name: string; character: string | null; photo_url: string | null }>;
+  /** A YouTube video id and its title. */
+  trailer?: { key: string; name: string } | null;
 }
 
 /** jellyseerr_search/waiting/check: what an interactive search found. */

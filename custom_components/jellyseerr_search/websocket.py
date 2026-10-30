@@ -526,7 +526,8 @@ async def ws_waiting_search(
 async def ws_release(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
-    """Is it out yet? TMDB's dates, for the line under a title's name."""
+    """The title screen's extras: is it out yet (the line under the name), and the
+    cast, trailer, director or creator, runtime, genres and rating."""
     client = resolve_client(hass, msg.get("config_entry_id"))
     try:
         info = await client.async_release_info(msg["media_type"], msg["tmdb_id"])

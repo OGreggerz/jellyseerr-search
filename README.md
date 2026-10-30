@@ -51,6 +51,13 @@ Top rated (200 with a genre), 50 for Newest, so the month's releases still show;
 If your dashboards are in YAML mode, add `/jellyseerr_search/jellyseerr-search-card.js`
 as a JavaScript module resource yourself.
 
+**Title screen.** Tapping a poster shows, besides the overview and the request
+controls: length (or seasons and episode length), genres and TMDB's rating, the
+tagline, director or creator, a trailer and the leading cast. The trailer is
+YouTube's thumbnail until tapped, then plays in place (youtube-nocookie.com, with
+a Referer, which YouTube's player needs; Home Assistant's pages send none), with
+an *Open it in YouTube* link beneath. All of it comes from Seerr's title record.
+
 **Downloaded.** A fourth chip beside All / Movies / TV lists what the server
 already has (available or partly available in Jellyseerr), newest first;
 typing narrows it. Tap a title for the usual screen: Remove, or Episodes to get

@@ -31,6 +31,8 @@ import {
   genresFor,
   servicesFor,
   streamChoices,
+  factsLine,
+  trailerEmbedUrl,
 } from "./logic";
 import type {
   AudioChoice,
@@ -142,6 +144,7 @@ export class JellyseerrSearchCard extends LitElement {
     _audioPick: { state: true },
     _audioConfirm: { state: true },
     _audioBusy: { state: true },
+    _trailerOn: { state: true },
   };
 
   declare hass: HomeAssistant;
@@ -210,6 +213,8 @@ export class JellyseerrSearchCard extends LitElement {
   /** A switch for a title Sonarr/Radarr has, waiting for "Switch". */
   declare _audioConfirm?: AudioChoice;
   declare _audioBusy: boolean;
+  /** The trailer was tapped: YouTube's player replaces its thumbnail. */
+  declare _trailerOn: boolean;
 
   private _debounce?: ReturnType<typeof setTimeout>;
   private _latestSearch = new Latest();
@@ -254,6 +259,7 @@ export class JellyseerrSearchCard extends LitElement {
     this._checkingAll = false;
     this._audioPick = "dub";
     this._audioBusy = false;
+    this._trailerOn = false;
   }
 
   static getConfigForm() {
@@ -673,6 +679,7 @@ export class JellyseerrSearchCard extends LitElement {
     this._picker = false;
     this._show = undefined;
     this._release = undefined;
+    this._trailerOn = false;
     this._seasonSource = undefined;
     this._audio = undefined;
     this._audioPick = "dub";
@@ -1450,6 +1457,9 @@ export class JellyseerrSearchCard extends LitElement {
               ${item.year ?? ""} · ${tv ? "TV show" : "Movie"}
               ${resultChips(item).map((c) => html`<span class="status inline ${c.cls}">${c.label}</span>`)}
             </div>
+            ${this._release && factsLine(this._release, item.media_type)
+              ? html`<div class="facts">${factsLine(this._release, item.media_type)}</div>`
+              : nothing}
             ${this._release && releaseLine(this._release, item.media_type, new Date().toISOString().slice(0, 10))
               ? html`<div class="release">${releaseLine(this._release, item.media_type, new Date().toISOString().slice(0, 10))}</div>`
               : nothing}
@@ -1461,7 +1471,12 @@ export class JellyseerrSearchCard extends LitElement {
           </div>
         </div>
         ${this._config.show_remove && isRemovable(item.status) && this._confirmRemove ? this._renderRemove(item) : nothing}
+        ${this._release?.tagline ? html`<p class="tagline">${this._release.tagline}</p>` : nothing}
         ${item.overview ? html`<p class="overview">${item.overview}</p>` : nothing}
+        ${this._release?.credit
+          ? html`<p class="credit">${this._release.credit.label} <b>${this._release.credit.names.join(" and ")}</b></p>`
+          : nothing}
+        ${this._renderTrailer()} ${this._renderCast()}
         ${this._renderAudio(item)}
         ${tv ? this._renderFollow(item) : nothing}
         ${tv ? this._renderSeasons() : nothing}
@@ -1482,6 +1497,49 @@ export class JellyseerrSearchCard extends LitElement {
         </button>
       </div>
     `;
+  }
+
+  /** The trailer: YouTube's thumbnail until tapped, then its player in place. */
+  private _renderTrailer() {
+    const trailer = this._release?.trailer;
+    if (!trailer) return nothing;
+    const youtube = `https://www.youtube.com/watch?v=${encodeURIComponent(trailer.key)}`;
+    if (!this._trailerOn) {
+      return html`<button class="trailer" aria-label=${`Play trailer: ${trailer.name}`} @click=${() => (this._trailerOn = true)}>
+        <img src=${`https://i.ytimg.com/vi/${encodeURIComponent(trailer.key)}/hqdefault.jpg`} alt="" loading="lazy" />
+        <span class="play"><ha-icon icon="mdi:play"></ha-icon></span>
+        <span class="trailer-name">${trailer.name}</span>
+      </button>`;
+    }
+    // referrerpolicy: Home Assistant's pages send no Referer, and YouTube's player
+    // refuses to play without one (error 153).
+    return html`<div class="trailer playing">
+        <iframe
+          src=${trailerEmbedUrl(trailer.key)}
+          title=${trailer.name}
+          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+          allowfullscreen
+          referrerpolicy="strict-origin-when-cross-origin"
+        ></iframe>
+      </div>
+      <a class="youtube" href=${youtube} target="_blank" rel="noopener">Won't play? Open it in YouTube</a>`;
+  }
+
+  /** The leading cast, sideways like the chip rows. */
+  private _renderCast() {
+    const cast = this._release?.cast;
+    if (!cast?.length) return nothing;
+    return html`<div class="cast" aria-label="Cast">
+      ${cast.map(
+        (c) => html`<div class="person">
+          ${c.photo_url
+            ? html`<img src=${c.photo_url} alt="" loading="lazy" />`
+            : html`<span class="nophoto"><ha-icon icon="mdi:account"></ha-icon></span>`}
+          <span class="name">${c.name}</span>
+          ${c.character ? html`<span class="role">${c.character}</span>` : nothing}
+        </div>`,
+      )}
+    </div>`;
   }
 
   /** The "are you sure" for Remove all / Remove, shown under the header. */
@@ -2129,6 +2187,120 @@ export class JellyseerrSearchCard extends LitElement {
       display: flex;
       gap: 8px;
       margin-top: 4px;
+    }
+    .facts {
+      margin-top: 4px;
+      font-size: 13px;
+      color: var(--secondary-text-color);
+    }
+    .tagline {
+      margin: 0;
+      font-style: italic;
+      color: var(--secondary-text-color);
+    }
+    .credit {
+      margin: 0;
+      font-size: 14px;
+      color: var(--secondary-text-color);
+    }
+    .credit b {
+      font-weight: 500;
+      color: var(--primary-text-color);
+    }
+    /* A 16:9 box, whether it holds the thumbnail or YouTube's player. */
+    .trailer {
+      position: relative;
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      padding: 0;
+      border: 0;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+    }
+    .trailer img,
+    .trailer iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      object-fit: cover;
+    }
+    .trailer .play {
+      position: absolute;
+      inset: 50% auto auto 50%;
+      transform: translate(-50%, -50%);
+      display: grid;
+      place-items: center;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.65);
+      color: #fff;
+      --mdc-icon-size: 32px;
+    }
+    .trailer .trailer-name {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 16px 10px 8px;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+      color: #fff;
+      font-size: 13px;
+      text-align: start;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .youtube {
+      align-self: flex-start;
+      font-size: 13px;
+      color: var(--primary-color);
+    }
+    .cast {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: 2px;
+    }
+    .cast::-webkit-scrollbar {
+      display: none;
+    }
+    .person {
+      flex: none;
+      width: 76px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      font-size: 12px;
+    }
+    .person img,
+    .person .nophoto {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: var(--secondary-background-color, #eee);
+      display: grid;
+      place-items: center;
+      color: var(--secondary-text-color);
+    }
+    .person .name {
+      margin-top: 4px;
+      line-height: 1.2;
+      color: var(--primary-text-color);
+    }
+    .person .role {
+      line-height: 1.2;
+      color: var(--secondary-text-color);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
     .release {
       margin-top: 4px;

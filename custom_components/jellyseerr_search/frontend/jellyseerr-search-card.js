@@ -988,6 +988,17 @@ function lt(e, t) {
 	let n = new Set(e.map((e) => `${e.media_type}/${e.tmdb_id}`));
 	return [...e, ...t.filter((e) => !n.has(`${e.media_type}/${e.tmdb_id}`))];
 }
+function ut(e) {
+	let t = Math.floor(e / 60), n = e % 60;
+	return t ? n ? `${t}h ${n}m` : `${t}h` : `${n}m`;
+}
+function dt(e, t) {
+	let n = [];
+	return t === "tv" && e.seasons_count && n.push(e.seasons_count === 1 ? "1 season" : `${e.seasons_count} seasons`), e.runtime && n.push(t === "tv" ? `${ut(e.runtime)} episodes` : ut(e.runtime)), e.genres?.length && n.push(e.genres.slice(0, 3).join(", ")), e.rating && n.push(`\u2605 ${e.rating.toFixed(1)}`), n.length ? n.join(" · ") : null;
+}
+function ft(e) {
+	return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(e)}?autoplay=1&rel=0&playsinline=1`;
+}
 function J(e, t) {
 	let n = t.trim().toLowerCase();
 	return n ? e.filter((e) => e.title.toLowerCase().includes(n)) : [...e];
@@ -1000,7 +1011,7 @@ var Y = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, X, ut = "0.15.0", Z = "jellyseerr_search", dt = 400, Q = 2, ft = 36e5, pt = [2e4, 6e4], mt = !1, ht = !1, gt = [
+}, X, pt = "0.16.0", Z = "jellyseerr_search", mt = 400, Q = 2, ht = 36e5, gt = [2e4, 6e4], _t = !1, $ = !1, vt = [
 	{
 		value: "all",
 		label: "All"
@@ -1021,7 +1032,7 @@ var Y = class {
 		value: "waiting",
 		label: "Waiting"
 	}
-], _t = [
+], yt = [
 	{
 		value: "streaming",
 		label: "Streaming",
@@ -1037,13 +1048,13 @@ var Y = class {
 		label: "Popular",
 		heading: "Popular"
 	}
-], vt = "GB";
-function yt(e, t) {
+], bt = "GB";
+function xt(e, t) {
 	return t === "daily" ? `${e} is released by date, so it's now set up as a daily show.` : `${e} isn't released by date, so it's no longer set up as a daily show.`;
 }
-var $ = class extends L {
+var St = class extends L {
 	constructor() {
-		super(), this._latestSearch = new Y(), this._latestSeasons = new Y(), this._latestBrowse = new Y(), this._latestEpisodes = new Y(), this._latestLibrary = new Y(), this._refreshTimers = [], this._browseAt = 0, this._browsePage = 1, this._query = "", this._filter = "all", this._browse = _t[0].value, this._service = "", this._genre = "", this._brand = "", this._sort = "popular", this._browseMore = !1, this._moreLoading = !1, this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1, this._confirmRemove = !1, this._removing = !1, this._picker = !1, this._picked = /* @__PURE__ */ new Set(), this._pickerBusy = !1, this._downloading = !1, this._followBusy = !1, this._checks = {}, this._waitingOn = ht, this._checkingAll = !1, this._audioPick = "dub", this._audioBusy = !1;
+		super(), this._latestSearch = new Y(), this._latestSeasons = new Y(), this._latestBrowse = new Y(), this._latestEpisodes = new Y(), this._latestLibrary = new Y(), this._refreshTimers = [], this._browseAt = 0, this._browsePage = 1, this._query = "", this._filter = "all", this._browse = yt[0].value, this._service = "", this._genre = "", this._brand = "", this._sort = "popular", this._browseMore = !1, this._moreLoading = !1, this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1, this._confirmRemove = !1, this._removing = !1, this._picker = !1, this._picked = /* @__PURE__ */ new Set(), this._pickerBusy = !1, this._downloading = !1, this._followBusy = !1, this._checks = {}, this._waitingOn = $, this._checkingAll = !1, this._audioPick = "dub", this._audioBusy = !1, this._trailerOn = !1;
 	}
 	static getConfigForm() {
 		return {
@@ -1121,7 +1132,7 @@ var $ = class extends L {
 	}
 	setConfig(e) {
 		if (!e) throw Error("Invalid configuration");
-		if (e.media_type && !gt.some((t) => t.value === e.media_type)) throw Error("media_type must be all, movie or tv");
+		if (e.media_type && !vt.some((t) => t.value === e.media_type)) throw Error("media_type must be all, movie or tv");
 		this._config = e, this._filter = e.media_type ?? "all";
 	}
 	getCardSize() {
@@ -1138,12 +1149,12 @@ var $ = class extends L {
 		super.disconnectedCallback(), clearTimeout(this._debounce), this._clearRefreshTimers();
 	}
 	updated(e) {
-		e.has("hass") && this.hass && !mt && (mt = !0, this._checkVersion()), e.has("hass") && this.hass && this._browseDue() && this._loadBrowse();
+		e.has("hass") && this.hass && !_t && (_t = !0, this._checkVersion()), e.has("hass") && this.hass && this._browseDue() && this._loadBrowse();
 	}
 	async _checkVersion() {
 		try {
 			let { version: e, waiting: t } = await this.hass.callWS({ type: `${Z}/version` });
-			e !== "0.15.0" && (this._staleVersion = e), ht = !!t, this._waitingOn = ht;
+			e !== "0.16.0" && (this._staleVersion = e), $ = !!t, this._waitingOn = $;
 		} catch {}
 	}
 	async _reload() {
@@ -1250,7 +1261,7 @@ var $ = class extends L {
 		}
 	}
 	_browseDue() {
-		return !this._showBrowse() || this._selected ? !1 : this._browseKey !== this._currentBrowseKey() || Date.now() - this._browseAt > ft;
+		return !this._showBrowse() || this._selected ? !1 : this._browseKey !== this._currentBrowseKey() || Date.now() - this._browseAt > ht;
 	}
 	_currentBrowseKey() {
 		let e = `${this._browse}/${this._filter}`;
@@ -1267,7 +1278,7 @@ var $ = class extends L {
 		return {
 			type: `${Z}/discover`,
 			provider: this._streamService().ids.length === 1 ? this._streamService().ids[0] : this._streamService().ids,
-			region: (this._config.region || vt).toUpperCase(),
+			region: (this._config.region || bt).toUpperCase(),
 			media_type: this._filter,
 			sort: this._sort,
 			...this._genre ? { genre: this._genre } : {},
@@ -1317,7 +1328,7 @@ var $ = class extends L {
 		e.service !== void 0 && e.service !== this._streamService().key && (this._service = e.service, this._brand = ""), e.brand !== void 0 && (this._brand = e.brand), e.genre !== void 0 && (this._genre = e.genre), e.sort !== void 0 && (this._sort = e.sort), this._browseDue() && this._loadBrowse();
 	}
 	_onInput(e) {
-		this._query = e.target.value, clearTimeout(this._debounce), this._filter !== "downloaded" && this._filter !== "waiting" && (this._debounce = setTimeout(() => void this._search(), dt));
+		this._query = e.target.value, clearTimeout(this._debounce), this._filter !== "downloaded" && this._filter !== "waiting" && (this._debounce = setTimeout(() => void this._search(), mt));
 	}
 	_onKeydown(e) {
 		e.key === "Enter" && (clearTimeout(this._debounce), e.target.blur(), this._search());
@@ -1353,7 +1364,7 @@ var $ = class extends L {
 		}
 	}
 	_open(e) {
-		this._leaveShow(), this._selected = e, this._seasons = void 0, this._seasonsError = void 0, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._confirmRemove = !1, this._picker = !1, this._show = void 0, this._release = void 0, this._seasonSource = void 0, this._audio = void 0, this._audioPick = "dub", this._audioConfirm = void 0, this._closeEpisodes(), this._loadRelease(e), this._loadAudio(e), e.media_type === "tv" && this._loadSeasons(e.tmdb_id);
+		this._leaveShow(), this._selected = e, this._seasons = void 0, this._seasonsError = void 0, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._confirmRemove = !1, this._picker = !1, this._show = void 0, this._release = void 0, this._trailerOn = !1, this._seasonSource = void 0, this._audio = void 0, this._audioPick = "dub", this._audioConfirm = void 0, this._closeEpisodes(), this._loadRelease(e), this._loadAudio(e), e.media_type === "tv" && this._loadSeasons(e.tmdb_id);
 	}
 	async _loadRelease(e) {
 		try {
@@ -1461,7 +1472,7 @@ var $ = class extends L {
 					seasons: t,
 					...this._audioFor(),
 					...this._entry()
-				}), r = n.series_type_changed ? ` ${yt(e.title, n.series_type_changed)}` : "", i = t.length === 1 ? `series ${t[0]}` : `series ${t.join(", ")}`;
+				}), r = n.series_type_changed ? ` ${xt(e.title, n.series_type_changed)}` : "", i = t.length === 1 ? `series ${t[0]}` : `series ${t.join(", ")}`;
 				z(this, `Getting ${i} of ${e.title}.${r}`), this._addedSeries !== void 0 && (this._addedSeries = void 0), this._selected === e && (this._loadSeasons(e.tmdb_id), this._loadAudio(e));
 			} catch (e) {
 				z(this, `Request failed: ${B(e)}`);
@@ -1575,9 +1586,9 @@ var $ = class extends L {
 				...this._entry()
 			});
 			this._addedSeries === e.series_id && (this._addedSeries = void 0);
-			let i = r.series_type_changed ? ` ${yt(e.title, r.series_type_changed)}` : "";
+			let i = r.series_type_changed ? ` ${xt(e.title, r.series_type_changed)}` : "";
 			if (z(this, `Downloading ${n.length} episode${n.length === 1 ? "" : "s"} of ${e.title}.${i}`), !this._stillOn(t, e.series_id)) return;
-			this._picked = /* @__PURE__ */ new Set(), await this._loadEpisodes(t.tmdb_id, e.season_number), this._clearRefreshTimers(), this._refreshTimers = pt.map((n) => setTimeout(() => {
+			this._picked = /* @__PURE__ */ new Set(), await this._loadEpisodes(t.tmdb_id, e.season_number), this._clearRefreshTimers(), this._refreshTimers = gt.map((n) => setTimeout(() => {
 				this._stillOn(t, e.series_id) && this._loadEpisodes(t.tmdb_id, e.season_number);
 			}, n));
 		} catch (n) {
@@ -1621,7 +1632,7 @@ var $ = class extends L {
 					...this._audioFor(),
 					...this._entry()
 				});
-				if (n.series_type_changed && z(this, yt(t.title, n.series_type_changed)), e && !n.follow_new ? z(this, `${t.title} has no regular series to follow yet.`) : e && z(this, `New episodes of ${t.title} will download as they come out.`), this._selected !== t) return;
+				if (n.series_type_changed && z(this, xt(t.title, n.series_type_changed)), e && !n.follow_new ? z(this, `${t.title} has no regular series to follow yet.`) : e && z(this, `New episodes of ${t.title} will download as they come out.`), this._selected !== t) return;
 				this._show = {
 					in_sonarr: n.in_sonarr,
 					follow_new: n.follow_new
@@ -1723,7 +1734,7 @@ var $ = class extends L {
               </button>` : A}
         </div>
         <div class="chips" role="radiogroup" aria-label="Media type">
-          ${gt.filter((e) => e.value !== "waiting" || this._waitingOn).map((e) => O`<button
+          ${vt.filter((e) => e.value !== "waiting" || this._waitingOn).map((e) => O`<button
               class="chip ${e.value === this._filter ? "on" : ""}"
               role="radio"
               aria-checked=${e.value === this._filter}
@@ -1744,12 +1755,12 @@ var $ = class extends L {
     ` : O`<div class="message">No movies or shows found.</div>` : A;
 	}
 	_renderBrowse() {
-		let e = this._browse === "streaming", t = _t.find((e) => e.value === this._browse).heading, n;
+		let e = this._browse === "streaming", t = yt.find((e) => e.value === this._browse).heading, n;
 		return n = this._browseError ? O`<div class="message error">Couldn't load ${t.toLowerCase()} (${this._browseError}).</div>` : this._browseResults ? this._browseResults.length ? O`<div class="grid">${this._browseResults.map((e) => this._renderTile(e))}</div>` : O`<div class="message">Nothing to show.</div>` : O`<div class="message">Loading…</div>`, O`
       <div class="section browse">
         <span class="heading">${t}</span>
         <div class="chips small" role="radiogroup" aria-label="Browse">
-          ${_t.map((e) => O`<button
+          ${yt.map((e) => O`<button
               class="chip ${e.value === this._browse ? "on" : ""}"
               role="radio"
               aria-checked=${e.value === this._browse}
@@ -1886,6 +1897,7 @@ var $ = class extends L {
               ${e.year ?? ""} · ${n ? "TV show" : "Movie"}
               ${Re(e).map((e) => O`<span class="status inline ${e.cls}">${e.label}</span>`)}
             </div>
+            ${this._release && dt(this._release, e.media_type) ? O`<div class="facts">${dt(this._release, e.media_type)}</div>` : A}
             ${this._release && Xe(this._release, e.media_type, (/* @__PURE__ */ new Date()).toISOString().slice(0, 10)) ? O`<div class="release">${Xe(this._release, e.media_type, (/* @__PURE__ */ new Date()).toISOString().slice(0, 10))}</div>` : A}
             ${this._config.show_remove && ze(e.status) && !this._confirmRemove ? O`<button class="danger small head-remove" @click=${this._remove}>
                   ${n ? "Remove all…" : "Remove…"}
@@ -1893,7 +1905,10 @@ var $ = class extends L {
           </div>
         </div>
         ${this._config.show_remove && ze(e.status) && this._confirmRemove ? this._renderRemove(e) : A}
+        ${this._release?.tagline ? O`<p class="tagline">${this._release.tagline}</p>` : A}
         ${e.overview ? O`<p class="overview">${e.overview}</p>` : A}
+        ${this._release?.credit ? O`<p class="credit">${this._release.credit.label} <b>${this._release.credit.names.join(" and ")}</b></p>` : A}
+        ${this._renderTrailer()} ${this._renderCast()}
         ${this._renderAudio(e)}
         ${n ? this._renderFollow(e) : A}
         ${n ? this._renderSeasons() : A}
@@ -1906,6 +1921,35 @@ var $ = class extends L {
         </button>
       </div>
     `;
+	}
+	_renderTrailer() {
+		let e = this._release?.trailer;
+		if (!e) return A;
+		let t = `https://www.youtube.com/watch?v=${encodeURIComponent(e.key)}`;
+		return this._trailerOn ? O`<div class="trailer playing">
+        <iframe
+          src=${ft(e.key)}
+          title=${e.name}
+          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+          allowfullscreen
+          referrerpolicy="strict-origin-when-cross-origin"
+        ></iframe>
+      </div>
+      <a class="youtube" href=${t} target="_blank" rel="noopener">Won't play? Open it in YouTube</a>` : O`<button class="trailer" aria-label=${`Play trailer: ${e.name}`} @click=${() => this._trailerOn = !0}>
+        <img src=${`https://i.ytimg.com/vi/${encodeURIComponent(e.key)}/hqdefault.jpg`} alt="" loading="lazy" />
+        <span class="play"><ha-icon icon="mdi:play"></ha-icon></span>
+        <span class="trailer-name">${e.name}</span>
+      </button>`;
+	}
+	_renderCast() {
+		let e = this._release?.cast;
+		return e?.length ? O`<div class="cast" aria-label="Cast">
+      ${e.map((e) => O`<div class="person">
+          ${e.photo_url ? O`<img src=${e.photo_url} alt="" loading="lazy" />` : O`<span class="nophoto"><ha-icon icon="mdi:account"></ha-icon></span>`}
+          <span class="name">${e.name}</span>
+          ${e.character ? O`<span class="role">${e.character}</span>` : A}
+        </div>`)}
+    </div>` : A;
 	}
 	_renderRemove(e) {
 		return O`
@@ -2018,7 +2062,7 @@ var $ = class extends L {
     `;
 	}
 };
-X = $, X.properties = {
+X = St, X.properties = {
 	hass: { attribute: !1 },
 	_config: { state: !0 },
 	_query: { state: !0 },
@@ -2067,7 +2111,8 @@ X = $, X.properties = {
 	_audio: { state: !0 },
 	_audioPick: { state: !0 },
 	_audioConfirm: { state: !0 },
-	_audioBusy: { state: !0 }
+	_audioBusy: { state: !0 },
+	_trailerOn: { state: !0 }
 }, X.styles = o`
     :host {
       --js-gap: 12px;
@@ -2563,6 +2608,120 @@ X = $, X.properties = {
       gap: 8px;
       margin-top: 4px;
     }
+    .facts {
+      margin-top: 4px;
+      font-size: 13px;
+      color: var(--secondary-text-color);
+    }
+    .tagline {
+      margin: 0;
+      font-style: italic;
+      color: var(--secondary-text-color);
+    }
+    .credit {
+      margin: 0;
+      font-size: 14px;
+      color: var(--secondary-text-color);
+    }
+    .credit b {
+      font-weight: 500;
+      color: var(--primary-text-color);
+    }
+    /* A 16:9 box, whether it holds the thumbnail or YouTube's player. */
+    .trailer {
+      position: relative;
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      padding: 0;
+      border: 0;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+    }
+    .trailer img,
+    .trailer iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      object-fit: cover;
+    }
+    .trailer .play {
+      position: absolute;
+      inset: 50% auto auto 50%;
+      transform: translate(-50%, -50%);
+      display: grid;
+      place-items: center;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.65);
+      color: #fff;
+      --mdc-icon-size: 32px;
+    }
+    .trailer .trailer-name {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 16px 10px 8px;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+      color: #fff;
+      font-size: 13px;
+      text-align: start;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .youtube {
+      align-self: flex-start;
+      font-size: 13px;
+      color: var(--primary-color);
+    }
+    .cast {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: 2px;
+    }
+    .cast::-webkit-scrollbar {
+      display: none;
+    }
+    .person {
+      flex: none;
+      width: 76px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      font-size: 12px;
+    }
+    .person img,
+    .person .nophoto {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: var(--secondary-background-color, #eee);
+      display: grid;
+      place-items: center;
+      color: var(--secondary-text-color);
+    }
+    .person .name {
+      margin-top: 4px;
+      line-height: 1.2;
+      color: var(--primary-text-color);
+    }
+    .person .role {
+      line-height: 1.2;
+      color: var(--secondary-text-color);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
     .release {
       margin-top: 4px;
       font-size: 13px;
@@ -2631,11 +2790,11 @@ X = $, X.properties = {
       background: var(--disabled-color, #bdbdbd);
       cursor: default;
     }
-  `, customElements.get("jellyseerr-search-card") || (customElements.define("jellyseerr-search-card", $), window.customCards = window.customCards ?? [], window.customCards.push({
+  `, customElements.get("jellyseerr-search-card") || (customElements.define("jellyseerr-search-card", St), window.customCards = window.customCards ?? [], window.customCards.push({
 	type: "jellyseerr-search-card",
 	name: "Jellyseerr Search",
 	description: "Search movies and TV shows and request them through Jellyseerr.",
 	preview: !1
 }));
 //#endregion
-export { ut as CARD_VERSION, $ as JellyseerrSearchCard };
+export { pt as CARD_VERSION, St as JellyseerrSearchCard };

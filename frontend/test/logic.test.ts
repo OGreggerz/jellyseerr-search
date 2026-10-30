@@ -6,6 +6,9 @@ import {
   brandsFor,
   genresFor,
   servicesFor,
+  factsLine,
+  runtimeLabel,
+  trailerEmbedUrl,
   streamChoices,
   airDateLabel,
   canRequestMore,
@@ -275,6 +278,29 @@ describe("anime audio", () => {
     expect(waitingLabel(item)).toBe("Waiting for dub");
     expect(waitingDetail(item, now)).toMatch(/^2 episodes in Japanese, dub wanted · Next dub: E3 Fri 30 Oct, \d\d:00$/);
     expect(waitingLabel({ ...item, state: "not_found", audio: "dub_only", missing: 1 })).toBe("Waiting for dub");
+  });
+});
+
+describe("title screen extras", () => {
+  it("writes lengths the short way", () => {
+    expect([runtimeLabel(105), runtimeLabel(45), runtimeLabel(120)]).toEqual(["1h 45m", "45m", "2h"]);
+  });
+
+  it("puts length or seasons, genres and the rating on one line", () => {
+    const base = { tmdb_status: "Released" };
+    expect(factsLine({ ...base, runtime: 105, genres: ["Family", "Animation", "Music", "Adventure"], rating: 8.2 }, "movie"))
+      .toBe("1h 45m \u00b7 Family, Animation, Music \u00b7 \u2605 8.2");
+    expect(factsLine({ ...base, seasons_count: 3, runtime: 24, genres: ["Animation"], rating: null }, "tv"))
+      .toBe("3 seasons \u00b7 24m episodes \u00b7 Animation");
+    expect(factsLine({ ...base, seasons_count: 1 }, "tv")).toBe("1 season");
+    // An older integration sends none of these.
+    expect(factsLine(base, "movie")).toBeNull();
+  });
+
+  it("embeds the trailer without cookies, playing on tap", () => {
+    expect(trailerEmbedUrl("Rvr68u6k5sI")).toBe(
+      "https://www.youtube-nocookie.com/embed/Rvr68u6k5sI?autoplay=1&rel=0&playsinline=1",
+    );
   });
 });
 

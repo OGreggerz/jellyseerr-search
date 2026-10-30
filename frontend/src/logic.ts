@@ -363,6 +363,35 @@ export function appendNew<T extends { media_type: string; tmdb_id: number }>(lis
   return [...list, ...more.filter((r) => !seen.has(`${r.media_type}/${r.tmdb_id}`))];
 }
 
+/** "1h 45m", "45m". */
+export function runtimeLabel(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h ? (m ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
+}
+
+/** The facts line under a title's name: length or seasons, genres, TMDB rating. */
+export function factsLine(info: ReleaseInfo, mediaType: MediaType): string | null {
+  const parts: string[] = [];
+  if (mediaType === "tv" && info.seasons_count) {
+    parts.push(info.seasons_count === 1 ? "1 season" : `${info.seasons_count} seasons`);
+  }
+  if (info.runtime) parts.push(mediaType === "tv" ? `${runtimeLabel(info.runtime)} episodes` : runtimeLabel(info.runtime));
+  if (info.genres?.length) parts.push(info.genres.slice(0, 3).join(", "));
+  if (info.rating) parts.push(`\u2605 ${info.rating.toFixed(1)}`);
+  return parts.length ? parts.join(" \u00b7 ") : null;
+}
+
+/**
+ * YouTube's player for a trailer. youtube-nocookie.com sets no cookies until
+ * playback. YouTube's player needs a Referer (Home Assistant's pages say
+ * no-referrer, and the player then fails with error 153); the iframe's own
+ * referrerpolicy provides it.
+ */
+export function trailerEmbedUrl(key: string): string {
+  return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(key)}?autoplay=1&rel=0&playsinline=1`;
+}
+
 /** The Downloaded list narrowed by what's typed in the search box. */
 export function filterLibrary<T extends { title: string }>(items: readonly T[], query: string): T[] {
   const q = query.trim().toLowerCase();

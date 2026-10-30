@@ -20,6 +20,10 @@ from .const import (
     REQUEST_TIMEOUT,
     STATUS_NOT_REQUESTED,
     TMDB_POSTER_URL,
+    TMDB_PROFILE_URL,
+    CAST_CREDIT_NAMES,
+    CAST_LIMIT,
+    RATING_MIN_VOTES,
 )
 
 
@@ -203,37 +207,11 @@ class JellyseerrClient:
         ]
 
     async def async_release_info(self, media_type: str, tmdb_id: int) -> dict[str, Any]:
-        """Whether a title is out, from TMDB via Jellyseerr. Films: TMDB status and
-        the cinema (types 2-3), digital (4) and physical (5) release dates, UK
-        first, then US, then the earliest anywhere. Shows: TMDB status and the
-        next and last episode air dates."""
+        """The title screen's extras, from TMDB via Jellyseerr: whether it's out
+        (_release_fields) and the cast, trailer and facts (_title_extras)."""
         data = await self._request("GET", f"/{media_type}/{tmdb_id}")
-        if media_type != MEDIA_MOVIE:
-            return {
-                "tmdb_status": data.get("status"),
-                "next_air_date": (data.get("nextEpisodeToAir") or {}).get("airDate"),
-                "last_air_date": (data.get("lastEpisodeToAir") or {}).get("airDate") or data.get("lastAirDate"),
-            }
-        by_country = {
-            r.get("iso_3166_1"): r.get("release_dates") or [] for r in (data.get("releases") or {}).get("results", [])
-        }
-
-        def first(types: tuple[int, ...]) -> str | None:
-            for country in ("GB", "US"):
-                dates = sorted(d["release_date"][:10] for d in by_country.get(country, []) if d.get("type") in types)
-                if dates:
-                    return dates[0]
-            anywhere = sorted(
-                d["release_date"][:10] for dates in by_country.values() for d in dates if d.get("type") in types
-            )
-            return anywhere[0] if anywhere else None
-
-        return {
-            "tmdb_status": data.get("status"),
-            "theatrical": first((2, 3)),
-            "digital": first((4,)),
-            "physical": first((5,)),
-        }
+        # The same record has what the title screen shows beyond the overview.
+        return {**_release_fields(media_type, data), **_title_extras(media_type, data)}
 
     async def async_get_tvdb_id(self, tmdb_id: int) -> int | None:
         """The show's TVDB id, which Sonarr matches on (Sonarr may have no TMDB id)."""
@@ -335,3 +313,85 @@ def normalize_result(item: dict[str, Any]) -> dict[str, Any]:
         # For matching shows Sonarr knows without a TMDB id.
         "tvdb_id": media_info.get("tvdbId") or None,
     }
+
+
+def _release_fields(media_type: str, data: dict[str, Any]) -> dict[str, Any]:
+    """Is it out? Films: TMDB status and the cinema (types 2-3), digital (4) and
+    physical (5) release dates, UK first, then US, then the earliest anywhere.
+    Shows: TMDB status and the next and last episode air dates."""
+    if media_type != MEDIA_MOVIE:
+        return {
+            "tmdb_status": data.get("status"),
+            "next_air_date": (data.get("nextEpisodeToAir") or {}).get("airDate"),
+            "last_air_date": (data.get("lastEpisodeToAir") or {}).get("airDate") or data.get("lastAirDate"),
+        }
+    by_country = {
+        r.get("iso_3166_1"): r.get("release_dates") or [] for r in (data.get("releases") or {}).get("results", [])
+    }
+
+    def first(types: tuple[int, ...]) -> str | None:
+        for country in ("GB", "US"):
+            dates = sorted(d["release_date"][:10] for d in by_country.get(country, []) if d.get("type") in types)
+            if dates:
+                return dates[0]
+        anywhere = sorted(
+            d["release_date"][:10] for dates in by_country.values() for d in dates if d.get("type") in types
+        )
+        return anywhere[0] if anywhere else None
+
+    return {
+        "tmdb_status": data.get("status"),
+        "theatrical": first((2, 3)),
+        "digital": first((4,)),
+        "physical": first((5,)),
+    }
+
+
+def _title_extras(media_type: str, data: dict[str, Any]) -> dict[str, Any]:
+    """What the title screen shows beyond the overview: runtime, genres, TMDB
+    rating, director or creator, the leading cast and a YouTube trailer. Seerr's
+    title record carries all of it (credits, relatedVideos; read 2026-10-30)."""
+    credits = data.get("credits") or {}
+    if media_type == MEDIA_MOVIE:
+        runtime = data.get("runtime") or None
+        people = [c["name"] for c in credits.get("crew", []) if c.get("job") == "Director" and c.get("name")]
+        credit = {"label": "Directed by", "names": list(dict.fromkeys(people))[:CAST_CREDIT_NAMES]}
+    else:
+        runtime = next(iter(data.get("episodeRunTime") or []), None)
+        people = [c["name"] for c in data.get("createdBy") or [] if c.get("name")]
+        credit = {"label": "Created by", "names": people[:CAST_CREDIT_NAMES]}
+    cast = sorted(credits.get("cast", []), key=lambda c: c.get("order", 999))[:CAST_LIMIT]
+    votes = data.get("voteCount") or 0
+    return {
+        "runtime": runtime,
+        "seasons_count": data.get("numberOfSeasons") if media_type != MEDIA_MOVIE else None,
+        "genres": [g["name"] for g in data.get("genres", []) if g.get("name")],
+        # A score from a handful of votes says little.
+        "rating": round(data["voteAverage"], 1) if votes >= RATING_MIN_VOTES and data.get("voteAverage") else None,
+        "tagline": data.get("tagline") or None,
+        "credit": credit if credit["names"] else None,
+        "cast": [
+            {
+                "name": c.get("name"),
+                "character": c.get("character") or None,
+                "photo_url": f"{TMDB_PROFILE_URL}{c['profilePath']}" if c.get("profilePath") else None,
+            }
+            for c in cast
+            if c.get("name")
+        ],
+        "trailer": _pick_trailer(data.get("relatedVideos") or []),
+    }
+
+
+def _pick_trailer(videos: list[dict[str, Any]]) -> dict[str, str] | None:
+    """The video to offer as the trailer: YouTube only (the card embeds YouTube's
+    player), a Trailer before a Teaser, an "Official" one first within each, in
+    TMDB's order otherwise. Featurettes and clips aren't trailers (Coco's first
+    videos are a cooking featurette and a song clip)."""
+    youtube = [v for v in videos if v.get("site") == "YouTube" and v.get("key")]
+    for kind in ("Trailer", "Teaser"):
+        found = [v for v in youtube if v.get("type") == kind]
+        found.sort(key=lambda v: "official" not in (v.get("name") or "").lower())
+        if found:
+            return {"key": found[0]["key"], "name": found[0].get("name") or kind}
+    return None
