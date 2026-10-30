@@ -6,6 +6,7 @@ import {
   brandsFor,
   genresFor,
   servicesFor,
+  streamChoices,
   airDateLabel,
   canRequestMore,
   episodeLabel,
@@ -282,6 +283,14 @@ describe("streaming browse", () => {
     expect(servicesFor().map((s) => s.label).slice(0, 3)).toEqual(["Netflix", "Disney+", "Crunchyroll"]);
     expect(servicesFor([]).length).toBe(SERVICES.length);
     expect(servicesFor(["crunchyroll", "netflix"]).map((s) => s.id)).toEqual([283, 8]);
+  });
+
+  it("puts All first, covering every service on the card, unless there's only one", () => {
+    const choices = streamChoices(["netflix", "disney"]);
+    expect(choices.map((c) => c.key)).toEqual(["all", "netflix", "disney"]);
+    expect(choices[0].ids).toEqual([8, 337]);
+    expect(streamChoices()[0].ids.length).toBe(SERVICES.length);
+    expect(streamChoices(["crunchyroll"]).map((c) => c.key)).toEqual(["crunchyroll"]);
   });
 
   it("ignores services it doesn't know, falling back to all when none are left", () => {

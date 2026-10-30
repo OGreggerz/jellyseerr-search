@@ -121,7 +121,7 @@ class JellyseerrClient:
         self,
         media_type: str,
         *,
-        provider: int,
+        provider: list[int],
         region: str,
         sort: str,
         genre: tuple[str, str] | None,
@@ -145,7 +145,9 @@ class JellyseerrClient:
             votes = floors[0]
         params: dict[str, Any] = {
             "page": page,
-            "watchProviders": provider,
+            # "|" = any of (TMDB): All on the card. Checked live 2026-10-30: all
+            # eleven UK services give 304 Christmas films to Netflix's 83.
+            "watchProviders": "|".join(str(p) for p in provider),
             "watchRegion": region,
             "sortBy": BROWSE_SORTS[sort][media_type],
             "voteCountGte": votes,

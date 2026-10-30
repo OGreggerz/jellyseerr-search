@@ -296,6 +296,21 @@ async def test_discover_christmas_is_a_keyword(
     assert (call["keywords"], call["voteCountGte"]) == ("207317,180547", "0")
 
 
+async def test_discover_any_of_several_services(
+    hass: HomeAssistant, entry, aioclient_mock, hass_ws_client
+) -> None:
+    """The card's All: titles on any of its services ("|" is TMDB's any-of)."""
+    aioclient_mock.get(f"{API}/discover/movies", json=MOVIES)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id(
+        {"type": f"{DOMAIN}/discover", "provider": [8, 337, 283], "region": "GB",
+         "genre": "christmas", "media_type": "movie"}
+    )
+    msg = await ws.receive_json()
+    assert msg["success"]
+    assert _discover_calls(aioclient_mock, "movies")[-1]["watchProviders"] == "8|337|283"
+
+
 async def test_discover_rejects_bad_input(hass: HomeAssistant, entry, hass_ws_client) -> None:
     ws = await hass_ws_client(hass)
     for bad in (
@@ -304,6 +319,8 @@ async def test_discover_rejects_bad_input(hass: HomeAssistant, entry, hass_ws_cl
         {"region": "GB", "provider": 8, "sort": "random"},
         {"region": "GB", "provider": 8, "genre": "western"},
         {"region": "GB", "provider": 337, "brand": "dreamworks"},
+        {"region": "GB", "provider": []},
+        {"region": "GB", "provider": [8, 0]},
         {"region": "GB", "provider": 8, "page": 501},
     ):
         await ws.send_json_auto_id({"type": f"{DOMAIN}/discover", **bad})

@@ -160,8 +160,12 @@ async def ws_popular(
 @websocket_api.websocket_command(
     {
         vol.Required("type"): f"{DOMAIN}/discover",
-        # TMDB watch provider id (Netflix is 8) and the country it streams in.
-        vol.Required("provider"): vol.All(int, vol.Range(min=1)),
+        # TMDB watch provider id (Netflix is 8), or several for the card's All
+        # (any of them), and the country they stream in.
+        vol.Required("provider"): vol.Any(
+            vol.All(int, vol.Range(min=1)),
+            vol.All([vol.All(int, vol.Range(min=1))], vol.Length(min=1, max=20)),
+        ),
         vol.Required("region"): vol.All(str, vol.Match(r"^[A-Z]{2}$")),
         vol.Optional("media_type", default=MEDIA_ALL): vol.In((MEDIA_ALL, *MEDIA_TYPES)),
         vol.Optional("sort", default="popular"): vol.In(tuple(BROWSE_SORTS)),
@@ -181,7 +185,7 @@ async def ws_discover(
     found = await async_discover_media(
         client,
         msg["media_type"],
-        provider=msg["provider"],
+        provider=msg["provider"] if isinstance(msg["provider"], list) else [msg["provider"]],
         region=msg["region"],
         sort=msg["sort"],
         genre=msg.get("genre"),

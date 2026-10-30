@@ -34,9 +34,10 @@ region: GB           # country whose streaming catalogues to show (default GB)
 ```
 
 **Streaming.** What the card opens on (*Streaming / Trending / Popular* on the
-heading): what one streaming service carries in your country: pick the
+heading): what your streaming services carry in your country. **All** (first, the
+default) looks across every service the card offers; pick the
 service, a genre and *Popular*, *Top rated* or *Newest*, and **Show more** adds
-the next page (20 films and 20 shows for All). Services: `netflix`, `disney`,
+the next page (20 films and 20 shows when the filter is on All). Services: `netflix`, `disney`,
 `crunchyroll`, `prime`, `apple`, `now`, `iplayer`, `itvx`, `channel4`,
 `paramount`, `skygo`. On Disney+ a brand row narrows it to **Disney**, **Pixar**,
 **Marvel**, **Star Wars** (Lucasfilm) or **Nat Geo**; Pixar, Star Wars and Nat Geo

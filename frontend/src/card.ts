@@ -30,6 +30,7 @@ import {
   brandsFor,
   genresFor,
   servicesFor,
+  streamChoices,
 } from "./logic";
 import type {
   AudioChoice,
@@ -488,9 +489,10 @@ export class JellyseerrSearchCard extends LitElement {
       : key;
   }
 
+  /** The service chip picked: All (the default, first) or one service. */
   private _streamService() {
-    const services = servicesFor(this._config.services);
-    return services.find((s) => s.key === this._service) ?? services[0];
+    const choices = streamChoices(this._config.services);
+    return choices.find((s) => s.key === this._service) ?? choices[0];
   }
 
   /** The picked brand, if it belongs to the service on screen (the card's
@@ -504,7 +506,7 @@ export class JellyseerrSearchCard extends LitElement {
   private _discoverMessage(page: number) {
     return {
       type: `${DOMAIN}/discover`,
-      provider: this._streamService().id,
+      provider: this._streamService().ids.length === 1 ? this._streamService().ids[0] : this._streamService().ids,
       region: (this._config.region || DEFAULT_REGION).toUpperCase(),
       media_type: this._filter,
       sort: this._sort,
@@ -1288,7 +1290,7 @@ export class JellyseerrSearchCard extends LitElement {
       html`<button class="chip ${on ? "on" : ""}" role="radio" aria-checked=${on} @click=${pick}>${label}</button>`;
     return html`
       <div class="chips scroll" role="radiogroup" aria-label="Streaming service">
-        ${servicesFor(this._config.services).map((s) =>
+        ${streamChoices(this._config.services).map((s) =>
           chip(s.label, s.key === service, () => this._setStream({ service: s.key })),
         )}
       </div>

@@ -317,6 +317,16 @@ export const GENRES: ReadonlyArray<{ key: string; label: string; types: Readonly
   { key: "reality", label: "Reality", types: ["tv"] },
 ];
 
+/**
+ * The service chips: All (any of the card's services, so a genre such as Christmas
+ * looks everywhere at once) and then each service. All is left out when the card
+ * has only one service.
+ */
+export function streamChoices(keys?: readonly string[]): Array<{ key: string; label: string; ids: number[] }> {
+  const services = servicesFor(keys).map((s) => ({ key: s.key, label: s.label, ids: [s.id] }));
+  return services.length > 1 ? [{ key: "all", label: "All", ids: services.flatMap((s) => s.ids) }, ...services] : services;
+}
+
 /** The genres that mean something for the All / Movies / TV filter. */
 export function genresFor(filter: MediaFilter): typeof GENRES {
   return filter === "movie" || filter === "tv" ? GENRES.filter((g) => g.types.includes(filter)) : GENRES;

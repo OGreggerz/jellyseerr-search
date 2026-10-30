@@ -183,14 +183,14 @@ async def async_discover_media(
     client: JellyseerrClient,
     media_type: str,
     *,
-    provider: int,
+    provider: list[int],
     region: str,
     sort: str,
     genre: str | None,
     page: int,
     brand: str | None = None,
 ) -> dict[str, Any]:
-    """One streaming service's titles, a page at a time. For "all", a page of
+    """One streaming service's titles (or any of several), a page at a time. For "all", a page of
     movies and a page of shows alternate. A genre or brand one type lacks
     (Horror has no TV genre, Pixar no TV filter) fetches only the other type."""
     ids = BROWSE_GENRES[genre] if genre else None
