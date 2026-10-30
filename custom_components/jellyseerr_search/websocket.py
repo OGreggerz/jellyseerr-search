@@ -14,6 +14,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 from .const import (
+    BROWSE_BRANDS,
     BROWSE_GENRES,
     BROWSE_MAX_PAGE,
     BROWSE_SORTS,
@@ -165,6 +166,8 @@ async def ws_popular(
         vol.Optional("media_type", default=MEDIA_ALL): vol.In((MEDIA_ALL, *MEDIA_TYPES)),
         vol.Optional("sort", default="popular"): vol.In(tuple(BROWSE_SORTS)),
         vol.Optional("genre"): vol.In(tuple(BROWSE_GENRES)),
+        # Pixar, Marvel... within the service (the card offers them for Disney+).
+        vol.Optional("brand"): vol.In(tuple(BROWSE_BRANDS)),
         vol.Optional("page", default=1): vol.All(int, vol.Range(min=1, max=BROWSE_MAX_PAGE)),
         vol.Optional("config_entry_id"): str,
     }
@@ -183,6 +186,7 @@ async def ws_discover(
         sort=msg["sort"],
         genre=msg.get("genre"),
         page=msg["page"],
+        brand=msg.get("brand"),
     )
     c = resolve_coordinator(hass, msg.get("config_entry_id"))
     found["results"] = await async_annotate(found["results"], c.arr_index, c.sonarr, c.radarr)

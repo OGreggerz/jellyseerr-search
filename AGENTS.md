@@ -36,7 +36,9 @@ here follow it. The user commits changes themselves.
 - **Streaming browse** (`/discover`): Seerr's `/discover/movies|tv` with
   `watchProviders` + `watchRegion`. Genres are keys whose TMDB ids per type live
   in `const.BROWSE_GENRES`; the card's `logic.GENRES` must list the same keys and
-  types (a test compares them).
+  types (a test compares them). Brands (`const.BROWSE_BRANDS`, card `logic.BRANDS`)
+  work the same way: films by `studio`, TV by `keywords` or `network` (Seerr's
+  `/discover/tv` rejects `studio`; both take one id, not a list).
 - Services, WS commands and card serving are registered in `async_setup`
   (once per process), never `async_setup_entry`.
 - User-facing errors are `ServiceValidationError`/`HomeAssistantError` with a

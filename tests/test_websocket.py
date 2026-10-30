@@ -223,6 +223,55 @@ async def test_discover_stops_at_tmdbs_last_page(
     assert msg["result"]["has_more"] is False
 
 
+async def test_discover_brand_per_type(hass: HomeAssistant, entry, aioclient_mock, hass_ws_client) -> None:
+    """Disney: films by studio, TV by original network; a brand list has no vote floor."""
+    aioclient_mock.get(f"{API}/discover/movies", json=MOVIES)
+    aioclient_mock.get(f"{API}/discover/tv", json=SHOWS)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/discover", "provider": 337, "region": "GB", "brand": "disney"})
+    msg = await ws.receive_json()
+    assert [r["tmdb_id"] for r in msg["result"]["results"]] == [1, 3, 2]
+    movie = _discover_calls(aioclient_mock, "movies")[-1]
+    tv = _discover_calls(aioclient_mock, "tv")[-1]
+    assert (movie["studio"], movie["voteCountGte"]) == ("2", "0")
+    assert (tv["network"], tv["voteCountGte"]) == ("54", "0")
+    assert "studio" not in tv  # Seerr's /discover/tv rejects it.
+
+
+async def test_discover_brand_films_only(hass: HomeAssistant, entry, aioclient_mock, hass_ws_client) -> None:
+    """Star Wars TV can't be picked out, so All lists the films and TV lists nothing."""
+    aioclient_mock.get(f"{API}/discover/movies", json=MOVIES)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id(
+        {"type": f"{DOMAIN}/discover", "provider": 337, "region": "GB", "brand": "starwars", "sort": "top_rated"}
+    )
+    msg = await ws.receive_json()
+    assert [r["tmdb_id"] for r in msg["result"]["results"]] == [1, 2]
+    assert not _discover_calls(aioclient_mock, "tv")
+    call = _discover_calls(aioclient_mock, "movies")[-1]
+    # Top rated keeps a small floor even for a brand, so one 10/10 vote can't lead it.
+    assert (call["studio"], call["sortBy"], call["voteCountGte"]) == ("1", "vote_average.desc", "20")
+
+    await ws.send_json_auto_id(
+        {"type": f"{DOMAIN}/discover", "provider": 337, "region": "GB", "brand": "starwars", "media_type": "tv"}
+    )
+    msg = await ws.receive_json()
+    assert msg["result"] == {"results": [], "has_more": False}
+
+
+async def test_discover_brand_with_genre(hass: HomeAssistant, entry, aioclient_mock, hass_ws_client) -> None:
+    """Marvel TV by keyword, narrowed by a genre; the brand's floor wins over the genre's."""
+    aioclient_mock.get(f"{API}/discover/tv", json=SHOWS)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id(
+        {"type": f"{DOMAIN}/discover", "provider": 337, "region": "GB", "brand": "marvel",
+         "genre": "action", "media_type": "tv"}
+    )
+    await ws.receive_json()
+    call = _discover_calls(aioclient_mock, "tv")[-1]
+    assert (call["keywords"], call["genre"], call["voteCountGte"]) == ("180547", "10759", "0")
+
+
 async def test_discover_rejects_bad_input(hass: HomeAssistant, entry, hass_ws_client) -> None:
     ws = await hass_ws_client(hass)
     for bad in (
@@ -230,6 +279,7 @@ async def test_discover_rejects_bad_input(hass: HomeAssistant, entry, hass_ws_cl
         {"region": "gb", "provider": 8},
         {"region": "GB", "provider": 8, "sort": "random"},
         {"region": "GB", "provider": 8, "genre": "western"},
+        {"region": "GB", "provider": 337, "brand": "dreamworks"},
         {"region": "GB", "provider": 8, "page": 501},
     ):
         await ws.send_json_auto_id({"type": f"{DOMAIN}/discover", **bad})

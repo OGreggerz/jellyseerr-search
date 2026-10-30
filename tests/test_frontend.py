@@ -8,6 +8,7 @@ from homeassistant.components.lovelace.const import LOVELACE_DATA
 from homeassistant.core import HomeAssistant
 
 from custom_components.jellyseerr_search.const import (
+    BROWSE_BRANDS,
     BROWSE_GENRES,
     CARD_FILENAME,
     CARD_URL,
@@ -25,17 +26,29 @@ async def test_versions_agree() -> None:
     assert manifest["version"] == package["version"] == CARD_VERSION
 
 
-async def test_card_genres_match_the_server() -> None:
-    """The card offers genres by key and says which types have them; the server
-    must know the same keys and agree on the types, or a chip would fail."""
+def _card_table(name: str) -> dict[str, set[str]]:
+    """A logic.ts table of { key, ..., types: [...] } rows, as key -> types."""
     logic = (INTEGRATION_DIR.parents[1] / "frontend" / "src" / "logic.ts").read_text()
-    table = logic.split("export const GENRES", 1)[1].split("];", 1)[0]
-    card = {
+    table = logic.split(f"export const {name}", 1)[1].split("];", 1)[0]
+    return {
         key: set(re.findall(r'"(movie|tv)"', types))
         for key, types in re.findall(r'key: "(\w+)".*?types: \[([^\]]*)\]', table)
     }
-    server = {key: {kind for kind, ids in by_type.items() if ids} for key, by_type in BROWSE_GENRES.items()}
-    assert card == server
+
+
+def _server_table(table: dict) -> dict[str, set[str]]:
+    return {key: {kind for kind, value in by_type.items() if value} for key, by_type in table.items()}
+
+
+async def test_card_genres_match_the_server() -> None:
+    """The card offers genres by key and says which types have them; the server
+    must know the same keys and agree on the types, or a chip would fail."""
+    assert _card_table("GENRES") == _server_table(BROWSE_GENRES)
+
+
+async def test_card_brands_match_the_server() -> None:
+    """Same for brands (Pixar has no TV filter, so the card says films only)."""
+    assert _card_table("BRANDS") == _server_table(BROWSE_BRANDS)
 
 
 async def test_bundle_is_built_for_this_version() -> None:

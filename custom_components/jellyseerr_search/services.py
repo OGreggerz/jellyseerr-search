@@ -20,7 +20,7 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 import homeassistant.helpers.config_validation as cv
 
 from .api import JellyseerrClient, JellyseerrError
-from .const import BROWSE_GENRES, BROWSE_MAX_PAGE, DOMAIN, MEDIA_TV, MEDIA_TYPES, REQUESTABLE_STATUSES
+from .const import BROWSE_BRANDS, BROWSE_GENRES, BROWSE_MAX_PAGE, DOMAIN, MEDIA_TV, MEDIA_TYPES, REQUESTABLE_STATUSES
 from .coordinator import JellyseerrCoordinator
 from .sonarr import SonarrClient, SonarrError
 
@@ -179,13 +179,19 @@ async def async_discover_media(
     sort: str,
     genre: str | None,
     page: int,
+    brand: str | None = None,
 ) -> dict[str, Any]:
     """One streaming service's titles, a page at a time. For "all", a page of
-    movies and a page of shows alternate. A genre one type lacks (Horror has no
-    TV genre) fetches only the other type."""
+    movies and a page of shows alternate. A genre or brand one type lacks
+    (Horror has no TV genre, Pixar no TV filter) fetches only the other type."""
     ids = BROWSE_GENRES[genre] if genre else None
+    by_brand = BROWSE_BRANDS[brand] if brand else None
     types = MEDIA_TYPES if media_type == MEDIA_ALL else (media_type,)
-    kinds = [kind for kind in types if ids is None or ids[kind]]
+    kinds = [
+        kind
+        for kind in types
+        if (ids is None or ids[kind]) and (by_brand is None or by_brand[kind])
+    ]
     if not kinds:
         return {"results": [], "has_more": False}
     try:
@@ -197,6 +203,7 @@ async def async_discover_media(
                     region=region,
                     sort=sort,
                     genre=ids[kind] if ids else None,
+                    brand=by_brand[kind] if by_brand else None,
                     page=page,
                 )
                 for kind in kinds

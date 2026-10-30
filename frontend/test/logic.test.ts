@@ -3,6 +3,7 @@ import {
   Latest,
   SERVICES,
   appendNew,
+  brandsFor,
   genresFor,
   servicesFor,
   airDateLabel,
@@ -294,6 +295,13 @@ describe("streaming browse", () => {
     expect(keys("all")).toContain("reality");
     expect(keys("tv")).not.toContain("horror");
     expect(keys("movie")).not.toContain("reality");
+  });
+
+  it("offers brands only for their service, and only TV-capable ones for TV", () => {
+    expect(brandsFor("netflix", "all")).toEqual([]);
+    expect(brandsFor("disney", "all").map((b) => b.label)).toEqual(["Disney", "Pixar", "Marvel", "Star Wars", "Nat Geo"]);
+    expect(brandsFor("disney", "tv").map((b) => b.key)).toEqual(["disney", "marvel"]);
+    expect(brandsFor("disney", "movie").length).toBe(5);
   });
 
   it("adds a Show more page without repeating titles already listed", () => {

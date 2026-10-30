@@ -27,6 +27,7 @@ import {
   statusLabel,
   STREAM_SORTS,
   appendNew,
+  brandsFor,
   genresFor,
   servicesFor,
 } from "./logic";
@@ -70,12 +71,14 @@ const FILTERS: Array<{ value: MediaFilter; label: string }> = [
   { value: "waiting", label: "Waiting" },
 ];
 
+// Streaming first and the default (Mitchell, 2026-10-30): browsing a service by
+// genre is what he looks for something to watch with; trending rarely helped.
 const BROWSE: Array<{ value: Browse; label: string; heading: string }> = [
-  { value: "trending", label: "Trending", heading: "Trending today" },
-  { value: "popular", label: "Popular", heading: "Popular" },
   // Not "On Netflix": the heading's length would change with the service, and on a
   // phone that moves the rows below it under the finger picking the next one.
   { value: "streaming", label: "Streaming", heading: "What's on" },
+  { value: "trending", label: "Trending", heading: "Trending today" },
+  { value: "popular", label: "Popular", heading: "Popular" },
 ];
 // TMDB's watch-provider data is per country; Mitchell's server is in the UK.
 const DEFAULT_REGION = "GB";
@@ -99,6 +102,7 @@ export class JellyseerrSearchCard extends LitElement {
     _browseError: { state: true },
     _service: { state: true },
     _genre: { state: true },
+    _brand: { state: true },
     _sort: { state: true },
     _browseMore: { state: true },
     _moreLoading: { state: true },
@@ -150,6 +154,8 @@ export class JellyseerrSearchCard extends LitElement {
   /** Streaming list: the service's SERVICES key, a GENRES key ("" = all) and the order. */
   declare _service: string;
   declare _genre: string;
+  /** A BRANDS key within the service ("" = all of it). */
+  declare _brand: string;
   declare _sort: StreamSort;
   /** The Streaming list has another page; _moreLoading while it's fetched. */
   declare _browseMore: boolean;
@@ -224,9 +230,10 @@ export class JellyseerrSearchCard extends LitElement {
     super();
     this._query = "";
     this._filter = "all";
-    this._browse = "trending";
+    this._browse = BROWSE[0].value;
     this._service = "";
     this._genre = "";
+    this._brand = "";
     this._sort = "popular";
     this._browseMore = false;
     this._moreLoading = false;
@@ -476,12 +483,21 @@ export class JellyseerrSearchCard extends LitElement {
   /** What the browse list on screen should be: list, filter and, for Streaming, its choices. */
   private _currentBrowseKey(): string {
     const key = `${this._browse}/${this._filter}`;
-    return this._browse === "streaming" ? `${key}/${this._streamService().key}/${this._genre}/${this._sort}` : key;
+    return this._browse === "streaming"
+      ? `${key}/${this._streamService().key}/${this._activeBrand()}/${this._genre}/${this._sort}`
+      : key;
   }
 
   private _streamService() {
     const services = servicesFor(this._config.services);
     return services.find((s) => s.key === this._service) ?? services[0];
+  }
+
+  /** The picked brand, if it belongs to the service on screen (the card's
+   *  services can change under it, leaving a Disney+ brand on Netflix). */
+  private _activeBrand(): string {
+    const brands = brandsFor(this._streamService().key, this._filter);
+    return brands.some((b) => b.key === this._brand) ? this._brand : "";
   }
 
   /** The discover command for one page of the Streaming list. */
@@ -493,6 +509,7 @@ export class JellyseerrSearchCard extends LitElement {
       media_type: this._filter,
       sort: this._sort,
       ...(this._genre ? { genre: this._genre } : {}),
+      ...(this._activeBrand() ? { brand: this._activeBrand() } : {}),
       page,
       ...this._entry(),
     };
@@ -559,8 +576,12 @@ export class JellyseerrSearchCard extends LitElement {
     if (this._browseDue()) void this._loadBrowse();
   }
 
-  private _setStream(change: { service?: string; genre?: string; sort?: StreamSort }): void {
-    if (change.service !== undefined) this._service = change.service;
+  private _setStream(change: { service?: string; brand?: string; genre?: string; sort?: StreamSort }): void {
+    if (change.service !== undefined && change.service !== this._streamService().key) {
+      this._service = change.service;
+      this._brand = ""; // Brands belong to one service (Pixar is Disney+'s).
+    }
+    if (change.brand !== undefined) this._brand = change.brand;
     if (change.genre !== undefined) this._genre = change.genre;
     if (change.sort !== undefined) this._sort = change.sort;
     if (this._browseDue()) void this._loadBrowse();
@@ -598,6 +619,10 @@ export class JellyseerrSearchCard extends LitElement {
     this._filter = filter;
     // Horror has no TV genre (nor Reality a film one): drop a genre the new filter lacks.
     if (this._genre && !genresFor(filter).some((g) => g.key === this._genre)) this._genre = "";
+    // Likewise a brand with no TV filter (Pixar) when TV is picked.
+    if (this._brand && !brandsFor(this._streamService().key, filter).some((b) => b.key === this._brand)) {
+      this._brand = "";
+    }
     if (filter === "downloaded") void this._loadLibrary();
     else if (filter === "waiting") void this._loadWaiting();
     else if (this._query.trim().length >= MIN_QUERY) void this._search();
@@ -1258,6 +1283,7 @@ export class JellyseerrSearchCard extends LitElement {
   /** Service, genre and order for the Streaming list. Rows scroll sideways on a phone. */
   private _renderStreamPickers() {
     const service = this._streamService().key;
+    const brands = brandsFor(service, this._filter);
     const chip = (label: string, on: boolean, pick: () => void) =>
       html`<button class="chip ${on ? "on" : ""}" role="radio" aria-checked=${on} @click=${pick}>${label}</button>`;
     return html`
@@ -1266,6 +1292,12 @@ export class JellyseerrSearchCard extends LitElement {
           chip(s.label, s.key === service, () => this._setStream({ service: s.key })),
         )}
       </div>
+      ${brands.length
+        ? html`<div class="chips scroll small" role="radiogroup" aria-label="Brand">
+            ${chip(`All ${this._streamService().label}`, !this._activeBrand(), () => this._setStream({ brand: "" }))}
+            ${brands.map((b) => chip(b.label, b.key === this._activeBrand(), () => this._setStream({ brand: b.key })))}
+          </div>`
+        : nothing}
       <div class="chips scroll small" role="radiogroup" aria-label="Genre">
         ${chip("All genres", !this._genre, () => this._setStream({ genre: "" }))}
         ${genresFor(this._filter).map((g) =>

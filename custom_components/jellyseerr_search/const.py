@@ -42,11 +42,14 @@ BROWSE_SORTS: Final = {
     "top_rated": {MEDIA_MOVIE: "vote_average.desc", MEDIA_TV: "vote_average.desc"},
     "newest": {MEDIA_MOVIE: "primary_release_date.desc", MEDIA_TV: "first_air_date.desc"},
 }
-# Fewest TMDB votes a title needs, as (no genre, with a genre). Read against UK
-# Netflix 2026-10-30: popular films with no floor include 8-10 vote releases, and
-# a genre narrows the list enough that 200 is clean. Newest needs a low floor or
-# it hides the month's releases (a new show has tens of votes, not hundreds).
-BROWSE_MIN_VOTES: Final = {"popular": (500, 200), "top_rated": (500, 200), "newest": (50, 50)}
+# Fewest TMDB votes a title needs, as (no genre, with a genre, with a brand). Read
+# against UK Netflix 2026-10-30: popular films with no floor include 8-10 vote
+# releases, and a genre narrows the list enough that 200 is clean. Newest needs a
+# low floor or it hides the month's releases (a new show has tens of votes, not
+# hundreds). A brand list is curated already: its low-vote titles are real (Nat
+# Geo documentaries, Disney Channel shows; a floor of 20 cut Nat Geo films from 93
+# to 25), so only Top rated keeps one, against a single 10/10 vote leading it.
+BROWSE_MIN_VOTES: Final = {"popular": (500, 200, 0), "top_rated": (500, 200, 20), "newest": (50, 50, 0)}
 # The genres the card offers, as TMDB genre ids per type ("|" = any of). Film and
 # TV lists differ (TV has "Action & Adventure", film has Action and Adventure);
 # None means the type has no such genre. The card's GENRES must list the same keys.
@@ -63,6 +66,25 @@ BROWSE_GENRES: Final[dict[str, dict[str, str | None]]] = {
     "romance": {MEDIA_MOVIE: "10749", MEDIA_TV: None},
     "scifi": {MEDIA_MOVIE: "878|14", MEDIA_TV: "10765"},
     "reality": {MEDIA_MOVIE: None, MEDIA_TV: "10764"},
+}
+# Brands within a service (Disney+ carries Pixar, Marvel, Lucasfilm and Nat Geo,
+# plus general entertainment that otherwise leads its lists), as the Seerr
+# discover parameter and value per type. Seerr's /discover/tv rejects `studio`
+# ("Unknown query parameter") and both take one studio or network id, not a list,
+# so: films by production company, TV by TMDB keyword or original network, and
+# None where neither picks the brand out. The Mandalorian and Andor have no Star
+# Wars keyword and first aired on Disney+, and Nat Geo's shows are listed under
+# the Disney+ network too. Ids and counts read from Seerr for GB 2026-10-30.
+# The card's BRANDS must list the same keys and types.
+BROWSE_BRANDS: Final[dict[str, dict[str, tuple[str, str] | None]]] = {
+    # Walt Disney Pictures (animation and live action, 198 films); Disney Channel (83 shows).
+    "disney": {MEDIA_MOVIE: ("studio", "2"), MEDIA_TV: ("network", "54")},
+    "pixar": {MEDIA_MOVIE: ("studio", "3"), MEDIA_TV: None},
+    # TMDB's "marvel cinematic universe (mcu)" keyword: 49 films, 33 shows.
+    "marvel": {MEDIA_MOVIE: ("keywords", "180547"), MEDIA_TV: ("keywords", "180547")},
+    # Lucasfilm: Star Wars and Indiana Jones.
+    "starwars": {MEDIA_MOVIE: ("studio", "1"), MEDIA_TV: None},
+    "natgeo": {MEDIA_MOVIE: ("studio", "7521"), MEDIA_TV: None},
 }
 # TMDB serves at most this many pages of a discover list.
 BROWSE_MAX_PAGE: Final = 500
@@ -94,4 +116,4 @@ REQUEST_COUNT_KEYS: Final = ("pending", "approved", "processing", "available", "
 URL_BASE: Final = f"/{DOMAIN}"
 CARD_FILENAME: Final = "jellyseerr-search-card.js"
 CARD_URL: Final = f"{URL_BASE}/{CARD_FILENAME}"
-CARD_VERSION: Final = "0.13.0"
+CARD_VERSION: Final = "0.14.0"

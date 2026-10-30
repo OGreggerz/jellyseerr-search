@@ -125,22 +125,29 @@ class JellyseerrClient:
         region: str,
         sort: str,
         genre: str | None,
+        brand: tuple[str, str] | None = None,
         page: int = 1,
     ) -> tuple[list[dict[str, Any]], int]:
         """One streaming service's movies or shows in one country (TMDB discover,
         filtered by watch provider), normalized, with the list's page count.
-        `genre` is TMDB ids for this type ("|" = any of). Newest needs no date
-        cap: titles not out yet have no votes, so the vote floor drops them
-        (checked on four UK services 2026-10-30)."""
+        `genre` is TMDB ids for this type ("|" = any of); `brand` is a Seerr
+        parameter and value (BROWSE_BRANDS). Newest needs no date cap: nothing
+        dated after today appeared, with or without a vote floor (four UK
+        services and five Disney+ brands checked 2026-10-30); a service only
+        lists a title once it carries it."""
+        floors = BROWSE_MIN_VOTES[sort]
         params: dict[str, Any] = {
             "page": page,
             "watchProviders": provider,
             "watchRegion": region,
             "sortBy": BROWSE_SORTS[sort][media_type],
-            "voteCountGte": BROWSE_MIN_VOTES[sort][1 if genre else 0],
+            "voteCountGte": floors[2] if brand else floors[1] if genre else floors[0],
         }
         if genre:
             params["genre"] = genre
+        if brand:
+            key, value = brand
+            params[key] = value
         path = "/discover/movies" if media_type == MEDIA_MOVIE else "/discover/tv"
         data = await self._request("GET", path, params=params)
         results = [

@@ -16,8 +16,8 @@ from Jellyseerr → Settings → General.
 
 **Search card**: the integration adds `custom:jellyseerr-search-card` to your
 dashboard resources automatically (storage-mode dashboards). Add it from
-*Add card → Jellyseerr Search*. Before you type it shows what's trending today, or
-what's popular (switch on the heading; follows the All / Movies / TV filter). Popular
+*Add card → Jellyseerr Search*. Before you type it shows what's on a streaming
+service (below), what's trending today, or what's popular (switch on the heading; follows the All / Movies / TV filter). Popular
 TV leaves out shows with fewer than 500 TMDB votes, which are mostly daily news and soaps. Type a title, tap a poster, pick seasons for
 shows, and tap **Request**. Posters show whether a title is already requested
 or available.
@@ -33,14 +33,18 @@ services: [netflix, disney, crunchyroll]  # Streaming list's services, in order 
 region: GB           # country whose streaming catalogues to show (default GB)
 ```
 
-**Streaming.** The third choice on the heading (*Trending / Popular /
-Streaming*) lists what one streaming service carries in your country: pick the
+**Streaming.** What the card opens on (*Streaming / Trending / Popular* on the
+heading): what one streaming service carries in your country: pick the
 service, a genre and *Popular*, *Top rated* or *Newest*, and **Show more** adds
 the next page (20 films and 20 shows for All). Services: `netflix`, `disney`,
 `crunchyroll`, `prime`, `apple`, `now`, `iplayer`, `itvx`, `channel4`,
-`paramount`, `skygo`. Availability is TMDB's (JustWatch) watch-provider data,
+`paramount`, `skygo`. On Disney+ a brand row narrows it to **Disney**, **Pixar**,
+**Marvel**, **Star Wars** (Lucasfilm) or **Nat Geo**; Pixar, Star Wars and Nat Geo
+are films only, because Seerr can filter TV by keyword or original network but not
+by studio. Availability is TMDB's (JustWatch) watch-provider data,
 as Seerr shows it. Titles with few TMDB votes are left out: 500 for Popular and
-Top rated (200 with a genre), 50 for Newest, so the month's releases still show.
+Top rated (200 with a genre), 50 for Newest, so the month's releases still show;
+none for a brand (20 for Top rated), whose lists are curated already.
 
 If your dashboards are in YAML mode, add `/jellyseerr_search/jellyseerr-search-card.js`
 as a JavaScript module resource yourself.

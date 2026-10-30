@@ -320,6 +320,25 @@ export function genresFor(filter: MediaFilter): typeof GENRES {
   return filter === "movie" || filter === "tv" ? GENRES.filter((g) => g.types.includes(filter)) : GENRES;
 }
 
+/**
+ * Brands within a service, keyed like the server's BROWSE_BRANDS. Disney+ carries
+ * general entertainment that otherwise leads its lists. `types` are the ones the
+ * server can pick the brand out for: Seerr filters TV by keyword or network only,
+ * so Pixar, Star Wars (Lucasfilm) and Nat Geo are films only.
+ */
+export const BRANDS: ReadonlyArray<{ key: string; label: string; service: string; types: ReadonlyArray<MediaType> }> = [
+  { key: "disney", label: "Disney", service: "disney", types: ["movie", "tv"] },
+  { key: "pixar", label: "Pixar", service: "disney", types: ["movie"] },
+  { key: "marvel", label: "Marvel", service: "disney", types: ["movie", "tv"] },
+  { key: "starwars", label: "Star Wars", service: "disney", types: ["movie"] },
+  { key: "natgeo", label: "Nat Geo", service: "disney", types: ["movie"] },
+];
+
+/** The service's brands; with TV picked, only those that have TV. */
+export function brandsFor(service: string, filter: MediaFilter): typeof BRANDS {
+  return BRANDS.filter((b) => b.service === service && (filter !== "tv" || b.types.includes("tv")));
+}
+
 export const STREAM_SORTS: ReadonlyArray<{ value: StreamSort; label: string }> = [
   { value: "popular", label: "Popular" },
   { value: "top_rated", label: "Top rated" },
