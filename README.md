@@ -27,9 +27,20 @@ type: custom:jellyseerr-search-card
 title: Request movies & TV
 media_type: all      # default filter: all | movie | tv
 show_4k: false       # offer a 4K toggle (needs 4K Radarr/Sonarr in Jellyseerr)
-show_trending: true  # trending / popular titles while the search box is empty
+show_trending: true  # trending / popular / streaming titles while the search box is empty
 show_remove: false   # a Remove button on titles you have; deletes the files (asks first)
+services: [netflix, disney, crunchyroll]  # Streaming list's services, in order (default: all)
+region: GB           # country whose streaming catalogues to show (default GB)
 ```
+
+**Streaming.** The third choice on the heading (*Trending / Popular /
+Streaming*) lists what one streaming service carries in your country: pick the
+service, a genre and *Popular*, *Top rated* or *Newest*, and **Show more** adds
+the next page (20 films and 20 shows for All). Services: `netflix`, `disney`,
+`crunchyroll`, `prime`, `apple`, `now`, `iplayer`, `itvx`, `channel4`,
+`paramount`, `skygo`. Availability is TMDB's (JustWatch) watch-provider data,
+as Seerr shows it. Titles with few TMDB votes are left out: 500 for Popular and
+Top rated (200 with a genre), 50 for Newest, so the month's releases still show.
 
 If your dashboards are in YAML mode, add `/jellyseerr_search/jellyseerr-search-card.js`
 as a JavaScript module resource yourself.

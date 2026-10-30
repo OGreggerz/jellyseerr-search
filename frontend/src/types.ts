@@ -90,7 +90,9 @@ export interface CheckResult {
   episode: { season: number; episode: number } | null;
 }
 /** What the card lists while the search box is empty. */
-export type Browse = "trending" | "popular";
+export type Browse = "trending" | "popular" | "streaming";
+/** How the Streaming list is ordered (the server's `sort`). */
+export type StreamSort = "popular" | "top_rated" | "newest";
 
 export type MediaStatus =
   | "not_requested"
@@ -168,4 +170,8 @@ export interface CardConfig {
   show_trending?: boolean;
   /** A Remove button on titles in the library. Deletes files. Default off. */
   show_remove?: boolean;
+  /** Services the Streaming list offers, as SERVICES keys, in this order. Default: all. */
+  services?: string[];
+  /** Country whose streaming catalogues to show (two letters). Default GB. */
+  region?: string;
 }

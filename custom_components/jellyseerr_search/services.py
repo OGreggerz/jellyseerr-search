@@ -20,7 +20,7 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 import homeassistant.helpers.config_validation as cv
 
 from .api import JellyseerrClient, JellyseerrError
-from .const import DOMAIN, MEDIA_TV, MEDIA_TYPES, REQUESTABLE_STATUSES
+from .const import BROWSE_GENRES, BROWSE_MAX_PAGE, DOMAIN, MEDIA_TV, MEDIA_TYPES, REQUESTABLE_STATUSES
 from .coordinator import JellyseerrCoordinator
 from .sonarr import SonarrClient, SonarrError
 
@@ -168,6 +168,49 @@ async def async_popular_media(
         ) from err
     mixed = [item for item in chain.from_iterable(zip_longest(*lists)) if item]
     return mixed[:limit]
+
+
+async def async_discover_media(
+    client: JellyseerrClient,
+    media_type: str,
+    *,
+    provider: int,
+    region: str,
+    sort: str,
+    genre: str | None,
+    page: int,
+) -> dict[str, Any]:
+    """One streaming service's titles, a page at a time. For "all", a page of
+    movies and a page of shows alternate. A genre one type lacks (Horror has no
+    TV genre) fetches only the other type."""
+    ids = BROWSE_GENRES[genre] if genre else None
+    types = MEDIA_TYPES if media_type == MEDIA_ALL else (media_type,)
+    kinds = [kind for kind in types if ids is None or ids[kind]]
+    if not kinds:
+        return {"results": [], "has_more": False}
+    try:
+        pages = await asyncio.gather(
+            *(
+                client.async_discover(
+                    kind,
+                    provider=provider,
+                    region=region,
+                    sort=sort,
+                    genre=ids[kind] if ids else None,
+                    page=page,
+                )
+                for kind in kinds
+            )
+        )
+    except JellyseerrError as err:
+        raise HomeAssistantError(
+            translation_domain=DOMAIN,
+            translation_key="api_error",
+            translation_placeholders={"error": str(err)},
+        ) from err
+    mixed = [item for item in chain.from_iterable(zip_longest(*(r for r, _ in pages))) if item]
+    last = [min(total, BROWSE_MAX_PAGE) for _, total in pages]
+    return {"results": mixed, "has_more": any(page < end for end in last)}
 
 
 async def async_remove_media(

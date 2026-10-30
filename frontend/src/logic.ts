@@ -7,10 +7,13 @@ import type {
   CheckResult,
   DubInfo,
   Episode,
+  MediaFilter,
   MediaStatus,
+  MediaType,
   ReleaseInfo,
   SearchResult,
   Season,
+  StreamSort,
   WaitingItem,
 } from "./types";
 
@@ -265,6 +268,68 @@ export function audioLines(state: AudioState, mediaType: "movie" | "tv", now: Da
     lines.push("No English dub dates listed for the next 4 weeks.");
   }
   return lines;
+}
+
+/**
+ * Services the Streaming list can show, in the default order. `id` is TMDB's
+ * watch provider id, the same in every country (what each service carries
+ * differs by country). Read from Seerr's /watchproviders for GB 2026-10-30.
+ */
+export const SERVICES: ReadonlyArray<{ key: string; label: string; id: number }> = [
+  { key: "netflix", label: "Netflix", id: 8 },
+  { key: "disney", label: "Disney+", id: 337 },
+  { key: "crunchyroll", label: "Crunchyroll", id: 283 },
+  { key: "prime", label: "Prime Video", id: 9 },
+  { key: "apple", label: "Apple TV", id: 350 },
+  { key: "now", label: "NOW", id: 39 },
+  { key: "iplayer", label: "BBC iPlayer", id: 38 },
+  { key: "itvx", label: "ITVX", id: 41 },
+  { key: "channel4", label: "Channel 4", id: 103 },
+  { key: "paramount", label: "Paramount+", id: 531 },
+  { key: "skygo", label: "Sky Go", id: 29 },
+];
+
+/** The configured services in the configured order; all of them when none are set. */
+export function servicesFor(keys?: readonly string[]): typeof SERVICES {
+  if (!keys?.length) return SERVICES;
+  const picked = keys.map((k) => SERVICES.find((s) => s.key === k)).filter((s) => s !== undefined);
+  return picked.length ? picked : SERVICES;
+}
+
+/**
+ * Genres the Streaming list offers. Keys match the server's BROWSE_GENRES;
+ * `types` are the ones TMDB has that genre for (no Horror for TV, no Reality for film).
+ */
+export const GENRES: ReadonlyArray<{ key: string; label: string; types: ReadonlyArray<MediaType> }> = [
+  { key: "action", label: "Action & Adventure", types: ["movie", "tv"] },
+  { key: "comedy", label: "Comedy", types: ["movie", "tv"] },
+  { key: "drama", label: "Drama", types: ["movie", "tv"] },
+  { key: "crime", label: "Crime", types: ["movie", "tv"] },
+  { key: "scifi", label: "Sci-Fi & Fantasy", types: ["movie", "tv"] },
+  { key: "mystery", label: "Mystery & Thriller", types: ["movie", "tv"] },
+  { key: "animation", label: "Animation", types: ["movie", "tv"] },
+  { key: "family", label: "Family & Kids", types: ["movie", "tv"] },
+  { key: "documentary", label: "Documentary", types: ["movie", "tv"] },
+  { key: "horror", label: "Horror", types: ["movie"] },
+  { key: "romance", label: "Romance", types: ["movie"] },
+  { key: "reality", label: "Reality", types: ["tv"] },
+];
+
+/** The genres that mean something for the All / Movies / TV filter. */
+export function genresFor(filter: MediaFilter): typeof GENRES {
+  return filter === "movie" || filter === "tv" ? GENRES.filter((g) => g.types.includes(filter)) : GENRES;
+}
+
+export const STREAM_SORTS: ReadonlyArray<{ value: StreamSort; label: string }> = [
+  { value: "popular", label: "Popular" },
+  { value: "top_rated", label: "Top rated" },
+  { value: "newest", label: "Newest" },
+];
+
+/** A Show more page added to the list; titles already there (TMDB pages can overlap as popularity shifts) are skipped. */
+export function appendNew<T extends { media_type: string; tmdb_id: number }>(list: readonly T[], more: readonly T[]): T[] {
+  const seen = new Set(list.map((r) => `${r.media_type}/${r.tmdb_id}`));
+  return [...list, ...more.filter((r) => !seen.has(`${r.media_type}/${r.tmdb_id}`))];
 }
 
 /** The Downloaded list narrowed by what's typed in the search box. */

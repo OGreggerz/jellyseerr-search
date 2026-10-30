@@ -35,6 +35,38 @@ STATUS_NOT_REQUESTED: Final = "not_requested"
 # filtered: unreleased blockbusters have 0 votes and lead the popular list.
 POPULAR_TV_MIN_VOTES: Final = 500
 
+# Streaming browse: one service's catalogue in one country (TMDB discover with
+# watch providers, through Seerr). Seerr's sortBy values differ by type for dates.
+BROWSE_SORTS: Final = {
+    "popular": {MEDIA_MOVIE: "popularity.desc", MEDIA_TV: "popularity.desc"},
+    "top_rated": {MEDIA_MOVIE: "vote_average.desc", MEDIA_TV: "vote_average.desc"},
+    "newest": {MEDIA_MOVIE: "primary_release_date.desc", MEDIA_TV: "first_air_date.desc"},
+}
+# Fewest TMDB votes a title needs, as (no genre, with a genre). Read against UK
+# Netflix 2026-10-30: popular films with no floor include 8-10 vote releases, and
+# a genre narrows the list enough that 200 is clean. Newest needs a low floor or
+# it hides the month's releases (a new show has tens of votes, not hundreds).
+BROWSE_MIN_VOTES: Final = {"popular": (500, 200), "top_rated": (500, 200), "newest": (50, 50)}
+# The genres the card offers, as TMDB genre ids per type ("|" = any of). Film and
+# TV lists differ (TV has "Action & Adventure", film has Action and Adventure);
+# None means the type has no such genre. The card's GENRES must list the same keys.
+BROWSE_GENRES: Final[dict[str, dict[str, str | None]]] = {
+    "action": {MEDIA_MOVIE: "28|12", MEDIA_TV: "10759"},
+    "animation": {MEDIA_MOVIE: "16", MEDIA_TV: "16"},
+    "comedy": {MEDIA_MOVIE: "35", MEDIA_TV: "35"},
+    "crime": {MEDIA_MOVIE: "80", MEDIA_TV: "80"},
+    "documentary": {MEDIA_MOVIE: "99", MEDIA_TV: "99"},
+    "drama": {MEDIA_MOVIE: "18", MEDIA_TV: "18"},
+    "family": {MEDIA_MOVIE: "10751", MEDIA_TV: "10751|10762"},
+    "horror": {MEDIA_MOVIE: "27", MEDIA_TV: None},
+    "mystery": {MEDIA_MOVIE: "9648|53", MEDIA_TV: "9648"},
+    "romance": {MEDIA_MOVIE: "10749", MEDIA_TV: None},
+    "scifi": {MEDIA_MOVIE: "878|14", MEDIA_TV: "10765"},
+    "reality": {MEDIA_MOVIE: None, MEDIA_TV: "10764"},
+}
+# TMDB serves at most this many pages of a discover list.
+BROWSE_MAX_PAGE: Final = 500
+
 # Episode picker (optional; Sonarr directly, since Jellyseerr requests whole seasons).
 CONF_SONARR_URL: Final = "sonarr_url"
 CONF_SONARR_API_KEY: Final = "sonarr_api_key"
@@ -62,4 +94,4 @@ REQUEST_COUNT_KEYS: Final = ("pending", "approved", "processing", "available", "
 URL_BASE: Final = f"/{DOMAIN}"
 CARD_FILENAME: Final = "jellyseerr-search-card.js"
 CARD_URL: Final = f"{URL_BASE}/{CARD_FILENAME}"
-CARD_VERSION: Final = "0.12.3"
+CARD_VERSION: Final = "0.13.0"

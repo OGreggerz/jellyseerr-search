@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   Latest,
+  SERVICES,
+  appendNew,
+  genresFor,
+  servicesFor,
   airDateLabel,
   canRequestMore,
   episodeLabel,
@@ -269,5 +273,31 @@ describe("anime audio", () => {
     expect(waitingLabel(item)).toBe("Waiting for dub");
     expect(waitingDetail(item, now)).toMatch(/^2 episodes in Japanese, dub wanted · Next dub: E3 Fri 30 Oct, \d\d:00$/);
     expect(waitingLabel({ ...item, state: "not_found", audio: "dub_only", missing: 1 })).toBe("Waiting for dub");
+  });
+});
+
+describe("streaming browse", () => {
+  it("offers every service unless the card picks some, in the card's order", () => {
+    expect(servicesFor().map((s) => s.label).slice(0, 3)).toEqual(["Netflix", "Disney+", "Crunchyroll"]);
+    expect(servicesFor([]).length).toBe(SERVICES.length);
+    expect(servicesFor(["crunchyroll", "netflix"]).map((s) => s.id)).toEqual([283, 8]);
+  });
+
+  it("ignores services it doesn't know, falling back to all when none are left", () => {
+    expect(servicesFor(["netflix", "hulu"]).map((s) => s.key)).toEqual(["netflix"]);
+    expect(servicesFor(["hulu"]).length).toBe(SERVICES.length);
+  });
+
+  it("only offers genres the filter has", () => {
+    const keys = (f: Parameters<typeof genresFor>[0]) => genresFor(f).map((g) => g.key);
+    expect(keys("all")).toContain("horror");
+    expect(keys("all")).toContain("reality");
+    expect(keys("tv")).not.toContain("horror");
+    expect(keys("movie")).not.toContain("reality");
+  });
+
+  it("adds a Show more page without repeating titles already listed", () => {
+    const t = (id: number, media_type: "movie" | "tv" = "tv") => ({ tmdb_id: id, media_type });
+    expect(appendNew([t(1), t(2)], [t(2), t(3), t(2, "movie")])).toEqual([t(1), t(2), t(3), t(2, "movie")]);
   });
 });

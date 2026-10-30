@@ -13,7 +13,17 @@ from homeassistant.core import HomeAssistant, callback
 
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
-from .const import CARD_VERSION, DOMAIN, LIBRARY_LIMIT, MEDIA_MOVIE, MEDIA_TV, MEDIA_TYPES
+from .const import (
+    BROWSE_GENRES,
+    BROWSE_MAX_PAGE,
+    BROWSE_SORTS,
+    CARD_VERSION,
+    DOMAIN,
+    LIBRARY_LIMIT,
+    MEDIA_MOVIE,
+    MEDIA_TV,
+    MEDIA_TYPES,
+)
 from .api import JellyseerrError
 from .audio import AUDIO_CHOICES
 from .dubs import async_anime_film_profile, async_audio_state, async_set_audio
@@ -36,6 +46,7 @@ from .services import (
     async_request_media,
     async_search_media,
     async_library_media,
+    async_discover_media,
     async_popular_media,
     async_remove_media,
     async_trending_media,
@@ -54,6 +65,7 @@ def async_register_websocket(hass: HomeAssistant) -> None:
         ws_search,
         ws_trending,
         ws_popular,
+        ws_discover,
         ws_library,
         ws_seasons,
         ws_request,
@@ -142,6 +154,39 @@ async def ws_popular(
     c = resolve_coordinator(hass, msg.get("config_entry_id"))
     results = await async_annotate(results, c.arr_index, c.sonarr, c.radarr)
     connection.send_result(msg["id"], {"results": results})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/discover",
+        # TMDB watch provider id (Netflix is 8) and the country it streams in.
+        vol.Required("provider"): vol.All(int, vol.Range(min=1)),
+        vol.Required("region"): vol.All(str, vol.Match(r"^[A-Z]{2}$")),
+        vol.Optional("media_type", default=MEDIA_ALL): vol.In((MEDIA_ALL, *MEDIA_TYPES)),
+        vol.Optional("sort", default="popular"): vol.In(tuple(BROWSE_SORTS)),
+        vol.Optional("genre"): vol.In(tuple(BROWSE_GENRES)),
+        vol.Optional("page", default=1): vol.All(int, vol.Range(min=1, max=BROWSE_MAX_PAGE)),
+        vol.Optional("config_entry_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_discover(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """The card's Streaming list: one service's titles, a page at a time."""
+    client = resolve_client(hass, msg.get("config_entry_id"))
+    found = await async_discover_media(
+        client,
+        msg["media_type"],
+        provider=msg["provider"],
+        region=msg["region"],
+        sort=msg["sort"],
+        genre=msg.get("genre"),
+        page=msg["page"],
+    )
+    c = resolve_coordinator(hass, msg.get("config_entry_id"))
+    found["results"] = await async_annotate(found["results"], c.arr_index, c.sonarr, c.radarr)
+    connection.send_result(msg["id"], found)
 
 
 @websocket_api.websocket_command(

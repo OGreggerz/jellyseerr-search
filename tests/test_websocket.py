@@ -125,6 +125,118 @@ async def test_popular_one_type(hass: HomeAssistant, entry, aioclient_mock, hass
     assert dict(tv[-1].query) == {"page": "1", "voteCountGte": "500"}
 
 
+def _discover_calls(aioclient_mock, path: str) -> list[dict[str, str]]:
+    return [dict(call[1].query) for call in aioclient_mock.mock_calls if call[1].path == f"/api/v1/discover/{path}"]
+
+
+async def test_discover_one_service(hass: HomeAssistant, entry, aioclient_mock, hass_ws_client) -> None:
+    aioclient_mock.get(f"{API}/discover/tv", json={**SHOWS, "totalPages": 3})
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id(
+        {"type": f"{DOMAIN}/discover", "provider": 8, "region": "GB", "media_type": "tv"}
+    )
+    msg = await ws.receive_json()
+    assert msg["success"]
+    assert [r["tmdb_id"] for r in msg["result"]["results"]] == [3]
+    assert msg["result"]["has_more"] is True
+    assert not _discover_calls(aioclient_mock, "movies")
+    # Popular by default; with no genre the stricter vote floor keeps obscure titles out.
+    assert _discover_calls(aioclient_mock, "tv") == [
+        {"page": "1", "watchProviders": "8", "watchRegion": "GB", "sortBy": "popularity.desc", "voteCountGte": "500"}
+    ]
+
+
+async def test_discover_all_alternates_and_pages(
+    hass: HomeAssistant, entry, aioclient_mock, hass_ws_client
+) -> None:
+    """Show more asks for the next page of both lists; the last page ends it."""
+    aioclient_mock.get(f"{API}/discover/movies", json={**MOVIES, "totalPages": 2})
+    aioclient_mock.get(f"{API}/discover/tv", json={**SHOWS, "totalPages": 1})
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/discover", "provider": 337, "region": "GB", "page": 2})
+    msg = await ws.receive_json()
+    assert [r["tmdb_id"] for r in msg["result"]["results"]] == [1, 3, 2]
+    assert msg["result"]["has_more"] is False
+    assert _discover_calls(aioclient_mock, "movies")[-1]["page"] == "2"
+    assert _discover_calls(aioclient_mock, "tv")[-1]["page"] == "2"
+
+
+async def test_discover_sort_and_genre_per_type(
+    hass: HomeAssistant, entry, aioclient_mock, hass_ws_client
+) -> None:
+    """Film and TV genre ids differ, as do the date sorts; a genre lowers the floor."""
+    aioclient_mock.get(f"{API}/discover/movies", json=MOVIES)
+    aioclient_mock.get(f"{API}/discover/tv", json=SHOWS)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id(
+        {"type": f"{DOMAIN}/discover", "provider": 283, "region": "GB", "sort": "newest", "genre": "action"}
+    )
+    msg = await ws.receive_json()
+    assert msg["success"]
+    movie = _discover_calls(aioclient_mock, "movies")[-1]
+    tv = _discover_calls(aioclient_mock, "tv")[-1]
+    assert (movie["sortBy"], movie["genre"], movie["voteCountGte"]) == ("primary_release_date.desc", "28|12", "50")
+    assert (tv["sortBy"], tv["genre"], tv["voteCountGte"]) == ("first_air_date.desc", "10759", "50")
+
+
+async def test_discover_genre_with_floor(hass: HomeAssistant, entry, aioclient_mock, hass_ws_client) -> None:
+    aioclient_mock.get(f"{API}/discover/movies", json=MOVIES)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id(
+        {"type": f"{DOMAIN}/discover", "provider": 8, "region": "GB", "media_type": "movie",
+         "sort": "top_rated", "genre": "comedy"}
+    )
+    await ws.receive_json()
+    call = _discover_calls(aioclient_mock, "movies")[-1]
+    assert (call["sortBy"], call["genre"], call["voteCountGte"]) == ("vote_average.desc", "35", "200")
+
+
+async def test_discover_genre_missing_for_one_type(
+    hass: HomeAssistant, entry, aioclient_mock, hass_ws_client
+) -> None:
+    """Horror has no TV genre: All fetches only films, TV fetches nothing."""
+    aioclient_mock.get(f"{API}/discover/movies", json=MOVIES)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/discover", "provider": 8, "region": "GB", "genre": "horror"})
+    msg = await ws.receive_json()
+    assert [r["tmdb_id"] for r in msg["result"]["results"]] == [1, 2]
+    assert not _discover_calls(aioclient_mock, "tv")
+
+    await ws.send_json_auto_id(
+        {"type": f"{DOMAIN}/discover", "provider": 8, "region": "GB", "genre": "horror", "media_type": "tv"}
+    )
+    msg = await ws.receive_json()
+    assert msg["result"] == {"results": [], "has_more": False}
+    assert not _discover_calls(aioclient_mock, "tv")
+
+
+async def test_discover_stops_at_tmdbs_last_page(
+    hass: HomeAssistant, entry, aioclient_mock, hass_ws_client
+) -> None:
+    """TMDB serves 500 pages at most, whatever totalPages says."""
+    aioclient_mock.get(f"{API}/discover/tv", json={**SHOWS, "totalPages": 900})
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id(
+        {"type": f"{DOMAIN}/discover", "provider": 8, "region": "GB", "media_type": "tv", "page": 500}
+    )
+    msg = await ws.receive_json()
+    assert msg["result"]["has_more"] is False
+
+
+async def test_discover_rejects_bad_input(hass: HomeAssistant, entry, hass_ws_client) -> None:
+    ws = await hass_ws_client(hass)
+    for bad in (
+        {"region": "GB", "provider": 0},
+        {"region": "gb", "provider": 8},
+        {"region": "GB", "provider": 8, "sort": "random"},
+        {"region": "GB", "provider": 8, "genre": "western"},
+        {"region": "GB", "provider": 8, "page": 501},
+    ):
+        await ws.send_json_auto_id({"type": f"{DOMAIN}/discover", **bad})
+        msg = await ws.receive_json()
+        assert not msg["success"], bad
+
+
 async def test_remove(hass: HomeAssistant, entry, aioclient_mock, hass_ws_client) -> None:
     aioclient_mock.get(f"{API}/movie/438631", json={"id": 438631, "mediaInfo": {"id": 12, "status": 5}})
     aioclient_mock.delete(f"{API}/media/12/file", status=204)

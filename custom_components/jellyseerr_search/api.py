@@ -10,6 +10,8 @@ import aiohttp
 from yarl import URL
 
 from .const import (
+    BROWSE_MIN_VOTES,
+    BROWSE_SORTS,
     LIBRARY_CONCURRENCY,
     MEDIA_MOVIE,
     MEDIA_STATUS,
@@ -114,6 +116,39 @@ class JellyseerrClient:
             for item in data.get("results", [])
             if item.get("mediaType") in MEDIA_TYPES
         ]
+
+    async def async_discover(
+        self,
+        media_type: str,
+        *,
+        provider: int,
+        region: str,
+        sort: str,
+        genre: str | None,
+        page: int = 1,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """One streaming service's movies or shows in one country (TMDB discover,
+        filtered by watch provider), normalized, with the list's page count.
+        `genre` is TMDB ids for this type ("|" = any of). Newest needs no date
+        cap: titles not out yet have no votes, so the vote floor drops them
+        (checked on four UK services 2026-10-30)."""
+        params: dict[str, Any] = {
+            "page": page,
+            "watchProviders": provider,
+            "watchRegion": region,
+            "sortBy": BROWSE_SORTS[sort][media_type],
+            "voteCountGte": BROWSE_MIN_VOTES[sort][1 if genre else 0],
+        }
+        if genre:
+            params["genre"] = genre
+        path = "/discover/movies" if media_type == MEDIA_MOVIE else "/discover/tv"
+        data = await self._request("GET", path, params=params)
+        results = [
+            normalize_result(item)
+            for item in data.get("results", [])
+            if item.get("mediaType") in MEDIA_TYPES
+        ]
+        return results, int(data.get("totalPages") or 1)
 
     async def async_library(self, limit: int) -> list[dict[str, Any]]:
         """What the server has (available or partly available), newest first,

@@ -791,11 +791,156 @@ function nt(e, t, n = /* @__PURE__ */ new Date()) {
 	} else i?.last_episode ? r.push(`English dub: up to episode ${i.last_episode}, no next date listed`) : e.dub_dates && t === "tv" && r.push("No English dub dates listed for the next 4 weeks.");
 	return r;
 }
-function K(e, t) {
+var K = [
+	{
+		key: "netflix",
+		label: "Netflix",
+		id: 8
+	},
+	{
+		key: "disney",
+		label: "Disney+",
+		id: 337
+	},
+	{
+		key: "crunchyroll",
+		label: "Crunchyroll",
+		id: 283
+	},
+	{
+		key: "prime",
+		label: "Prime Video",
+		id: 9
+	},
+	{
+		key: "apple",
+		label: "Apple TV",
+		id: 350
+	},
+	{
+		key: "now",
+		label: "NOW",
+		id: 39
+	},
+	{
+		key: "iplayer",
+		label: "BBC iPlayer",
+		id: 38
+	},
+	{
+		key: "itvx",
+		label: "ITVX",
+		id: 41
+	},
+	{
+		key: "channel4",
+		label: "Channel 4",
+		id: 103
+	},
+	{
+		key: "paramount",
+		label: "Paramount+",
+		id: 531
+	},
+	{
+		key: "skygo",
+		label: "Sky Go",
+		id: 29
+	}
+];
+function q(e) {
+	if (!e?.length) return K;
+	let t = e.map((e) => K.find((t) => t.key === e)).filter((e) => e !== void 0);
+	return t.length ? t : K;
+}
+var rt = [
+	{
+		key: "action",
+		label: "Action & Adventure",
+		types: ["movie", "tv"]
+	},
+	{
+		key: "comedy",
+		label: "Comedy",
+		types: ["movie", "tv"]
+	},
+	{
+		key: "drama",
+		label: "Drama",
+		types: ["movie", "tv"]
+	},
+	{
+		key: "crime",
+		label: "Crime",
+		types: ["movie", "tv"]
+	},
+	{
+		key: "scifi",
+		label: "Sci-Fi & Fantasy",
+		types: ["movie", "tv"]
+	},
+	{
+		key: "mystery",
+		label: "Mystery & Thriller",
+		types: ["movie", "tv"]
+	},
+	{
+		key: "animation",
+		label: "Animation",
+		types: ["movie", "tv"]
+	},
+	{
+		key: "family",
+		label: "Family & Kids",
+		types: ["movie", "tv"]
+	},
+	{
+		key: "documentary",
+		label: "Documentary",
+		types: ["movie", "tv"]
+	},
+	{
+		key: "horror",
+		label: "Horror",
+		types: ["movie"]
+	},
+	{
+		key: "romance",
+		label: "Romance",
+		types: ["movie"]
+	},
+	{
+		key: "reality",
+		label: "Reality",
+		types: ["tv"]
+	}
+];
+function it(e) {
+	return e === "movie" || e === "tv" ? rt.filter((t) => t.types.includes(e)) : rt;
+}
+var at = [
+	{
+		value: "popular",
+		label: "Popular"
+	},
+	{
+		value: "top_rated",
+		label: "Top rated"
+	},
+	{
+		value: "newest",
+		label: "Newest"
+	}
+];
+function ot(e, t) {
+	let n = new Set(e.map((e) => `${e.media_type}/${e.tmdb_id}`));
+	return [...e, ...t.filter((e) => !n.has(`${e.media_type}/${e.tmdb_id}`))];
+}
+function J(e, t) {
 	let n = t.trim().toLowerCase();
 	return n ? e.filter((e) => e.title.toLowerCase().includes(n)) : [...e];
 }
-var q = class {
+var Y = class {
 	constructor() {
 		this._seq = 0;
 	}
@@ -803,7 +948,7 @@ var q = class {
 		let e = ++this._seq;
 		return () => e === this._seq;
 	}
-}, J, rt = "0.12.3", Y = "jellyseerr_search", it = 400, X = 2, at = 36e5, ot = [2e4, 6e4], st = !1, Z = !1, ct = [
+}, X, st = "0.13.0", Z = "jellyseerr_search", ct = 400, Q = 2, lt = 36e5, ut = [2e4, 6e4], dt = !1, ft = !1, pt = [
 	{
 		value: "all",
 		label: "All"
@@ -824,21 +969,29 @@ var q = class {
 		value: "waiting",
 		label: "Waiting"
 	}
-], lt = [{
-	value: "trending",
-	label: "Trending",
-	heading: "Trending today"
-}, {
-	value: "popular",
-	label: "Popular",
-	heading: "Popular"
-}];
-function Q(e, t) {
+], mt = [
+	{
+		value: "trending",
+		label: "Trending",
+		heading: "Trending today"
+	},
+	{
+		value: "popular",
+		label: "Popular",
+		heading: "Popular"
+	},
+	{
+		value: "streaming",
+		label: "Streaming",
+		heading: "What's on"
+	}
+], ht = "GB";
+function gt(e, t) {
 	return t === "daily" ? `${e} is released by date, so it's now set up as a daily show.` : `${e} isn't released by date, so it's no longer set up as a daily show.`;
 }
 var $ = class extends L {
 	constructor() {
-		super(), this._latestSearch = new q(), this._latestSeasons = new q(), this._latestBrowse = new q(), this._latestEpisodes = new q(), this._latestLibrary = new q(), this._refreshTimers = [], this._browseAt = 0, this._query = "", this._filter = "all", this._browse = "trending", this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1, this._confirmRemove = !1, this._removing = !1, this._picker = !1, this._picked = /* @__PURE__ */ new Set(), this._pickerBusy = !1, this._downloading = !1, this._followBusy = !1, this._checks = {}, this._waitingOn = Z, this._checkingAll = !1, this._audioPick = "dub", this._audioBusy = !1;
+		super(), this._latestSearch = new Y(), this._latestSeasons = new Y(), this._latestBrowse = new Y(), this._latestEpisodes = new Y(), this._latestLibrary = new Y(), this._refreshTimers = [], this._browseAt = 0, this._browsePage = 1, this._query = "", this._filter = "all", this._browse = "trending", this._service = "", this._genre = "", this._sort = "popular", this._browseMore = !1, this._moreLoading = !1, this._loading = !1, this._chosen = /* @__PURE__ */ new Set(), this._is4k = !1, this._requesting = !1, this._confirmRemove = !1, this._removing = !1, this._picker = !1, this._picked = /* @__PURE__ */ new Set(), this._pickerBusy = !1, this._downloading = !1, this._followBusy = !1, this._checks = {}, this._waitingOn = ft, this._checkingAll = !1, this._audioPick = "dub", this._audioBusy = !1;
 	}
 	static getConfigForm() {
 		return {
@@ -872,6 +1025,21 @@ var $ = class extends L {
 					selector: { boolean: {} }
 				},
 				{
+					name: "services",
+					selector: { select: {
+						multiple: !0,
+						mode: "list",
+						options: q().map((e) => ({
+							value: e.key,
+							label: e.label
+						}))
+					} }
+				},
+				{
+					name: "region",
+					selector: { text: {} }
+				},
+				{
 					name: "show_4k",
 					selector: { boolean: {} }
 				},
@@ -881,13 +1049,15 @@ var $ = class extends L {
 				},
 				{
 					name: "config_entry_id",
-					selector: { config_entry: { integration: Y } }
+					selector: { config_entry: { integration: Z } }
 				}
 			],
 			computeLabel: (e) => ({
 				title: "Title",
 				media_type: "Default filter",
-				show_trending: "Show trending and popular titles before searching",
+				show_trending: "Show trending, popular and streaming titles before searching",
+				services: "Streaming services to offer (none ticked = all)",
+				region: "Streaming country, two letters (default GB)",
 				show_4k: "Offer 4K requests",
 				show_remove: "Offer Remove (deletes the files from Radarr/Sonarr)",
 				config_entry_id: "Jellyseerr server (only if you have several)"
@@ -899,7 +1069,7 @@ var $ = class extends L {
 	}
 	setConfig(e) {
 		if (!e) throw Error("Invalid configuration");
-		if (e.media_type && !ct.some((t) => t.value === e.media_type)) throw Error("media_type must be all, movie or tv");
+		if (e.media_type && !pt.some((t) => t.value === e.media_type)) throw Error("media_type must be all, movie or tv");
 		this._config = e, this._filter = e.media_type ?? "all";
 	}
 	getCardSize() {
@@ -916,12 +1086,12 @@ var $ = class extends L {
 		super.disconnectedCallback(), clearTimeout(this._debounce), this._clearRefreshTimers();
 	}
 	updated(e) {
-		e.has("hass") && this.hass && !st && (st = !0, this._checkVersion()), e.has("hass") && this.hass && this._browseDue() && this._loadBrowse();
+		e.has("hass") && this.hass && !dt && (dt = !0, this._checkVersion()), e.has("hass") && this.hass && this._browseDue() && this._loadBrowse();
 	}
 	async _checkVersion() {
 		try {
-			let { version: e, waiting: t } = await this.hass.callWS({ type: `${Y}/version` });
-			e !== "0.12.3" && (this._staleVersion = e), Z = !!t, this._waitingOn = Z;
+			let { version: e, waiting: t } = await this.hass.callWS({ type: `${Z}/version` });
+			e !== "0.13.0" && (this._staleVersion = e), ft = !!t, this._waitingOn = ft;
 		} catch {}
 	}
 	async _reload() {
@@ -938,7 +1108,7 @@ var $ = class extends L {
 		this._waitingError = void 0;
 		try {
 			let { results: e } = await this.hass.callWS({
-				type: `${Y}/waiting`,
+				type: `${Z}/waiting`,
 				...this._entry()
 			});
 			this._filter === "waiting" && (this._waiting = e);
@@ -957,7 +1127,7 @@ var $ = class extends L {
 		};
 		try {
 			let n = await this.hass.callWS({
-				type: `${Y}/waiting/check`,
+				type: `${Z}/waiting/check`,
 				media_type: e.media_type,
 				arr_id: e.arr_id,
 				...this._entry()
@@ -989,7 +1159,7 @@ var $ = class extends L {
 	async _searchWaiting(e) {
 		try {
 			await this.hass.callWS({
-				type: `${Y}/waiting/search`,
+				type: `${Z}/waiting/search`,
 				media_type: e.media_type,
 				arr_id: e.arr_id,
 				...this._entry()
@@ -1012,14 +1182,14 @@ var $ = class extends L {
 		});
 	}
 	_showBrowse() {
-		return this._filter !== "downloaded" && this._filter !== "waiting" && this._config.show_trending !== !1 && this._query.trim().length < X;
+		return this._filter !== "downloaded" && this._filter !== "waiting" && this._config.show_trending !== !1 && this._query.trim().length < Q;
 	}
 	async _loadLibrary() {
 		let e = this._latestLibrary.next();
 		this._libraryError = void 0;
 		try {
 			let { results: t } = await this.hass.callWS({
-				type: `${Y}/library`,
+				type: `${Z}/library`,
 				...this._entry()
 			});
 			e() && (this._library = t);
@@ -1028,14 +1198,40 @@ var $ = class extends L {
 		}
 	}
 	_browseDue() {
-		return !this._showBrowse() || this._selected ? !1 : this._browseKey !== `${this._browse}/${this._filter}` || Date.now() - this._browseAt > at;
+		return !this._showBrowse() || this._selected ? !1 : this._browseKey !== this._currentBrowseKey() || Date.now() - this._browseAt > lt;
+	}
+	_currentBrowseKey() {
+		let e = `${this._browse}/${this._filter}`;
+		return this._browse === "streaming" ? `${e}/${this._streamService().key}/${this._genre}/${this._sort}` : e;
+	}
+	_streamService() {
+		let e = q(this._config.services);
+		return e.find((e) => e.key === this._service) ?? e[0];
+	}
+	_discoverMessage(e) {
+		return {
+			type: `${Z}/discover`,
+			provider: this._streamService().id,
+			region: (this._config.region || ht).toUpperCase(),
+			media_type: this._filter,
+			sort: this._sort,
+			...this._genre ? { genre: this._genre } : {},
+			page: e,
+			...this._entry()
+		};
 	}
 	async _loadBrowse() {
-		let e = this._latestBrowse.next(), t = `${this._browse}/${this._filter}`;
-		this._browseKey !== t && (this._browseResults = void 0), this._browseKey = t, this._browseAt = Date.now(), this._browseError = void 0;
+		let e = this._latestBrowse.next(), t = this._currentBrowseKey();
+		this._browseKey !== t && (this._browseResults = void 0), this._browseKey = t, this._browseAt = Date.now(), this._browseError = void 0, this._moreError = void 0, this._browseMore = !1;
 		try {
+			if (this._browse === "streaming") {
+				let t = await this.hass.callWS(this._discoverMessage(1));
+				if (!e()) return;
+				this._browsePage = 1, this._browseResults = t.results, this._browseMore = t.has_more;
+				return;
+			}
 			let { results: t } = await this.hass.callWS({
-				type: `${Y}/${this._browse}`,
+				type: `${Z}/${this._browse}`,
 				media_type: this._filter,
 				...this._entry()
 			});
@@ -1044,11 +1240,28 @@ var $ = class extends L {
 			e() && (this._browseError = B(t));
 		}
 	}
+	async _loadMore() {
+		if (this._moreLoading || !this._browseResults) return;
+		let e = this._browseKey, t = this._browsePage + 1;
+		this._moreLoading = !0, this._moreError = void 0;
+		try {
+			let n = await this.hass.callWS(this._discoverMessage(t));
+			if (e !== this._browseKey || !this._browseResults) return;
+			this._browsePage = t, this._browseResults = ot(this._browseResults, n.results), this._browseMore = n.has_more;
+		} catch (t) {
+			e === this._browseKey && (this._moreError = B(t));
+		} finally {
+			this._moreLoading = !1;
+		}
+	}
 	_setBrowse(e) {
 		e !== this._browse && (this._browse = e, this._browseDue() && this._loadBrowse());
 	}
+	_setStream(e) {
+		e.service !== void 0 && (this._service = e.service), e.genre !== void 0 && (this._genre = e.genre), e.sort !== void 0 && (this._sort = e.sort), this._browseDue() && this._loadBrowse();
+	}
 	_onInput(e) {
-		this._query = e.target.value, clearTimeout(this._debounce), this._filter !== "downloaded" && this._filter !== "waiting" && (this._debounce = setTimeout(() => void this._search(), it));
+		this._query = e.target.value, clearTimeout(this._debounce), this._filter !== "downloaded" && this._filter !== "waiting" && (this._debounce = setTimeout(() => void this._search(), ct));
 	}
 	_onKeydown(e) {
 		e.key === "Enter" && (clearTimeout(this._debounce), e.target.blur(), this._search());
@@ -1057,12 +1270,12 @@ var $ = class extends L {
 		this._leaveShow(), clearTimeout(this._debounce), this._latestSearch.next(), this._query = "", this._results = void 0, this._error = void 0, this._loading = !1, this._selected = void 0;
 	}
 	_setFilter(e) {
-		e !== this._filter && (this._filter = e, e === "downloaded" ? this._loadLibrary() : e === "waiting" ? this._loadWaiting() : this._query.trim().length >= X ? this._search() : this._browseDue() && this._loadBrowse());
+		e !== this._filter && (this._filter = e, this._genre && !it(e).some((e) => e.key === this._genre) && (this._genre = ""), e === "downloaded" ? this._loadLibrary() : e === "waiting" ? this._loadWaiting() : this._query.trim().length >= Q ? this._search() : this._browseDue() && this._loadBrowse());
 	}
 	async _search() {
 		if (this._filter === "downloaded" || this._filter === "waiting") return;
 		let e = this._query.trim();
-		if (e.length < X) {
+		if (e.length < Q) {
 			this._latestSearch.next(), this._results = void 0, this._loading = !1;
 			return;
 		}
@@ -1070,7 +1283,7 @@ var $ = class extends L {
 		this._loading = !0, this._error = void 0;
 		try {
 			let { results: n } = await this.hass.callWS({
-				type: `${Y}/search`,
+				type: `${Z}/search`,
 				query: e,
 				media_type: this._filter,
 				...this._entry()
@@ -1089,7 +1302,7 @@ var $ = class extends L {
 	async _loadRelease(e) {
 		try {
 			let t = await this.hass.callWS({
-				type: `${Y}/release`,
+				type: `${Z}/release`,
 				tmdb_id: e.tmdb_id,
 				media_type: e.media_type,
 				...this._entry()
@@ -1100,7 +1313,7 @@ var $ = class extends L {
 	async _loadAudio(e) {
 		try {
 			let t = await this.hass.callWS({
-				type: `${Y}/audio`,
+				type: `${Z}/audio`,
 				tmdb_id: e.tmdb_id,
 				media_type: e.media_type,
 				...this._entry()
@@ -1120,7 +1333,7 @@ var $ = class extends L {
 			this._audioBusy = !0;
 			try {
 				let n = await this.hass.callWS({
-					type: `${Y}/audio`,
+					type: `${Z}/audio`,
 					tmdb_id: t.tmdb_id,
 					media_type: t.media_type,
 					audio: e,
@@ -1139,7 +1352,7 @@ var $ = class extends L {
 		let t = this._latestSeasons.next();
 		try {
 			let { seasons: n, episode_picker: r, show: i, season_source: a } = await this.hass.callWS({
-				type: `${Y}/seasons`,
+				type: `${Z}/seasons`,
 				tmdb_id: e,
 				...this._entry()
 			});
@@ -1165,7 +1378,7 @@ var $ = class extends L {
 			return;
 		}
 		let t = {
-			type: `${Y}/request`,
+			type: `${Z}/request`,
 			tmdb_id: e.tmdb_id,
 			media_type: e.media_type,
 			is_4k: this._is4k,
@@ -1187,12 +1400,12 @@ var $ = class extends L {
 			this._requesting = !0;
 			try {
 				let n = await this.hass.callWS({
-					type: `${Y}/episodes/request`,
+					type: `${Z}/episodes/request`,
 					tmdb_id: e.tmdb_id,
 					seasons: t,
 					...this._audioFor(),
 					...this._entry()
-				}), r = n.series_type_changed ? ` ${Q(e.title, n.series_type_changed)}` : "", i = t.length === 1 ? `series ${t[0]}` : `series ${t.join(", ")}`;
+				}), r = n.series_type_changed ? ` ${gt(e.title, n.series_type_changed)}` : "", i = t.length === 1 ? `series ${t[0]}` : `series ${t.join(", ")}`;
 				z(this, `Getting ${i} of ${e.title}.${r}`), this._addedSeries !== void 0 && (this._addedSeries = void 0), this._selected === e && (this._loadSeasons(e.tmdb_id), this._loadAudio(e));
 			} catch (e) {
 				z(this, `Request failed: ${B(e)}`);
@@ -1211,7 +1424,7 @@ var $ = class extends L {
 			this._removing = !0;
 			try {
 				await this.hass.callWS({
-					type: `${Y}/remove`,
+					type: `${Z}/remove`,
 					tmdb_id: e.tmdb_id,
 					media_type: e.media_type,
 					...this._entry()
@@ -1250,7 +1463,7 @@ var $ = class extends L {
 		let n = this._latestEpisodes.next();
 		try {
 			let r = await this.hass.callWS({
-				type: `${Y}/episodes`,
+				type: `${Z}/episodes`,
 				tmdb_id: e,
 				season_number: t,
 				...this._audioFor(),
@@ -1271,7 +1484,7 @@ var $ = class extends L {
 	_leaveShow() {
 		let e = this._addedSeries;
 		this._addedSeries = void 0, e !== void 0 && this.hass && this.hass.callWS({
-			type: `${Y}/episodes/discard`,
+			type: `${Z}/episodes/discard`,
 			series_id: e,
 			...this._entry()
 		}).catch(() => void 0);
@@ -1300,15 +1513,15 @@ var $ = class extends L {
 		this._pickerBusy = !0, this._downloading = !0;
 		try {
 			let r = await this.hass.callWS({
-				type: `${Y}/episodes/download`,
+				type: `${Z}/episodes/download`,
 				series_id: e.series_id,
 				episode_ids: n,
 				...this._entry()
 			});
 			this._addedSeries === e.series_id && (this._addedSeries = void 0);
-			let i = r.series_type_changed ? ` ${Q(e.title, r.series_type_changed)}` : "";
+			let i = r.series_type_changed ? ` ${gt(e.title, r.series_type_changed)}` : "";
 			if (z(this, `Downloading ${n.length} episode${n.length === 1 ? "" : "s"} of ${e.title}.${i}`), !this._stillOn(t, e.series_id)) return;
-			this._picked = /* @__PURE__ */ new Set(), await this._loadEpisodes(t.tmdb_id, e.season_number), this._clearRefreshTimers(), this._refreshTimers = ot.map((n) => setTimeout(() => {
+			this._picked = /* @__PURE__ */ new Set(), await this._loadEpisodes(t.tmdb_id, e.season_number), this._clearRefreshTimers(), this._refreshTimers = ut.map((n) => setTimeout(() => {
 				this._stillOn(t, e.series_id) && this._loadEpisodes(t.tmdb_id, e.season_number);
 			}, n));
 		} catch (n) {
@@ -1326,7 +1539,7 @@ var $ = class extends L {
 			this._pickerBusy = !0;
 			try {
 				let r = await this.hass.callWS({
-					type: `${Y}/episodes/remove`,
+					type: `${Z}/episodes/remove`,
 					series_id: t.series_id,
 					tmdb_id: n.tmdb_id,
 					episode_ids: [e.id],
@@ -1346,13 +1559,13 @@ var $ = class extends L {
 			this._followBusy = !0;
 			try {
 				let n = await this.hass.callWS({
-					type: `${Y}/episodes/follow`,
+					type: `${Z}/episodes/follow`,
 					tmdb_id: t.tmdb_id,
 					follow_new: e,
 					...this._audioFor(),
 					...this._entry()
 				});
-				if (n.series_type_changed && z(this, Q(t.title, n.series_type_changed)), e && !n.follow_new ? z(this, `${t.title} has no regular series to follow yet.`) : e && z(this, `New episodes of ${t.title} will download as they come out.`), this._selected !== t) return;
+				if (n.series_type_changed && z(this, gt(t.title, n.series_type_changed)), e && !n.follow_new ? z(this, `${t.title} has no regular series to follow yet.`) : e && z(this, `New episodes of ${t.title} will download as they come out.`), this._selected !== t) return;
 				this._show = {
 					in_sonarr: n.in_sonarr,
 					follow_new: n.follow_new
@@ -1454,7 +1667,7 @@ var $ = class extends L {
               </button>` : A}
         </div>
         <div class="chips" role="radiogroup" aria-label="Media type">
-          ${ct.filter((e) => e.value !== "waiting" || this._waitingOn).map((e) => O`<button
+          ${pt.filter((e) => e.value !== "waiting" || this._waitingOn).map((e) => O`<button
               class="chip ${e.value === this._filter ? "on" : ""}"
               role="radio"
               aria-checked=${e.value === this._filter}
@@ -1475,12 +1688,12 @@ var $ = class extends L {
     ` : O`<div class="message">No movies or shows found.</div>` : A;
 	}
 	_renderBrowse() {
-		let e = lt.find((e) => e.value === this._browse).heading, t;
-		return t = this._browseError ? O`<div class="message error">Couldn't load ${e.toLowerCase()} (${this._browseError}).</div>` : this._browseResults ? this._browseResults.length ? O`<div class="grid">${this._browseResults.map((e) => this._renderTile(e))}</div>` : O`<div class="message">Nothing to show.</div>` : O`<div class="message">Loading…</div>`, O`
-      <div class="section">
-        <span>${e}</span>
+		let e = this._browse === "streaming", t = mt.find((e) => e.value === this._browse).heading, n;
+		return n = this._browseError ? O`<div class="message error">Couldn't load ${t.toLowerCase()} (${this._browseError}).</div>` : this._browseResults ? this._browseResults.length ? O`<div class="grid">${this._browseResults.map((e) => this._renderTile(e))}</div>` : O`<div class="message">Nothing to show.</div>` : O`<div class="message">Loading…</div>`, O`
+      <div class="section browse">
+        <span class="heading">${t}</span>
         <div class="chips small" role="radiogroup" aria-label="Browse">
-          ${lt.map((e) => O`<button
+          ${mt.map((e) => O`<button
               class="chip ${e.value === this._browse ? "on" : ""}"
               role="radio"
               aria-checked=${e.value === this._browse}
@@ -1490,22 +1703,48 @@ var $ = class extends L {
             </button>`)}
         </div>
       </div>
-      ${t}
+      ${e ? this._renderStreamPickers() : A} ${n}
+      ${e ? O`${this._renderMore()}
+            <div class="attribution">Streaming availability from JustWatch</div>` : A}
     `;
+	}
+	_renderStreamPickers() {
+		let e = this._streamService().key, t = (e, t, n) => O`<button class="chip ${t ? "on" : ""}" role="radio" aria-checked=${t} @click=${n}>${e}</button>`;
+		return O`
+      <div class="chips scroll" role="radiogroup" aria-label="Streaming service">
+        ${q(this._config.services).map((n) => t(n.label, n.key === e, () => this._setStream({ service: n.key })))}
+      </div>
+      <div class="chips scroll small" role="radiogroup" aria-label="Genre">
+        ${t("All genres", !this._genre, () => this._setStream({ genre: "" }))}
+        ${it(this._filter).map((e) => t(e.label, e.key === this._genre, () => this._setStream({ genre: e.key })))}
+      </div>
+      <div class="chips scroll small" role="radiogroup" aria-label="Order">
+        ${at.map((e) => t(e.label, e.value === this._sort, () => this._setStream({ sort: e.value })))}
+      </div>
+    `;
+	}
+	_renderMore() {
+		return this._moreError ? O`<div class="message error">
+        Couldn't load more (${this._moreError}). <button class="link" @click=${this._loadMore}>Try again</button>
+      </div>` : !this._browseMore || !this._browseResults?.length ? A : O`<div class="more">
+      <button class="chip" ?disabled=${this._moreLoading} @click=${this._loadMore}>
+        ${this._moreLoading ? "Loading…" : "Show more"}
+      </button>
+    </div>`;
 	}
 	_renderLibrary() {
 		let e;
 		if (this._libraryError) e = O`<div class="message error">Couldn't load what's downloaded (${this._libraryError}).</div>`;
 		else if (!this._library) e = O`<div class="message">Loading…</div>`;
 		else {
-			let t = K(this._library, this._query);
+			let t = J(this._library, this._query);
 			e = t.length ? O`<div class="grid">${t.map((e) => this._renderTile(e))}</div>` : O`<div class="message">
             ${this._library.length ? `Nothing downloaded matches “${this._query.trim()}”.` : "Nothing downloaded yet."}
           </div>`;
 		}
 		return O`
       <div class="section stack">
-        <span>Downloaded${this._library ? O` · ${K(this._library, this._query).length}` : A}</span>
+        <span>Downloaded${this._library ? O` · ${J(this._library, this._query).length}` : A}</span>
         <span class="hint">Newest first. Tap one to remove it or get more episodes.</span>
       </div>
       ${e}
@@ -1514,7 +1753,7 @@ var $ = class extends L {
 	_renderWaiting() {
 		if (this._waitingError) return O`<div class="message error">Couldn't load the Waiting list (${this._waitingError}).</div>`;
 		if (!this._waiting) return O`<div class="message">Loading…</div>`;
-		let e = K(this._waiting, this._query), t = e.filter((e) => e.state !== "downloading");
+		let e = J(this._waiting, this._query), t = e.filter((e) => e.state !== "downloading");
 		return O`
       <div class="section stack">
         <span>Waiting · ${e.length}</span>
@@ -1719,7 +1958,7 @@ var $ = class extends L {
     `;
 	}
 };
-J = $, J.properties = {
+X = $, X.properties = {
 	hass: { attribute: !1 },
 	_config: { state: !0 },
 	_query: { state: !0 },
@@ -1728,6 +1967,12 @@ J = $, J.properties = {
 	_browse: { state: !0 },
 	_browseResults: { state: !0 },
 	_browseError: { state: !0 },
+	_service: { state: !0 },
+	_genre: { state: !0 },
+	_sort: { state: !0 },
+	_browseMore: { state: !0 },
+	_moreLoading: { state: !0 },
+	_moreError: { state: !0 },
 	_loading: { state: !0 },
 	_error: { state: !0 },
 	_selected: { state: !0 },
@@ -1762,7 +2007,7 @@ J = $, J.properties = {
 	_audioPick: { state: !0 },
 	_audioConfirm: { state: !0 },
 	_audioBusy: { state: !0 }
-}, J.styles = o`
+}, X.styles = o`
     :host {
       --js-gap: 12px;
       --js-radius: var(--ha-card-border-radius, 12px);
@@ -2088,6 +2333,45 @@ J = $, J.properties = {
     .chips {
       flex-wrap: wrap;
     }
+    /* Streaming pickers: eleven services and a dozen genres would fill a phone
+       screen wrapped, so each row scrolls sideways instead. */
+    .chips.scroll {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 8px var(--js-gap) 0;
+    }
+    .chips.scroll::-webkit-scrollbar {
+      display: none;
+    }
+    .chips.scroll .chip {
+      flex: none;
+      white-space: nowrap;
+    }
+    .section .heading {
+      white-space: nowrap;
+    }
+    /* Heading and Trending / Popular / Streaming share a line when they fit;
+       on a phone the switch drops below the heading rather than wrapping a chip. */
+    .section.browse {
+      flex-wrap: wrap;
+      row-gap: 6px;
+    }
+    .section.browse .chips.small {
+      flex-wrap: nowrap;
+    }
+    /* TMDB's watch-provider data must be credited to JustWatch (TMDB API docs, "Watch Providers"). */
+    .attribution {
+      padding: 0 var(--js-gap) var(--js-gap);
+      font-size: 11px;
+      text-align: center;
+      color: var(--secondary-text-color);
+    }
+    .more {
+      display: flex;
+      justify-content: center;
+      padding: 0 var(--js-gap) var(--js-gap);
+    }
     .chipstack {
       position: absolute;
       top: 6px;
@@ -2293,4 +2577,4 @@ J = $, J.properties = {
 	preview: !1
 }));
 //#endregion
-export { rt as CARD_VERSION, $ as JellyseerrSearchCard };
+export { st as CARD_VERSION, $ as JellyseerrSearchCard };

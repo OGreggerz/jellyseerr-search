@@ -14,9 +14,9 @@ here follow it. The user commits changes themselves.
   `/request/count` for the sensors.
 - **Actions and WebSocket commands share one code path**:
   `services.resolve_client` / `async_search_media` / `async_trending_media` /
-  `async_popular_media` / `async_request_media` / `async_remove_media` /
+  `async_popular_media` / `async_discover_media` / `async_request_media` / `async_remove_media` /
   `async_tv_seasons`. The card uses the WS commands (`jellyseerr_search/search`,
-  `/trending`, `/popular`, `/seasons`, `/request`, `/remove`, `/version`); automations use the actions.
+  `/trending`, `/popular`, `/discover`, `/seasons`, `/request`, `/remove`, `/version`); automations use the actions.
 - **Episode picker talks to Sonarr directly** (`sonarr.py`, `episodes.py`),
   only when Sonarr is set in the entry's **options** (`coordinator.sonarr`;
   otherwise `None`). Shows are matched by TVDB id from Jellyseerr
@@ -33,6 +33,10 @@ here follow it. The user commits changes themselves.
   for indexers): capture the show first and use `_stillOn` before touching state.
 - Query strings are encoded like `encodeURIComponent` (`%20`, not `+`);
   Jellyseerr rejects anything else. A test pins this.
+- **Streaming browse** (`/discover`): Seerr's `/discover/movies|tv` with
+  `watchProviders` + `watchRegion`. Genres are keys whose TMDB ids per type live
+  in `const.BROWSE_GENRES`; the card's `logic.GENRES` must list the same keys and
+  types (a test compares them).
 - Services, WS commands and card serving are registered in `async_setup`
   (once per process), never `async_setup_entry`.
 - User-facing errors are `ServiceValidationError`/`HomeAssistantError` with a

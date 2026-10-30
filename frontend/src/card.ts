@@ -25,6 +25,10 @@ import {
   pickableEpisodes,
   requestableSeasons,
   statusLabel,
+  STREAM_SORTS,
+  appendNew,
+  genresFor,
+  servicesFor,
 } from "./logic";
 import type {
   AudioChoice,
@@ -40,6 +44,7 @@ import type {
   ReleaseInfo,
   ShowState,
   SonarrShow,
+  StreamSort,
   WaitingItem,
 } from "./types";
 
@@ -68,7 +73,12 @@ const FILTERS: Array<{ value: MediaFilter; label: string }> = [
 const BROWSE: Array<{ value: Browse; label: string; heading: string }> = [
   { value: "trending", label: "Trending", heading: "Trending today" },
   { value: "popular", label: "Popular", heading: "Popular" },
+  // Not "On Netflix": the heading's length would change with the service, and on a
+  // phone that moves the rows below it under the finger picking the next one.
+  { value: "streaming", label: "Streaming", heading: "What's on" },
 ];
+// TMDB's watch-provider data is per country; Mitchell's server is in the UK.
+const DEFAULT_REGION = "GB";
 
 /** Said when the server found the show's releases are (or aren't) named by date. */
 function typeChangedMessage(title: string, type: string): string {
@@ -87,6 +97,12 @@ export class JellyseerrSearchCard extends LitElement {
     _browse: { state: true },
     _browseResults: { state: true },
     _browseError: { state: true },
+    _service: { state: true },
+    _genre: { state: true },
+    _sort: { state: true },
+    _browseMore: { state: true },
+    _moreLoading: { state: true },
+    _moreError: { state: true },
     _loading: { state: true },
     _error: { state: true },
     _selected: { state: true },
@@ -131,6 +147,14 @@ export class JellyseerrSearchCard extends LitElement {
   declare _browse: Browse;
   declare _browseResults?: SearchResult[];
   declare _browseError?: string;
+  /** Streaming list: the service's SERVICES key, a GENRES key ("" = all) and the order. */
+  declare _service: string;
+  declare _genre: string;
+  declare _sort: StreamSort;
+  /** The Streaming list has another page; _moreLoading while it's fetched. */
+  declare _browseMore: boolean;
+  declare _moreLoading: boolean;
+  declare _moreError?: string;
   declare _loading: boolean;
   declare _error?: string;
   declare _selected?: SearchResult;
@@ -191,14 +215,21 @@ export class JellyseerrSearchCard extends LitElement {
   private _addedSeries?: number;
   private _refreshTimers: Array<ReturnType<typeof setTimeout>> = [];
   private _browseAt = 0;
-  /** What _browseResults were loaded for, as `${browse}/${filter}`. */
+  /** What _browseResults were loaded for (see _currentBrowseKey). */
   private _browseKey?: string;
+  /** The Streaming page last loaded. */
+  private _browsePage = 1;
 
   constructor() {
     super();
     this._query = "";
     this._filter = "all";
     this._browse = "trending";
+    this._service = "";
+    this._genre = "";
+    this._sort = "popular";
+    this._browseMore = false;
+    this._moreLoading = false;
     this._loading = false;
     this._chosen = new Set();
     this._is4k = false;
@@ -235,6 +266,17 @@ export class JellyseerrSearchCard extends LitElement {
           },
         },
         { name: "show_trending", selector: { boolean: {} } },
+        {
+          name: "services",
+          selector: {
+            select: {
+              multiple: true,
+              mode: "list",
+              options: servicesFor().map((s) => ({ value: s.key, label: s.label })),
+            },
+          },
+        },
+        { name: "region", selector: { text: {} } },
         { name: "show_4k", selector: { boolean: {} } },
         { name: "show_remove", selector: { boolean: {} } },
         { name: "config_entry_id", selector: { config_entry: { integration: DOMAIN } } },
@@ -243,7 +285,9 @@ export class JellyseerrSearchCard extends LitElement {
         ({
           title: "Title",
           media_type: "Default filter",
-          show_trending: "Show trending and popular titles before searching",
+          show_trending: "Show trending, popular and streaming titles before searching",
+          services: "Streaming services to offer (none ticked = all)",
+          region: "Streaming country, two letters (default GB)",
           show_4k: "Offer 4K requests",
           show_remove: "Offer Remove (deletes the files from Radarr/Sonarr)",
           config_entry_id: "Jellyseerr server (only if you have several)",
@@ -425,19 +469,56 @@ export class JellyseerrSearchCard extends LitElement {
   /** Missing, for another list or filter, or older than the TTL, and on screen. */
   private _browseDue(): boolean {
     if (!this._showBrowse() || this._selected) return false;
-    if (this._browseKey !== `${this._browse}/${this._filter}`) return true;
+    if (this._browseKey !== this._currentBrowseKey()) return true;
     return Date.now() - this._browseAt > BROWSE_TTL_MS;
+  }
+
+  /** What the browse list on screen should be: list, filter and, for Streaming, its choices. */
+  private _currentBrowseKey(): string {
+    const key = `${this._browse}/${this._filter}`;
+    return this._browse === "streaming" ? `${key}/${this._streamService().key}/${this._genre}/${this._sort}` : key;
+  }
+
+  private _streamService() {
+    const services = servicesFor(this._config.services);
+    return services.find((s) => s.key === this._service) ?? services[0];
+  }
+
+  /** The discover command for one page of the Streaming list. */
+  private _discoverMessage(page: number) {
+    return {
+      type: `${DOMAIN}/discover`,
+      provider: this._streamService().id,
+      region: (this._config.region || DEFAULT_REGION).toUpperCase(),
+      media_type: this._filter,
+      sort: this._sort,
+      ...(this._genre ? { genre: this._genre } : {}),
+      page,
+      ...this._entry(),
+    };
   }
 
   private async _loadBrowse(): Promise<void> {
     const current = this._latestBrowse.next();
-    const key = `${this._browse}/${this._filter}`;
+    const key = this._currentBrowseKey();
     if (this._browseKey !== key) this._browseResults = undefined;
     // Set before the call so the frequent hass updates don't refetch meanwhile.
     this._browseKey = key;
     this._browseAt = Date.now();
     this._browseError = undefined;
+    this._moreError = undefined;
+    this._browseMore = false;
     try {
+      if (this._browse === "streaming") {
+        const found = await this.hass.callWS<{ results: SearchResult[]; has_more: boolean }>(
+          this._discoverMessage(1),
+        );
+        if (!current()) return;
+        this._browsePage = 1;
+        this._browseResults = found.results;
+        this._browseMore = found.has_more;
+        return;
+      }
       const { results } = await this.hass.callWS<{ results: SearchResult[] }>({
         type: `${DOMAIN}/${this._browse}`,
         media_type: this._filter,
@@ -449,9 +530,39 @@ export class JellyseerrSearchCard extends LitElement {
     }
   }
 
+  /** Show more: the Streaming list's next page, added below. */
+  private async _loadMore(): Promise<void> {
+    if (this._moreLoading || !this._browseResults) return;
+    const key = this._browseKey;
+    const page = this._browsePage + 1;
+    this._moreLoading = true;
+    this._moreError = undefined;
+    try {
+      const found = await this.hass.callWS<{ results: SearchResult[]; has_more: boolean }>(
+        this._discoverMessage(page),
+      );
+      // Another service, genre or filter was picked meanwhile: this page is for the old list.
+      if (key !== this._browseKey || !this._browseResults) return;
+      this._browsePage = page;
+      this._browseResults = appendNew(this._browseResults, found.results);
+      this._browseMore = found.has_more;
+    } catch (err) {
+      if (key === this._browseKey) this._moreError = errorMessage(err);
+    } finally {
+      this._moreLoading = false;
+    }
+  }
+
   private _setBrowse(browse: Browse): void {
     if (browse === this._browse) return;
     this._browse = browse;
+    if (this._browseDue()) void this._loadBrowse();
+  }
+
+  private _setStream(change: { service?: string; genre?: string; sort?: StreamSort }): void {
+    if (change.service !== undefined) this._service = change.service;
+    if (change.genre !== undefined) this._genre = change.genre;
+    if (change.sort !== undefined) this._sort = change.sort;
     if (this._browseDue()) void this._loadBrowse();
   }
 
@@ -485,6 +596,8 @@ export class JellyseerrSearchCard extends LitElement {
   private _setFilter(filter: MediaFilter): void {
     if (filter === this._filter) return;
     this._filter = filter;
+    // Horror has no TV genre (nor Reality a film one): drop a genre the new filter lacks.
+    if (this._genre && !genresFor(filter).some((g) => g.key === this._genre)) this._genre = "";
     if (filter === "downloaded") void this._loadLibrary();
     else if (filter === "waiting") void this._loadWaiting();
     else if (this._query.trim().length >= MIN_QUERY) void this._search();
@@ -1106,6 +1219,7 @@ export class JellyseerrSearchCard extends LitElement {
   }
 
   private _renderBrowse() {
+    const streaming = this._browse === "streaming";
     const heading = BROWSE.find((b) => b.value === this._browse)!.heading;
     let body;
     if (this._browseError) {
@@ -1118,8 +1232,8 @@ export class JellyseerrSearchCard extends LitElement {
       body = html`<div class="grid">${this._browseResults.map((r) => this._renderTile(r))}</div>`;
     }
     return html`
-      <div class="section">
-        <span>${heading}</span>
+      <div class="section browse">
+        <span class="heading">${heading}</span>
         <div class="chips small" role="radiogroup" aria-label="Browse">
           ${BROWSE.map(
             (b) => html`<button
@@ -1133,8 +1247,49 @@ export class JellyseerrSearchCard extends LitElement {
           )}
         </div>
       </div>
-      ${body}
+      ${streaming ? this._renderStreamPickers() : nothing} ${body}
+      ${streaming
+        ? html`${this._renderMore()}
+            <div class="attribution">Streaming availability from JustWatch</div>`
+        : nothing}
     `;
+  }
+
+  /** Service, genre and order for the Streaming list. Rows scroll sideways on a phone. */
+  private _renderStreamPickers() {
+    const service = this._streamService().key;
+    const chip = (label: string, on: boolean, pick: () => void) =>
+      html`<button class="chip ${on ? "on" : ""}" role="radio" aria-checked=${on} @click=${pick}>${label}</button>`;
+    return html`
+      <div class="chips scroll" role="radiogroup" aria-label="Streaming service">
+        ${servicesFor(this._config.services).map((s) =>
+          chip(s.label, s.key === service, () => this._setStream({ service: s.key })),
+        )}
+      </div>
+      <div class="chips scroll small" role="radiogroup" aria-label="Genre">
+        ${chip("All genres", !this._genre, () => this._setStream({ genre: "" }))}
+        ${genresFor(this._filter).map((g) =>
+          chip(g.label, g.key === this._genre, () => this._setStream({ genre: g.key })),
+        )}
+      </div>
+      <div class="chips scroll small" role="radiogroup" aria-label="Order">
+        ${STREAM_SORTS.map((s) => chip(s.label, s.value === this._sort, () => this._setStream({ sort: s.value })))}
+      </div>
+    `;
+  }
+
+  private _renderMore() {
+    if (this._moreError) {
+      return html`<div class="message error">
+        Couldn't load more (${this._moreError}). <button class="link" @click=${this._loadMore}>Try again</button>
+      </div>`;
+    }
+    if (!this._browseMore || !this._browseResults?.length) return nothing;
+    return html`<div class="more">
+      <button class="chip" ?disabled=${this._moreLoading} @click=${this._loadMore}>
+        ${this._moreLoading ? "Loading…" : "Show more"}
+      </button>
+    </div>`;
   }
 
   private _renderLibrary() {
@@ -1771,6 +1926,45 @@ export class JellyseerrSearchCard extends LitElement {
     }
     .chips {
       flex-wrap: wrap;
+    }
+    /* Streaming pickers: eleven services and a dozen genres would fill a phone
+       screen wrapped, so each row scrolls sideways instead. */
+    .chips.scroll {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 8px var(--js-gap) 0;
+    }
+    .chips.scroll::-webkit-scrollbar {
+      display: none;
+    }
+    .chips.scroll .chip {
+      flex: none;
+      white-space: nowrap;
+    }
+    .section .heading {
+      white-space: nowrap;
+    }
+    /* Heading and Trending / Popular / Streaming share a line when they fit;
+       on a phone the switch drops below the heading rather than wrapping a chip. */
+    .section.browse {
+      flex-wrap: wrap;
+      row-gap: 6px;
+    }
+    .section.browse .chips.small {
+      flex-wrap: nowrap;
+    }
+    /* TMDB's watch-provider data must be credited to JustWatch (TMDB API docs, "Watch Providers"). */
+    .attribution {
+      padding: 0 var(--js-gap) var(--js-gap);
+      font-size: 11px;
+      text-align: center;
+      color: var(--secondary-text-color);
+    }
+    .more {
+      display: flex;
+      justify-content: center;
+      padding: 0 var(--js-gap) var(--js-gap);
     }
     .chipstack {
       position: absolute;
