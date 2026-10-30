@@ -20,7 +20,16 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 import homeassistant.helpers.config_validation as cv
 
 from .api import JellyseerrClient, JellyseerrError
-from .const import BROWSE_BRANDS, BROWSE_GENRES, BROWSE_MAX_PAGE, DOMAIN, MEDIA_TV, MEDIA_TYPES, REQUESTABLE_STATUSES
+from .const import (
+    BROWSE_BRANDS,
+    BROWSE_GENRE_MIN_VOTES,
+    BROWSE_GENRES,
+    BROWSE_MAX_PAGE,
+    DOMAIN,
+    MEDIA_TV,
+    MEDIA_TYPES,
+    REQUESTABLE_STATUSES,
+)
 from .coordinator import JellyseerrCoordinator
 from .sonarr import SonarrClient, SonarrError
 
@@ -204,6 +213,7 @@ async def async_discover_media(
                     sort=sort,
                     genre=ids[kind] if ids else None,
                     brand=by_brand[kind] if by_brand else None,
+                    min_votes=BROWSE_GENRE_MIN_VOTES.get(genre or ""),
                     page=page,
                 )
                 for kind in kinds

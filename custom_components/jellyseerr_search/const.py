@@ -50,23 +50,31 @@ BROWSE_SORTS: Final = {
 # Geo documentaries, Disney Channel shows; a floor of 20 cut Nat Geo films from 93
 # to 25), so only Top rated keeps one, against a single 10/10 vote leading it.
 BROWSE_MIN_VOTES: Final = {"popular": (500, 200, 0), "top_rated": (500, 200, 20), "newest": (50, 50, 0)}
-# The genres the card offers, as TMDB genre ids per type ("|" = any of). Film and
-# TV lists differ (TV has "Action & Adventure", film has Action and Adventure);
-# None means the type has no such genre. The card's GENRES must list the same keys.
-BROWSE_GENRES: Final[dict[str, dict[str, str | None]]] = {
-    "action": {MEDIA_MOVIE: "28|12", MEDIA_TV: "10759"},
-    "animation": {MEDIA_MOVIE: "16", MEDIA_TV: "16"},
-    "comedy": {MEDIA_MOVIE: "35", MEDIA_TV: "35"},
-    "crime": {MEDIA_MOVIE: "80", MEDIA_TV: "80"},
-    "documentary": {MEDIA_MOVIE: "99", MEDIA_TV: "99"},
-    "drama": {MEDIA_MOVIE: "18", MEDIA_TV: "18"},
-    "family": {MEDIA_MOVIE: "10751", MEDIA_TV: "10751|10762"},
-    "horror": {MEDIA_MOVIE: "27", MEDIA_TV: None},
-    "mystery": {MEDIA_MOVIE: "9648|53", MEDIA_TV: "9648"},
-    "romance": {MEDIA_MOVIE: "10749", MEDIA_TV: None},
-    "scifi": {MEDIA_MOVIE: "878|14", MEDIA_TV: "10765"},
-    "reality": {MEDIA_MOVIE: None, MEDIA_TV: "10764"},
+# The genres the card offers, as the Seerr discover parameter and value per type
+# (like BROWSE_BRANDS). Most are TMDB genre ids ("|" = any of); film and TV lists
+# differ (TV has "Action & Adventure", film has Action and Adventure). Christmas is
+# no TMDB genre, so it's TMDB's "christmas" keyword (207317). None means the type
+# has no such genre. The card's GENRES must list the same keys and types.
+BROWSE_GENRES: Final[dict[str, dict[str, tuple[str, str] | None]]] = {
+    "christmas": {MEDIA_MOVIE: ("keywords", "207317"), MEDIA_TV: ("keywords", "207317")},
+    "action": {MEDIA_MOVIE: ("genre", "28|12"), MEDIA_TV: ("genre", "10759")},
+    "animation": {MEDIA_MOVIE: ("genre", "16"), MEDIA_TV: ("genre", "16")},
+    "comedy": {MEDIA_MOVIE: ("genre", "35"), MEDIA_TV: ("genre", "35")},
+    "crime": {MEDIA_MOVIE: ("genre", "80"), MEDIA_TV: ("genre", "80")},
+    "documentary": {MEDIA_MOVIE: ("genre", "99"), MEDIA_TV: ("genre", "99")},
+    "drama": {MEDIA_MOVIE: ("genre", "18"), MEDIA_TV: ("genre", "18")},
+    "family": {MEDIA_MOVIE: ("genre", "10751"), MEDIA_TV: ("genre", "10751|10762")},
+    "horror": {MEDIA_MOVIE: ("genre", "27"), MEDIA_TV: None},
+    "mystery": {MEDIA_MOVIE: ("genre", "9648|53"), MEDIA_TV: ("genre", "9648")},
+    "romance": {MEDIA_MOVIE: ("genre", "10749"), MEDIA_TV: None},
+    "scifi": {MEDIA_MOVIE: ("genre", "878|14"), MEDIA_TV: ("genre", "10765")},
+    "reality": {MEDIA_MOVIE: None, MEDIA_TV: ("genre", "10764")},
 }
+# Genres narrower than a TMDB genre, with their own vote floor (Popular and Top
+# rated; a brand's floor still wins). Christmas on UK Netflix 2026-10-30: 108 films
+# at no floor, 83 at 50, 43 at the genre floor of 200, which cut real Christmas
+# films; at 50 the list is all Christmas films.
+BROWSE_GENRE_MIN_VOTES: Final = {"christmas": 50}
 # Brands within a service (Disney+ carries Pixar, Marvel, Lucasfilm and Nat Geo,
 # plus general entertainment that otherwise leads its lists), as the Seerr
 # discover parameter and value per type. Seerr's /discover/tv rejects `studio`

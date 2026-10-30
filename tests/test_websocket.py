@@ -272,6 +272,30 @@ async def test_discover_brand_with_genre(hass: HomeAssistant, entry, aioclient_m
     assert (call["keywords"], call["genre"], call["voteCountGte"]) == ("180547", "10759", "0")
 
 
+async def test_discover_christmas_is_a_keyword(
+    hass: HomeAssistant, entry, aioclient_mock, hass_ws_client
+) -> None:
+    """Christmas is TMDB's keyword, with its own lower floor (a genre's 200 cut real
+    Christmas films); with Marvel, both keywords must match."""
+    aioclient_mock.get(f"{API}/discover/movies", json=MOVIES)
+    ws = await hass_ws_client(hass)
+    await ws.send_json_auto_id(
+        {"type": f"{DOMAIN}/discover", "provider": 8, "region": "GB", "genre": "christmas", "media_type": "movie"}
+    )
+    await ws.receive_json()
+    call = _discover_calls(aioclient_mock, "movies")[-1]
+    assert (call["keywords"], call["voteCountGte"]) == ("207317", "50")
+    assert "genre" not in call
+
+    await ws.send_json_auto_id(
+        {"type": f"{DOMAIN}/discover", "provider": 337, "region": "GB", "genre": "christmas",
+         "brand": "marvel", "media_type": "movie"}
+    )
+    await ws.receive_json()
+    call = _discover_calls(aioclient_mock, "movies")[-1]
+    assert (call["keywords"], call["voteCountGte"]) == ("207317,180547", "0")
+
+
 async def test_discover_rejects_bad_input(hass: HomeAssistant, entry, hass_ws_client) -> None:
     ws = await hass_ws_client(hass)
     for bad in (

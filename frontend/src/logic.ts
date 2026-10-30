@@ -301,6 +301,8 @@ export function servicesFor(keys?: readonly string[]): typeof SERVICES {
  * `types` are the ones TMDB has that genre for (no Horror for TV, no Reality for film).
  */
 export const GENRES: ReadonlyArray<{ key: string; label: string; types: ReadonlyArray<MediaType> }> = [
+  // A TMDB keyword, not a genre, on the server; first because it's seasonal and asked for.
+  { key: "christmas", label: "Christmas", types: ["movie", "tv"] },
   { key: "action", label: "Action & Adventure", types: ["movie", "tv"] },
   { key: "comedy", label: "Comedy", types: ["movie", "tv"] },
   { key: "drama", label: "Drama", types: ["movie", "tv"] },

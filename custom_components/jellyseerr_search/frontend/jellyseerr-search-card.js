@@ -855,6 +855,11 @@ function q(e) {
 }
 var rt = [
 	{
+		key: "christmas",
+		label: "Christmas",
+		types: ["movie", "tv"]
+	},
+	{
 		key: "action",
 		label: "Action & Adventure",
 		types: ["movie", "tv"]

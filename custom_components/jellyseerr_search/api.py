@@ -124,30 +124,35 @@ class JellyseerrClient:
         provider: int,
         region: str,
         sort: str,
-        genre: str | None,
+        genre: tuple[str, str] | None,
         brand: tuple[str, str] | None = None,
+        min_votes: int | None = None,
         page: int = 1,
     ) -> tuple[list[dict[str, Any]], int]:
         """One streaming service's movies or shows in one country (TMDB discover,
         filtered by watch provider), normalized, with the list's page count.
-        `genre` is TMDB ids for this type ("|" = any of); `brand` is a Seerr
-        parameter and value (BROWSE_BRANDS). Newest needs no date cap: nothing
-        dated after today appeared, with or without a vote floor (four UK
-        services and five Disney+ brands checked 2026-10-30); a service only
-        lists a title once it carries it."""
+        `genre` and `brand` are a Seerr parameter and value each (BROWSE_GENRES,
+        BROWSE_BRANDS); `min_votes` overrides the genre's floor. Newest needs no
+        date cap: nothing dated after today appeared, with or without a vote
+        floor (four UK services and five Disney+ brands checked 2026-10-30); a
+        service only lists a title once it carries it."""
         floors = BROWSE_MIN_VOTES[sort]
+        if brand:
+            votes = floors[2]
+        elif genre:
+            votes = floors[1] if min_votes is None or sort == "newest" else min_votes
+        else:
+            votes = floors[0]
         params: dict[str, Any] = {
             "page": page,
             "watchProviders": provider,
             "watchRegion": region,
             "sortBy": BROWSE_SORTS[sort][media_type],
-            "voteCountGte": floors[2] if brand else floors[1] if genre else floors[0],
+            "voteCountGte": votes,
         }
-        if genre:
-            params["genre"] = genre
-        if brand:
-            key, value = brand
-            params[key] = value
+        for key, value in (f for f in (genre, brand) if f):
+            # Christmas and Marvel are both keywords: TMDB reads "a,b" as both.
+            params[key] = f"{params[key]},{value}" if key in params else value
         path = "/discover/movies" if media_type == MEDIA_MOVIE else "/discover/tv"
         data = await self._request("GET", path, params=params)
         results = [

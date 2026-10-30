@@ -41,10 +41,11 @@ the next page (20 films and 20 shows for All). Services: `netflix`, `disney`,
 `paramount`, `skygo`. On Disney+ a brand row narrows it to **Disney**, **Pixar**,
 **Marvel**, **Star Wars** (Lucasfilm) or **Nat Geo**; Pixar, Star Wars and Nat Geo
 are films only, because Seerr can filter TV by keyword or original network but not
-by studio. Availability is TMDB's (JustWatch) watch-provider data,
+by studio. The genre row starts with **Christmas** (TMDB's "christmas" keyword, so
+it works with any service or brand). Availability is TMDB's (JustWatch) watch-provider data,
 as Seerr shows it. Titles with few TMDB votes are left out: 500 for Popular and
 Top rated (200 with a genre), 50 for Newest, so the month's releases still show;
-none for a brand (20 for Top rated), whose lists are curated already.
+50 for Christmas; none for a brand (20 for Top rated), whose lists are curated already.
 
 If your dashboards are in YAML mode, add `/jellyseerr_search/jellyseerr-search-card.js`
 as a JavaScript module resource yourself.
